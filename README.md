@@ -84,39 +84,79 @@ KarmaLoop tracks meaningful outcomes:
 
 ## 🚀 Getting Started
 
-### Prerequisites
-- Node.js 18+ and npm
+### Quick Start (Docker)
 
-### Installation
+The fastest way to run the full stack (frontend + backend):
 
 1. **Clone the repository**
    ```bash
-   cd "bb wit hack"
+   git clone <repo-url>
+   cd Gatherlings
    ```
 
-2. **Install dependencies**
+2. **Set up environment variables**
+
+   Create a `.env.local` file in the project root:
+   ```
+   VITE_GOOGLE_CLIENT_ID=your_google_client_id_here
+   DATABASE_URL=your_postgresql_connection_string_here
+   ```
+
+3. **Build and run with Docker Compose**
+   ```bash
+   docker compose up --build
+   ```
+
+4. **Open in browser**
+   - Frontend: `http://localhost:3000`
+   - Backend API docs: `http://localhost:8000/docs`
+   - Backend health check: `http://localhost:8000/api/health`
+
+   To run in the background, add `-d`:
+   ```bash
+   docker compose up --build -d
+   ```
+
+   To stop:
+   ```bash
+   docker compose down
+   ```
+
+### Manual Setup (Without Docker)
+
+#### Prerequisites
+- Node.js 18+ and npm
+- Python 3.12+
+- A PostgreSQL database (e.g. Neon)
+
+#### Frontend
+
+1. **Install dependencies**
    ```bash
    npm install
    ```
 
-3. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Edit `.env` and add your Google OAuth Client ID:
-   ```
-   VITE_GOOGLE_CLIENT_ID=your_google_client_id_here
-   ```
-
-4. **Run the development server**
+2. **Run the dev server**
    ```bash
    npm run dev
    ```
+   Opens at `http://localhost:3000`
 
-5. **Open in browser**
-   - Navigate to `http://localhost:3000`
-   - For mobile testing, use your local network IP (shown in terminal)
+#### Backend
+
+1. **Create a virtual environment and install dependencies**
+   ```bash
+   cd backend
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   ```
+
+2. **Run the backend**
+   ```bash
+   python main.py
+   ```
+   Runs at `http://localhost:8000` (API docs at `/docs`)
 
 ### Building for Production
 
@@ -128,11 +168,14 @@ npm run preview
 ## 🎨 Tech Stack
 
 - **Frontend**: React 18 + Vite
+- **Backend**: FastAPI (Python) with 39 REST endpoints
+- **Database**: PostgreSQL 17 (Neon) via SQLAlchemy ORM
 - **Styling**: TailwindCSS with custom pixel art theme
 - **State Management**: Zustand (with persistence)
 - **Authentication**: Google OAuth 2.0
 - **QR Codes**: qrcode.react
 - **Routing**: React Router v6
+- **Containerization**: Docker + Docker Compose
 - **Fonts**: Press Start 2P (pixel), VT323 (game)
 
 ## 📱 Mobile-First Design
@@ -168,11 +211,11 @@ Simply click "Try Demo" on the login page!
 - Boost high-success quests in your hub
 - Detect disengagement and offer lower-pressure options
 
-**All data stays client-side in MVP** (using Zustand persist to localStorage)
+**Frontend stores data client-side via Zustand persist. Backend persists all data to PostgreSQL (Neon).**
 
 ## 🔮 Future Enhancements (Phase 2)
 
-- Real backend API with database
+- Frontend-backend API integration (backend is ready, frontend calls pending)
 - WebSocket for true real-time updates
 - LLM integration (via Emergent API) for:
   - Dynamic quest descriptions
@@ -194,12 +237,12 @@ Simply click "Try Demo" on the login page!
 ## 📝 Project Structure
 
 ```
-bb wit hack/
-├── src/
-│   ├── components/        # Reusable UI components
+Gatherlings/
+├── src/                       # Frontend (React)
+│   ├── components/            # Reusable UI components
 │   │   ├── NavigationBar.jsx
 │   │   └── PixelMonster.jsx
-│   ├── pages/            # Main application pages
+│   ├── pages/                 # Main application pages
 │   │   ├── Login.jsx
 │   │   ├── HubSelection.jsx
 │   │   ├── LivingHub.jsx
@@ -207,19 +250,27 @@ bb wit hack/
 │   │   ├── Lobby.jsx
 │   │   ├── QRCheckIn.jsx
 │   │   └── Profile.jsx
-│   ├── stores/           # Zustand state management
+│   ├── stores/                # Zustand state management
 │   │   ├── authStore.js
 │   │   ├── monsterStore.js
 │   │   ├── hubStore.js
 │   │   └── dataStore.js
-│   ├── App.jsx           # Main app component & routing
-│   ├── main.jsx          # App entry point
-│   └── index.css         # Global styles & animations
-├── public/               # Static assets
-├── index.html            # HTML template
-├── package.json          # Dependencies
-├── vite.config.js        # Vite configuration
-└── tailwind.config.js    # Tailwind CSS config
+│   ├── App.jsx
+│   ├── main.jsx
+│   └── index.css
+├── backend/                   # Backend (FastAPI + SQLAlchemy)
+│   ├── main.py                # 39 API endpoints
+│   ├── models.py              # 16 SQLAlchemy ORM models
+│   ├── database.py            # DB engine, session, dependency
+│   ├── requirements.txt       # Python dependencies
+│   └── Dockerfile
+├── docker-compose.yaml        # Run full stack with one command
+├── Dockerfile                 # Frontend container
+├── .env.local                 # Environment variables (not in git)
+├── .gitignore
+├── package.json
+├── vite.config.js
+└── tailwind.config.js
 ```
 
 ## 🤝 Contributing
