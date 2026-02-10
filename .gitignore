@@ -1,0 +1,14 @@
+# Environment variables
+.env.local
+.env
+
+# Python
+__pycache__/
+*.pyc
+backend/venv/
+
+# Node
+node_modules/
+
+# Vite
+dist/
