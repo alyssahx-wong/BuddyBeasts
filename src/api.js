@@ -6,7 +6,7 @@ const api = axios.create({
 
 // Attach auth token to every request
 api.interceptors.request.use((config) => {
-  const raw = localStorage.getItem('karmaloop-auth')
+  const raw = localStorage.getItem('buddybeasts-auth')
   if (raw) {
     try {
       const { state } = JSON.parse(raw)
