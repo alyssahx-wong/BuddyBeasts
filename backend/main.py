@@ -264,6 +264,7 @@ def instance_to_dict(inst: models.QuestInstance, tpl: models.QuestTemplate, part
         "isActive": inst.is_active,
         "startTime": inst.start_time,
         "location": inst.location or "",
+        "deadline": inst.deadline,
     }
 
 
@@ -336,6 +337,7 @@ def _seed_data() -> None:
                     is_active=True,
                     start_time=None,
                     location=hub.location,
+                    deadline=time.time() + tpl.duration * 60,
                 ))
             db.commit()
     finally:
@@ -422,6 +424,7 @@ class QuestInstanceSchema(BaseModel):
     isActive: bool = True
     startTime: Optional[str] = None
     location: str = ""
+    deadline: Optional[float] = None
 
 class CreateInstanceRequest(BaseModel):
     templateId: str
@@ -709,14 +712,20 @@ def list_quest_instances(hub_id: Optional[str] = Query(None), db: Session = Depe
     if hub_id:
         q = q.filter(models.QuestInstance.hub_id == hub_id)
     instances = q.all()
+    now = time.time()
     result = []
     for inst in instances:
+        # Auto-expire quests past their deadline
+        if inst.deadline and now > inst.deadline:
+            inst.is_active = False
+            continue
         tpl = db.query(models.QuestTemplate).filter(models.QuestTemplate.id == inst.template_id).first()
         if not tpl:
             continue
         pids = [p.user_id for p in db.query(models.InstanceParticipant).filter(
             models.InstanceParticipant.instance_id == inst.instance_id).all()]
         result.append(instance_to_dict(inst, tpl, pids))
+    db.commit()  # Persist any deadline-based deactivations
     return result
 
 
@@ -730,6 +739,7 @@ def create_quest_instance(body: CreateInstanceRequest, user: dict = Depends(get_
         raise HTTPException(status_code=404, detail="Hub not found")
 
     inst_id = f"inst_{uuid.uuid4().hex[:8]}"
+    deadline = time.time() + tpl.duration * 60
     inst = models.QuestInstance(
         instance_id=inst_id,
         template_id=tpl.id,
@@ -738,8 +748,10 @@ def create_quest_instance(body: CreateInstanceRequest, user: dict = Depends(get_
         is_active=True,
         start_time=None,
         location=body.location or hub.location,
+        deadline=deadline,
     )
     db.add(inst)
+    db.flush()  # Flush parent row before inserting FK-dependent children
     db.add(models.InstanceParticipant(instance_id=inst_id, user_id=user["id"]))
     # Auto-create lobby entry (host)
     db.add(models.LobbyParticipant(instance_id=inst_id, user_id=user["id"], is_ready=False, is_host=True))
@@ -756,6 +768,10 @@ def join_quest_instance(instance_id: str, user: dict = Depends(get_current_user)
         raise HTTPException(status_code=404, detail="Instance not found")
     if not inst.is_active:
         raise HTTPException(status_code=400, detail="Quest is no longer active")
+    if inst.deadline and time.time() > inst.deadline:
+        inst.is_active = False
+        db.commit()
+        raise HTTPException(status_code=400, detail="Quest has expired")
 
     tpl = db.query(models.QuestTemplate).filter(models.QuestTemplate.id == inst.template_id).first()
     pids = [p.user_id for p in db.query(models.InstanceParticipant).filter(

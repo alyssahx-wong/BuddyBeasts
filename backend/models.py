@@ -95,6 +95,7 @@ class QuestInstance(Base):
     is_active = Column(Boolean, nullable=False, default=True)
     start_time = Column(String, nullable=True)
     location = Column(String, nullable=True)
+    deadline = Column(Float, nullable=True)
 
 
 class InstanceParticipant(Base):
