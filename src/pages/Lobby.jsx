@@ -50,6 +50,7 @@ export default function Lobby() {
             monster: {
               evolution: ['baby', 'teen', 'adult'][Math.floor(Math.random() * 3)],
               level: Math.floor(Math.random() * 10) + 1,
+              activeSkin: 'default',
             },
             isReady: Math.random() > 0.5,
             isHost: false,

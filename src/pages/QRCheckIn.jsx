@@ -23,13 +23,14 @@ export default function QRCheckIn() {
   const [showScanner, setShowScanner] = useState(false)
   const [questStartTime] = useState(Date.now())
   const [scanError, setScanError] = useState(null)
+  const [scannedCode, setScannedCode] = useState(null)
 
   useEffect(() => {
     if (!quest) {
       navigate('/quests')
       return
     }
-    const code = `KARMA_${questId}_${Date.now()}`
+    const code = `BUDDY_${questId}_${Date.now()}`
     setCheckInCode(code)
   }, [quest, questId, navigate])
 
@@ -45,7 +46,7 @@ export default function QRCheckIn() {
           scanner.stop().catch(() => {})
           scannerRef.current = null
           setShowScanner(false)
-          performCheckIn()
+          setScannedCode(decodedText.trim())
         }
       },
       () => {}
@@ -60,6 +61,13 @@ export default function QRCheckIn() {
       }
     }
   }, [showScanner, checkInCode, checkedIn])
+
+  useEffect(() => {
+    if (scannedCode && checkInCode && scannedCode === checkInCode && !checkedIn) {
+      setScannedCode(null)
+      performCheckIn()
+    }
+  }, [scannedCode, checkInCode, checkedIn])
 
   const performCheckIn = () => {
     if (checkedIn) return
@@ -193,18 +201,20 @@ export default function QRCheckIn() {
               </button>
             </div>
 
-            {/* Scanner Placeholder */}
+            {/* QR Scanner – verify in person by scanning host's code */}
             {showScanner && (
-              <div className="mt-4 pixel-card p-6 bg-pixel-dark text-center">
-                <p className="font-game text-pixel-light mb-4">
-                  Camera scanner would appear here
+              <div className="mt-4 pixel-card p-4 bg-pixel-dark">
+                <p className="font-game text-pixel-yellow text-sm mb-2 text-center">
+                  Point camera at host’s QR code to verify
                 </p>
-                <p className="text-xs text-pixel-blue font-game mb-4">
-                  (Demo mode: click Confirm Check-In above)
-                </p>
+                <div id="qr-reader" className="rounded overflow-hidden mb-3" />
+                {scanError && (
+                  <p className="text-xs text-pixel-pink font-game text-center mb-2">{scanError}</p>
+                )}
                 <button
-                  onClick={() => setShowScanner(false)}
-                  className="text-pixel-pink hover:text-pixel-light text-sm font-game"
+                  type="button"
+                  onClick={() => { setShowScanner(false); setScanError(null) }}
+                  className="pixel-button bg-pixel-purple text-white w-full py-2 text-xs"
                 >
                   Close Scanner
                 </button>

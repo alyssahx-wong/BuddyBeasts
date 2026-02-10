@@ -84,7 +84,7 @@ export const useMonsterStore = create(
       }),
     }),
     {
-      name: 'karmaloop-monster',
+      name: 'buddybeasts-monster',
     }
   )
 )

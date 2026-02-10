@@ -39,7 +39,7 @@ export default function Login() {
     const demoUser = {
       id: 'demo_' + Date.now(),
       name: 'Demo Player',
-      email: 'demo@karmaloop.com',
+      email: 'demo@buddybeasts.com',
       picture: null,
     }
     
@@ -53,7 +53,7 @@ export default function Login() {
       <div className="max-w-md w-full pixel-card p-8 text-center">
         <div className="mb-8">
           <h1 className="font-pixel text-2xl md:text-3xl text-pixel-yellow mb-4 animate-pulse-slow">
-            KarmaLoop
+            BuddyBeasts
           </h1>
           <p className="text-lg md:text-xl text-pixel-light font-game">
             Turn local social connection into a living pixel world

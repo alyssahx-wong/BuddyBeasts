@@ -9,7 +9,7 @@ import NavigationBar from '../components/NavigationBar'
 export default function Profile() {
   const navigate = useNavigate()
   const { user, currentHub, logout } = useAuthStore()
-  const { monster, evolveMonster, unlockSkin, setActiveSkin } = useMonsterStore()
+  const { monster, evolveMonster, unlockSkin, setActiveSkin, addCrystals } = useMonsterStore()
   const { questHistory, belongingScores, trackBelongingScore } = useDataStore()
   const [showBelongingPrompt, setShowBelongingPrompt] = useState(false)
   const [belongingScore, setBelongingScore] = useState(5)
@@ -204,7 +204,10 @@ export default function Profile() {
                 <button
                   key={s.id}
                   onClick={() => {
-                    if (canUnlock) unlockSkin(s.id)
+                    if (canUnlock) {
+                      addCrystals(-s.cost)
+                      unlockSkin(s.id)
+                    }
                     if (unlocked) setActiveSkin(s.id)
                   }}
                   disabled={!unlocked && !canUnlock}
@@ -329,7 +332,7 @@ export default function Profile() {
         {/* App Info */}
         <div className="pixel-card p-4 bg-pixel-purple bg-opacity-20 text-center">
           <p className="text-xs text-pixel-light font-game mb-2">
-            KarmaLoop v0.1.0 - Built for Building Belonging
+            BuddyBeasts v0.1.0 - Built for Building Belonging
           </p>
           <p className="text-xs text-pixel-blue font-game">
             🎮 Turning local connections into pixel adventures
