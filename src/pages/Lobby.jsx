@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import PixelMonster from '../components/PixelMonster'
@@ -27,6 +27,9 @@ export default function Lobby() {
   const fetchLobby = useCallback(async () => {
     try {
       const { data } = await api.get(`/api/lobbies/${questId}`)
+      console.log('Lobby state:', data)
+      console.log('All ready?', data.allReady)
+      console.log('Participants:', data.participants.map(p => ({ name: p.name, isReady: p.isReady })))
       setLobby(data)
       return data
     } catch (err) {
@@ -46,26 +49,35 @@ export default function Lobby() {
       .then(() => fetchLobby())
       .catch(() => fetchLobby())
 
-    // Poll lobby state every 3 seconds
-    const interval = setInterval(fetchLobby, 3000)
+    // Poll lobby state every 2 seconds
+    const interval = setInterval(fetchLobby, 2000)
     return () => clearInterval(interval)
   }, [questId, fetchLobby])
 
+  // Separate effect for countdown
   useEffect(() => {
+    console.log('Lobby state:', { allReady: lobby?.allReady, countdown })
     if (lobby?.allReady && countdown === null) {
-      let count = 5
-      setCountdown(count)
-      const interval = setInterval(() => {
-        count--
-        setCountdown(count)
-        if (count === 0) {
-          clearInterval(interval)
-          navigate(`/checkin/${questId}`)
-        }
-      }, 1000)
-      return () => clearInterval(interval)
+      console.log('🎯 Starting countdown!')
+      setCountdown(5)
     }
-  }, [lobby?.allReady, countdown, questId, navigate])
+  }, [lobby?.allReady, countdown])
+
+  // Countdown timer
+  useEffect(() => {
+    console.log('⏱️ Countdown effect:', countdown)
+    if (countdown !== null && countdown > 0) {
+      console.log(`Countdown: ${countdown} - setting timeout`)
+      const timer = setTimeout(() => {
+        console.log(`⬇️ Decrementing from ${countdown} to ${countdown - 1}`)
+        setCountdown(countdown - 1)
+      }, 1000)
+      return () => clearTimeout(timer)
+    } else if (countdown === 0) {
+      console.log('🚀 Navigating to checkin!')
+      navigate(`/checkin/${questId}`)
+    }
+  }, [countdown, questId, navigate])
 
   const handleReady = async () => {
     try {

@@ -17,7 +17,7 @@ export default function QRCheckIn() {
   const [lobby, setLobby] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  const [step, setStep] = useState('emote')
+  const [step, setStep] = useState('photo')
   const [emoteChoice, setEmoteChoice] = useState(null)
   const [allEmotesIn, setAllEmotesIn] = useState(false)
   const [reactionConfirmed, setReactionConfirmed] = useState(false)
@@ -28,6 +28,10 @@ export default function QRCheckIn() {
   const [photoUploaded, setPhotoUploaded] = useState(false)
   const [cameraActive, setCameraActive] = useState(false)
   const [cameraStream, setCameraStream] = useState(null)
+  const [wordStatus, setWordStatus] = useState(null)
+  const [pollingWordStatus, setPollingWordStatus] = useState(false)
+  const [groupPhotoData, setGroupPhotoData] = useState(null)
+  const [pollingGroupPhoto, setPollingGroupPhoto] = useState(false)
 
   useEffect(() => {
     const init = async () => {
@@ -39,6 +43,9 @@ export default function QRCheckIn() {
         // Generate check-in code from backend
         const codeRes = await api.get(`/api/checkin/${questId}/code`)
         setCheckInCode(codeRes.data.code)
+        
+        // Start polling for group photo immediately
+        setPollingGroupPhoto(true)
       } catch (err) {
         console.error('Failed to init check-in:', err)
       } finally {
@@ -83,6 +90,14 @@ export default function QRCheckIn() {
 
   const signalCount = Object.values(signals).filter(Boolean).length
 
+  const handlePhotoContinue = () => {
+    if (groupPhotoData?.photoData) {
+      setStep('emote')
+    } else {
+      alert('Please take or upload a group photo first')
+    }
+  }
+
   const finishIfQualified = () => {
     if (signalCount >= 2 && !checkedIn) {
       handleCheckIn()
@@ -104,12 +119,36 @@ export default function QRCheckIn() {
     setStep('memory')
   }
 
-  const handleMemorySelect = (word) => {
+  const handleMemorySelect = async (word) => {
+    console.log('📝 User selected word:', word)
     setMemoryWord(word)
     markSignal('memory')
-    const otherWord = WORDS.filter((w) => w !== word)[Math.floor(Math.random() * (WORDS.length - 1))]
-    setGroupMemory(`${word} + ${otherWord}`)
-    finishIfQualified()
+    
+    try {
+      const { data } = await api.post('/api/quests/word-selection', {
+        questId,
+        word,
+      })
+      
+      console.log('✓ Word selection submitted:', data)
+      setWordStatus(data)
+      
+      if (data.allSameWord) {
+        console.log('✓ All participants agreed!')
+        setGroupMemory(word)
+        finishIfQualified()
+      } else {
+        console.log('⏳ Waiting for other participants...')
+        // Start polling for word status
+        setPollingWordStatus(true)
+      }
+    } catch (err) {
+      console.error('Failed to submit word selection:', err)
+      // Fallback to old behavior
+      const otherWord = WORDS.filter((w) => w !== word)[Math.floor(Math.random() * (WORDS.length - 1))]
+      setGroupMemory(`${word} + ${otherWord}`)
+      finishIfQualified()
+    }
   }
 
   const quest = lobby?.quest || {}
@@ -148,16 +187,42 @@ export default function QRCheckIn() {
     reader.readAsDataURL(file)
   }
 
-  const handleSavePhoto = () => {
-    if (photoPreview && saveGroupPhoto) {
-      saveGroupPhoto({
-        imageBase64: photoPreview,
-        questTitle: quest?.title || 'Shared Moment',
-        questIcon: quest?.icon || '📷',
+  const handleSavePhoto = async () => {
+    if (!photoPreview) return
+    
+    try {
+      console.log('📸 Uploading photo for quest:', questId)
+      const response = await api.post('/api/quests/photos/upload', {
+        questId,
+        imageData: photoPreview,
         groupMemory: groupMemory || 'Together',
         groupSize: participants.length,
       })
+      
+      console.log('✓ Photo uploaded:', response.data)
+      
+      // Also save to local store for immediate display
+      if (saveGroupPhoto) {
+        saveGroupPhoto({
+          imageBase64: photoPreview,
+          questTitle: quest?.title || 'Shared Moment',
+          questIcon: quest?.icon || '📷',
+          groupMemory: groupMemory || 'Together',
+          groupSize: participants.length,
+        })
+      }
+      
       setPhotoUploaded(true)
+      // Immediately set group photo data so this user can see it
+      setGroupPhotoData({
+        photoData: photoPreview,
+        uploadedBy: user?.name || 'You'
+      })
+      
+      console.log('✓ Photo saved locally, polling stopped')
+    } catch (err) {
+      console.error('Failed to upload photo:', err)
+      alert('Failed to save photo. Please try again.')
     }
   }
 
@@ -203,6 +268,65 @@ export default function QRCheckIn() {
       }
     }
   }, [cameraStream])
+
+  // Poll word selection status when waiting for others
+  useEffect(() => {
+    if (!pollingWordStatus) return
+    
+    console.log('🔄 Starting word status polling for quest:', questId)
+    
+    const interval = setInterval(async () => {
+      try {
+        const { data } = await api.get(`/api/quests/${questId}/word-status`)
+        console.log('📝 Word status:', data)
+        setWordStatus(data)
+        
+        if (data.allSameWord) {
+          console.log('✓ All participants selected the same word!')
+          setGroupMemory(data.chosenWord)
+          setPollingWordStatus(false)
+          finishIfQualified()
+        }
+      } catch (err) {
+        console.error('Failed to fetch word status:', err)
+      }
+    }, 2000)
+    
+    return () => {
+      console.log('🛑 Stopping word status polling')
+      clearInterval(interval)
+    }
+  }, [pollingWordStatus, questId])
+
+  // Poll for group photo uploaded by other participants
+  useEffect(() => {
+    if (!pollingGroupPhoto) return
+    
+    console.log('🔄 Starting group photo polling for quest:', questId)
+    
+    const interval = setInterval(async () => {
+      try {
+        const { data } = await api.get(`/api/quests/${questId}/group-photo`)
+        console.log('📷 Group photo status:', data)
+        
+        if (data.photoData && !groupPhotoData) {
+          console.log('✓ Group photo found! Updating...')
+          setGroupPhotoData({
+            photoData: data.photoData,
+            uploadedBy: data.uploadedBy || 'Someone',
+            groupMemory: data.groupMemory
+          })
+        }
+      } catch (err) {
+        console.error('Failed to fetch group photo:', err)
+      }
+    }, 1500) // Poll every 1.5 seconds
+    
+    return () => {
+      console.log('🛑 Stopping group photo polling')
+      clearInterval(interval)
+    }
+  }, [pollingGroupPhoto, questId, groupPhotoData])
 
   if (loading) {
     return (
@@ -255,6 +379,115 @@ export default function QRCheckIn() {
               </p>
             </div>
 
+            {/* Group Photo Section - Always visible */}
+            <div className="pixel-card p-6 mb-6">
+              <h3 className="font-pixel text-xs text-pixel-yellow mb-3">
+                Take Group Photo
+              </h3>
+              <p className="text-xs text-pixel-light font-game mb-4">
+                Only one person needs to take a photo. Once uploaded, everyone can see it.
+              </p>
+              
+              {!groupPhotoData ? (
+                !cameraActive && !photoPreview ? (
+                  <div>
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                      <button
+                        onClick={handleStartCamera}
+                        className="pixel-card p-4 text-center hover:border-pixel-blue transition"
+                      >
+                        <p className="text-2xl mb-2">📷</p>
+                        <p className="text-xs font-game text-pixel-light">
+                          Take Photo
+                        </p>
+                      </button>
+                      <label className="cursor-pointer">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handlePhotoUpload}
+                          className="hidden"
+                        />
+                        <div className="pixel-card p-4 text-center hover:border-pixel-blue transition">
+                          <p className="text-2xl mb-2">📁</p>
+                          <p className="text-xs font-game text-pixel-light">
+                            Upload Photo
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+                    {!cameraActive && !photoPreview && (
+                      <p className="text-xs text-pixel-blue font-game text-center">
+                        💡 Waiting for someone to share a photo...
+                      </p>
+                    )}
+                  </div>
+                ) : cameraActive ? (
+                  <div>
+                    <video
+                      id="camera-video"
+                      autoPlay
+                      playsInline
+                      className="w-full max-h-60 object-cover mb-3 pixel-card"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={handleTakePhoto}
+                        className="pixel-button bg-pixel-blue text-white text-xs py-2"
+                      >
+                        Snap
+                      </button>
+                      <button
+                        onClick={handleStopCamera}
+                        className="pixel-button bg-pixel-pink text-white text-xs py-2"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <img
+                      src={photoPreview}
+                      alt="Preview"
+                      className="w-full max-h-40 object-cover mb-3 pixel-card"
+                    />
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                      <button
+                        onClick={() => setPhotoPreview(null)}
+                        className="pixel-button bg-pixel-pink text-white text-xs py-2"
+                      >
+                        Change Photo
+                      </button>
+                      <button
+                        onClick={handleSavePhoto}
+                        className="pixel-button bg-pixel-blue text-white text-xs py-2"
+                      >
+                        {photoUploaded ? 'Saved ✓' : 'Save Photo'}
+                      </button>
+                    </div>
+                  </div>
+                )
+              ) : (
+                <div className="text-center">
+                  <img
+                    src={groupPhotoData.photoData}
+                    alt="Group Photo"
+                    className="w-full max-h-40 object-cover mb-3 pixel-card"
+                  />
+                  <p className="text-xs text-pixel-green font-game mb-3">
+                    ✓ Group photo captured by {groupPhotoData.uploadedBy || 'someone'}
+                  </p>
+                  <button
+                    onClick={() => setStep('emote')}
+                    className="pixel-button bg-pixel-blue text-white w-full py-3"
+                  >
+                    Continue →
+                  </button>
+                </div>
+              )}
+            </div>
+
             {step === 'emote' && (
               <div className="pixel-card p-6 mb-6">
                 <h3 className="font-pixel text-xs text-pixel-yellow mb-3">
@@ -305,19 +538,39 @@ export default function QRCheckIn() {
                   3. One-Word Group Memory
                 </h3>
                 <p className="text-xs text-pixel-light font-game mb-4">
-                  In one word, how did this feel?
+                  In one word, how did this feel? Everyone must choose the same word.
                 </p>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {WORDS.map((word) => (
-                    <button
-                      key={word}
-                      onClick={() => handleMemorySelect(word)}
-                      className="pixel-card p-4 text-center hover:border-pixel-yellow"
-                    >
-                      <span className="text-sm font-game text-pixel-light">{word}</span>
-                    </button>
-                  ))}
-                </div>
+                {memoryWord ? (
+                  <div className="text-center">
+                    <div className="pixel-card p-4 bg-pixel-blue bg-opacity-20 mb-4">
+                      <p className="text-sm font-game text-pixel-yellow mb-2">
+                        You selected: {memoryWord}
+                      </p>
+                      {wordStatus && !wordStatus.allSameWord && (
+                        <p className="text-xs text-pixel-light font-game">
+                          Waiting for others... ({wordStatus.totalSelections}/{wordStatus.totalParticipants} selected)
+                        </p>
+                      )}
+                      {wordStatus && wordStatus.allSameWord && (
+                        <p className="text-xs text-pixel-green font-game">
+                          ✓ Everyone agreed on: {groupMemory}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {WORDS.map((word) => (
+                      <button
+                        key={word}
+                        onClick={() => handleMemorySelect(word)}
+                        className="pixel-card p-4 text-center hover:border-pixel-yellow"
+                      >
+                        <span className="text-sm font-game text-pixel-light">{word}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

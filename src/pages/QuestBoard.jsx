@@ -30,56 +30,76 @@ export default function QuestBoard() {
     }
 
     const fetchData = async () => {
+      setLoading(true)
       try {
-        // Fetch recommendations, instances, and monster in parallel
-        const [recs, instancesRes, monsterRes] = await Promise.all([
-          getRecommendations(),
-          api.get('/api/quests/instances', { params: { hub_id: currentHub.id } }),
-          api.get('/api/monsters/me'),
-        ])
+        console.log('Fetching quests for hub:', currentHub.id)
+        
+        // Fetch quest instances from backend
+        const instancesRes = await api.get('/api/quests/instances', { 
+          params: { hub_id: currentHub.id } 
+        })
+        
+        console.log('Quest instances response:', instancesRes.data)
+        
+        // Try to fetch monster data
+        try {
+          const monsterRes = await api.get('/api/monsters/me')
+          if (monsterRes.data && monsterRes.data.id) {
+            setMonster(monsterRes.data)
+          }
+        } catch (err) {
+          console.log('Could not fetch monster data:', err)
+        }
 
+        // Get recommendations
+        const recs = getRecommendations()
         setRecommendations(recs)
-        if (monsterRes.data && monsterRes.data.id) setMonster(monsterRes.data)
 
         // Mark which quests are recommended
-        const instances = instancesRes.data.map(q => ({
+        const instances = (instancesRes.data || []).map(q => ({
           ...q,
-          isRecommended: recs.recommendedTypes.includes(q.type),
+          isRecommended: recs?.recommendedTypes?.includes(q.type) || false,
         }))
+        
+        console.log('Processed quests:', instances)
         setQuests(instances)
       } catch (err) {
         console.error('Failed to load quest board:', err)
+        console.error('Error details:', err.response?.data || err.message)
+        setQuests([])
       } finally {
         setLoading(false)
       }
     }
 
     fetchData()
-  }, [currentHub])
+  }, [currentHub, navigate, getRecommendations])
 
   const filteredQuests = quests.filter(quest => {
     if (filter === 'all') return true
-    return quest.category === filter
+    // Match filter with quest type or tags
+    const typeMatch = quest.type?.toLowerCase().includes(filter.toLowerCase())
+    const tagMatch = quest.tags?.some(tag => tag.toLowerCase().includes(filter.toLowerCase()))
+    return typeMatch || tagMatch
   })
 
   const handleJoinQuest = async (quest) => {
     try {
-      // Create a new instance from the template, or join existing instance
-      let instanceId = quest.instanceId
+      const instanceId = quest.instanceId
+      
       if (!instanceId) {
-        // This is a template — create a new instance
-        const { data } = await api.post('/api/quests/instances', {
-          templateId: quest.id,
-          hubId: currentHub.id,
-        })
-        instanceId = data.instanceId
-      } else {
-        // Join the existing instance
-        await api.post(`/api/quests/instances/${instanceId}/join`)
+        console.error('No instance ID found for quest')
+        return
       }
+
+      // Join the existing instance
+      await api.post(`/api/quests/instances/${instanceId}/join`)
+      
+      // Navigate to lobby
       navigate(`/lobby/${instanceId}`)
     } catch (err) {
       console.error('Failed to join quest:', err)
+      alert('Could not join quest. Please try again.')
     }
   }
 
@@ -141,15 +161,15 @@ export default function QuestBoard() {
           </div>
         )}
 
-        {loading && (
+        {loading ? (
           <div className="pixel-card p-8 text-center">
             <p className="font-game text-pixel-light animate-pulse">Loading quests...</p>
           </div>
-        )}
-
+        ) : (
+          <>
         {/* Quest Cards */}
         <div className="space-y-4">
-          {filteredQuests.map((quest) => (
+          {filteredQuests.length > 0 && filteredQuests.map((quest) => (
             <div
               key={quest.instanceId || quest.id}
               className={`
@@ -206,19 +226,23 @@ export default function QuestBoard() {
           ))}
         </div>
 
-        {!loading && filteredQuests.length === 0 && (
+        {filteredQuests.length === 0 && (
           <div className="pixel-card p-8 text-center">
             <p className="text-4xl mb-4">🔍</p>
-            <p className="font-game text-pixel-light">
-              No quests available in this category
+            <p className="font-game text-pixel-light mb-2">
+              No quests available {filter !== 'all' ? 'in this category' : 'right now'}
             </p>
-            <button
-              onClick={() => setFilter('all')}
-              className="pixel-button bg-pixel-blue text-white mt-4"
-            >
-              View All Quests
-            </button>
+            {filter !== 'all' && (
+              <button
+                onClick={() => setFilter('all')}
+                className="pixel-button bg-pixel-blue text-white mt-4"
+              >
+                View All Quests
+              </button>
+            )}
           </div>
+        )}
+          </>
         )}
 
         {/* Info Card */}

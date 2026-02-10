@@ -164,6 +164,266 @@ SEED_TEMPLATES = [
         "type": "art_cafe",
         "tags": ["creative", "indoor", "relaxing"],
     },
+    {
+        "id": "board_game_night",
+        "title": "Board Game Night",
+        "description": "Gather for a fun evening of board games and snacks",
+        "duration": 120,
+        "min_participants": 3,
+        "max_participants": 6,
+        "difficulty": "easy",
+        "crystals": 150,
+        "icon": "\U0001F3B2",
+        "type": "board_game",
+        "tags": ["indoor", "social", "evening", "games"],
+    },
+    {
+        "id": "cooking_together",
+        "title": "Cooking Together",
+        "description": "Learn to cook a new recipe and share a meal together",
+        "duration": 90,
+        "min_participants": 2,
+        "max_participants": 4,
+        "difficulty": "medium",
+        "crystals": 125,
+        "icon": "\U0001F468\u200D\U0001F373",
+        "type": "cooking",
+        "tags": ["indoor", "creative", "food", "skill-building"],
+    },
+    {
+        "id": "photo_walk",
+        "title": "Photography Walk",
+        "description": "Explore the neighborhood and practice photography skills",
+        "duration": 60,
+        "min_participants": 2,
+        "max_participants": 5,
+        "difficulty": "easy",
+        "crystals": 80,
+        "icon": "\U0001F4F8",
+        "type": "photo_walk",
+        "tags": ["outdoor", "creative", "exploration", "art"],
+    },
+    {
+        "id": "karaoke_session",
+        "title": "Karaoke Session",
+        "description": "Sing your heart out with friends at a karaoke spot",
+        "duration": 90,
+        "min_participants": 3,
+        "max_participants": 8,
+        "difficulty": "easy",
+        "crystals": 110,
+        "icon": "\U0001F3A4",
+        "type": "karaoke",
+        "tags": ["indoor", "social", "music", "fun"],
+    },
+    {
+        "id": "hiking_adventure",
+        "title": "Hiking Adventure",
+        "description": "Challenge yourselves with a scenic hiking trail",
+        "duration": 180,
+        "min_participants": 3,
+        "max_participants": 8,
+        "difficulty": "hard",
+        "crystals": 200,
+        "icon": "\u26F0\uFE0F",
+        "type": "hiking",
+        "tags": ["outdoor", "active", "nature", "adventure"],
+    },
+    {
+        "id": "book_club",
+        "title": "Book Club Meeting",
+        "description": "Discuss the latest book club selection over tea",
+        "duration": 75,
+        "min_participants": 3,
+        "max_participants": 8,
+        "difficulty": "easy",
+        "crystals": 95,
+        "icon": "\U0001F4D6",
+        "type": "book_club",
+        "tags": ["indoor", "intellectual", "social", "reading"],
+    },
+    {
+        "id": "movie_night",
+        "title": "Movie Night",
+        "description": "Watch a movie together and discuss afterwards",
+        "duration": 150,
+        "min_participants": 3,
+        "max_participants": 10,
+        "difficulty": "easy",
+        "crystals": 90,
+        "icon": "\U0001F3AC",
+        "type": "movie",
+        "tags": ["indoor", "social", "evening", "entertainment"],
+    },
+    {
+        "id": "beach_cleanup",
+        "title": "Beach Cleanup",
+        "description": "Help clean up the local beach and protect the environment",
+        "duration": 90,
+        "min_participants": 4,
+        "max_participants": 12,
+        "difficulty": "medium",
+        "crystals": 140,
+        "icon": "\U0001F3D6\uFE0F",
+        "type": "volunteer",
+        "tags": ["outdoor", "volunteer", "environment", "community"],
+    },
+    {
+        "id": "yoga_session",
+        "title": "Group Yoga",
+        "description": "Relaxing group yoga session in the park",
+        "duration": 60,
+        "min_participants": 3,
+        "max_participants": 10,
+        "difficulty": "easy",
+        "crystals": 85,
+        "icon": "\U0001F9D8",
+        "type": "fitness",
+        "tags": ["outdoor", "wellness", "relaxing", "health"],
+    },
+    {
+        "id": "trivia_night",
+        "title": "Trivia Night",
+        "description": "Test your knowledge at a local trivia competition",
+        "duration": 120,
+        "min_participants": 3,
+        "max_participants": 6,
+        "difficulty": "medium",
+        "crystals": 130,
+        "icon": "\U0001F9E0",
+        "type": "trivia",
+        "tags": ["indoor", "social", "intellectual", "competitive"],
+    },
+    {
+        "id": "poetry_slam",
+        "title": "Poetry Slam",
+        "description": "Share poems and creative writing with the group",
+        "duration": 75,
+        "min_participants": 3,
+        "max_participants": 10,
+        "difficulty": "easy",
+        "crystals": 95,
+        "icon": "\U0001F4DD",
+        "type": "poetry",
+        "tags": ["indoor", "creative", "social", "art"],
+    },
+    {
+        "id": "bike_ride",
+        "title": "Group Bike Ride",
+        "description": "Explore the city on two wheels together",
+        "duration": 90,
+        "min_participants": 3,
+        "max_participants": 8,
+        "difficulty": "medium",
+        "crystals": 115,
+        "icon": "\U0001F6B4",
+        "type": "biking",
+        "tags": ["outdoor", "active", "exploration", "fitness"],
+    },
+    {
+        "id": "picnic_park",
+        "title": "Picnic in the Park",
+        "description": "Bring snacks and enjoy outdoor time together",
+        "duration": 90,
+        "min_participants": 3,
+        "max_participants": 10,
+        "difficulty": "easy",
+        "crystals": 85,
+        "icon": "\U0001F9FA",
+        "type": "picnic",
+        "tags": ["outdoor", "social", "food", "relaxing"],
+    },
+    {
+        "id": "skill_swap",
+        "title": "Skill Swap Workshop",
+        "description": "Teach and learn new skills from each other",
+        "duration": 60,
+        "min_participants": 3,
+        "max_participants": 6,
+        "difficulty": "medium",
+        "crystals": 105,
+        "icon": "\U0001F4A1",
+        "type": "learning",
+        "tags": ["indoor", "skill-building", "collaborative", "educational"],
+    },
+    {
+        "id": "farmers_market",
+        "title": "Farmers Market Visit",
+        "description": "Explore the local farmers market and support local vendors",
+        "duration": 60,
+        "min_participants": 2,
+        "max_participants": 6,
+        "difficulty": "easy",
+        "crystals": 70,
+        "icon": "\U0001F96C",
+        "type": "exploration",
+        "tags": ["outdoor", "social", "food", "community"],
+    },
+    {
+        "id": "meditation_circle",
+        "title": "Meditation Circle",
+        "description": "Practice mindfulness together in a peaceful setting",
+        "duration": 45,
+        "min_participants": 3,
+        "max_participants": 12,
+        "difficulty": "easy",
+        "crystals": 75,
+        "icon": "\U0001F9D8\u200D\u2640\uFE0F",
+        "type": "wellness",
+        "tags": ["outdoor", "wellness", "relaxing", "mindfulness"],
+    },
+    {
+        "id": "dance_class",
+        "title": "Dance Class",
+        "description": "Learn new dance moves and have fun moving together",
+        "duration": 75,
+        "min_participants": 4,
+        "max_participants": 12,
+        "difficulty": "medium",
+        "crystals": 110,
+        "icon": "\U0001F483",
+        "type": "dance",
+        "tags": ["indoor", "active", "fun", "fitness"],
+    },
+    {
+        "id": "star_gazing",
+        "title": "Star Gazing Night",
+        "description": "Watch the night sky and learn about constellations",
+        "duration": 90,
+        "min_participants": 2,
+        "max_participants": 8,
+        "difficulty": "easy",
+        "crystals": 80,
+        "icon": "\u2728",
+        "type": "stargazing",
+        "tags": ["outdoor", "evening", "educational", "nature"],
+    },
+    {
+        "id": "volunteering",
+        "title": "Community Volunteering",
+        "description": "Give back to the community through volunteer work",
+        "duration": 120,
+        "min_participants": 4,
+        "max_participants": 15,
+        "difficulty": "medium",
+        "crystals": 160,
+        "icon": "\u2764\uFE0F",
+        "type": "volunteer",
+        "tags": ["outdoor", "volunteer", "community", "meaningful"],
+    },
+    {
+        "id": "pottery_class",
+        "title": "Pottery Workshop",
+        "description": "Get hands-on with clay and create pottery together",
+        "duration": 120,
+        "min_participants": 3,
+        "max_participants": 8,
+        "difficulty": "medium",
+        "crystals": 135,
+        "icon": "\U0001FAB4",
+        "type": "pottery",
+        "tags": ["indoor", "creative", "art", "skill-building"],
+    },
 ]
 
 
@@ -322,23 +582,30 @@ def _seed_data() -> None:
                 db.add(models.QuestTemplate(**t))
             db.commit()
 
-        # Seed one quest instance per hub if empty
+        # Seed multiple quest instances per hub if empty
         if db.query(models.QuestInstance).count() == 0:
             hubs_list = db.query(models.Hub).all()
             templates_list = db.query(models.QuestTemplate).all()
-            for i, hub in enumerate(hubs_list):
-                tpl = templates_list[i % len(templates_list)]
-                inst_id = f"inst_{hub.id}_{tpl.id}"
-                db.add(models.QuestInstance(
-                    instance_id=inst_id,
-                    template_id=tpl.id,
-                    hub_id=hub.id,
-                    current_participants=0,
-                    is_active=True,
-                    start_time=None,
-                    location=hub.location,
-                    deadline=time.time() + tpl.duration * 60,
-                ))
+            
+            # Create more quest instances per hub
+            for hub in hubs_list:
+                # Main Campus Hub gets more quests (12), others get 6
+                num_quests = 12 if hub.id == "hub_campus_main" else 6
+                num_quests = min(num_quests, len(templates_list))
+                
+                for i in range(num_quests):
+                    tpl = templates_list[i % len(templates_list)]
+                    inst_id = f"inst_{hub.id}_{tpl.id}_{i}"
+                    db.add(models.QuestInstance(
+                        instance_id=inst_id,
+                        template_id=tpl.id,
+                        hub_id=hub.id,
+                        current_participants=0,
+                        is_active=True,
+                        start_time=None,
+                        location=hub.location,
+                        deadline=time.time() + tpl.duration * 60,
+                    ))
             db.commit()
     finally:
         db.close()
@@ -426,6 +693,19 @@ class QuestInstanceSchema(BaseModel):
     location: str = ""
     deadline: Optional[float] = None
 
+class CreateTemplateRequest(BaseModel):
+    id: str
+    title: str
+    description: str
+    duration: int
+    minParticipants: int
+    maxParticipants: int
+    difficulty: str
+    crystals: int
+    icon: str = "🎯"
+    type: str
+    tags: list[str] = Field(default_factory=list)
+
 class CreateInstanceRequest(BaseModel):
     templateId: str
     hubId: str
@@ -467,6 +747,16 @@ class CheckInResult(BaseModel):
     questName: str
     connections: int
     xp: int = 10
+
+class UploadPhotoRequest(BaseModel):
+    questId: str
+    imageData: str  # base64 encoded
+    groupMemory: Optional[str] = None
+    groupSize: int = 1
+
+class WordSelectionRequest(BaseModel):
+    questId: str
+    word: str
 
 class MonsterSchema(BaseModel):
     id: Optional[str] = None
@@ -566,6 +856,69 @@ def root():
 @app.get("/api/health", tags=["Utility"])
 def health():
     return {"status": "ok", "timestamp": time.time()}
+
+
+@app.delete("/api/admin/cleanup-demo-users", tags=["Utility"])
+def cleanup_demo_users(db: Session = Depends(get_db)):
+    """Remove all demo users (demo_*) from quest instances."""
+    # Delete demo user participants
+    demo_participants = db.query(models.InstanceParticipant).filter(
+        models.InstanceParticipant.user_id.like('demo_%')
+    ).all()
+    
+    affected_instances = set()
+    for p in demo_participants:
+        affected_instances.add(p.instance_id)
+        db.delete(p)
+    
+    # Update participant counts
+    for instance_id in affected_instances:
+        inst = db.query(models.QuestInstance).filter(
+            models.QuestInstance.instance_id == instance_id
+        ).first()
+        if inst:
+            count = db.query(models.InstanceParticipant).filter(
+                models.InstanceParticipant.instance_id == instance_id
+            ).count()
+            inst.current_participants = count
+    
+    db.commit()
+    
+    return {
+        "removed": len(demo_participants),
+        "affected_quests": len(affected_instances)
+    }
+
+
+@app.delete("/api/admin/cleanup-all-participants", tags=["Utility"])
+def cleanup_all_participants(db: Session = Depends(get_db)):
+    """Remove ALL participants from ALL quest instances (fresh start)."""
+    # Delete all participants
+    all_participants = db.query(models.InstanceParticipant).all()
+    
+    affected_instances = set()
+    for p in all_participants:
+        affected_instances.add(p.instance_id)
+        db.delete(p)
+    
+    # Reset all participant counts to 0
+    for instance_id in affected_instances:
+        inst = db.query(models.QuestInstance).filter(
+            models.QuestInstance.instance_id == instance_id
+        ).first()
+        if inst:
+            inst.current_participants = 0
+    
+    # Also clean up lobby participants
+    db.query(models.LobbyParticipant).delete()
+    
+    db.commit()
+    
+    return {
+        "removed": len(all_participants),
+        "affected_quests": len(affected_instances),
+        "message": "All quest participants cleared"
+    }
 
 
 # ── Auth ─────────────────────────────────────────────────────────────────────
@@ -706,6 +1059,43 @@ def list_quest_templates(db: Session = Depends(get_db)):
     return [template_to_dict(t) for t in templates]
 
 
+@app.post("/api/quests/templates", tags=["Quests"])
+def create_quest_template(body: CreateTemplateRequest, db: Session = Depends(get_db)):
+    """Create a new quest template."""
+    # Check if template with this ID already exists
+    existing = db.query(models.QuestTemplate).filter(models.QuestTemplate.id == body.id).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Template with this ID already exists")
+    
+    # Validate difficulty
+    if body.difficulty not in ["easy", "medium", "hard"]:
+        raise HTTPException(status_code=400, detail="Difficulty must be 'easy', 'medium', or 'hard'")
+    
+    # Validate participants
+    if body.minParticipants < 1 or body.maxParticipants < body.minParticipants:
+        raise HTTPException(status_code=400, detail="Invalid participant range")
+    
+    # Create the template
+    template = models.QuestTemplate(
+        id=body.id,
+        title=body.title,
+        description=body.description,
+        duration=body.duration,
+        min_participants=body.minParticipants,
+        max_participants=body.maxParticipants,
+        difficulty=body.difficulty,
+        crystals=body.crystals,
+        icon=body.icon,
+        type=body.type,
+        tags=body.tags,
+    )
+    db.add(template)
+    db.commit()
+    db.refresh(template)
+    
+    return template_to_dict(template)
+
+
 @app.get("/api/quests/instances", tags=["Quests"])
 def list_quest_instances(hub_id: Optional[str] = Query(None), db: Session = Depends(get_db)):
     q = db.query(models.QuestInstance).filter(models.QuestInstance.is_active == True)
@@ -824,7 +1214,7 @@ def _build_lobby_state(db: Session, instance_id: str) -> dict:
         })
 
     all_ready = (
-        len(participants) >= tpl.min_participants
+        len(participants) >= 1  # For development: allow solo testing (change to tpl.min_participants for production)
         and all(p["isReady"] for p in participants)
     ) if participants else False
 
@@ -1014,6 +1404,152 @@ def confirm_checkin(
         "questName": quest_name,
         "connections": connections_made,
         "xp": 10,
+    }
+
+
+@app.post("/api/quests/photos/upload", tags=["Quest Photos"])
+def upload_quest_photo(
+    body: UploadPhotoRequest,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Upload a group photo after completing a quest."""
+    photo_id = f"photo_{uuid.uuid4().hex[:12]}"
+    
+    db.add(models.QuestPhoto(
+        id=photo_id,
+        quest_id=body.questId,
+        user_id=user["id"],
+        image_data=body.imageData,
+        group_memory=body.groupMemory,
+        group_size=body.groupSize,
+        timestamp=time.time() * 1000,
+    ))
+    db.commit()
+    
+    return {
+        "success": True,
+        "photoId": photo_id,
+        "message": "Photo saved to gallery"
+    }
+
+
+@app.get("/api/quests/photos/gallery", tags=["Quest Photos"])
+def get_gallery_photos(
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get all gallery photos for the current user."""
+    photos = db.query(models.QuestPhoto).filter(
+        models.QuestPhoto.user_id == user["id"]
+    ).order_by(models.QuestPhoto.timestamp.desc()).all()
+    
+    result = []
+    for photo in photos:
+        result.append({
+            "id": photo.id,
+            "questId": photo.quest_id,
+            "imageData": photo.image_data,
+            "groupMemory": photo.group_memory,
+            "groupSize": photo.group_size,
+            "timestamp": photo.timestamp,
+        })
+    
+    return {"photos": result}
+
+
+@app.get("/api/quests/{quest_id}/group-photo", tags=["Quest Photos"])
+def get_group_photo(
+    quest_id: str,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get the group photo for a quest (uploaded by any participant)."""
+    photo = db.query(models.QuestPhoto).filter(
+        models.QuestPhoto.quest_id == quest_id
+    ).order_by(models.QuestPhoto.timestamp.desc()).first()
+    
+    if photo:
+        return {
+            "photoData": photo.image_data,
+            "uploadedBy": db.query(models.User).filter(models.User.id == photo.user_id).first().name,
+            "groupMemory": photo.group_memory,
+            "timestamp": photo.timestamp,
+        }
+    
+    return {"photoData": None}
+
+
+@app.post("/api/quests/word-selection", tags=["Quest Photos"])
+def submit_word_selection(
+    body: WordSelectionRequest,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Submit a word selection for group memory verification."""
+    # Remove any previous selection by this user for this quest
+    db.query(models.WordSelection).filter(
+        models.WordSelection.quest_id == body.questId,
+        models.WordSelection.user_id == user["id"]
+    ).delete()
+    
+    # Add new selection
+    db.add(models.WordSelection(
+        quest_id=body.questId,
+        user_id=user["id"],
+        word=body.word,
+        timestamp=time.time() * 1000,
+    ))
+    db.commit()
+    
+    # Check if all participants selected the same word
+    selections = db.query(models.WordSelection).filter(
+        models.WordSelection.quest_id == body.questId
+    ).all()
+    
+    # Get participant count
+    participants = db.query(models.LobbyParticipant).filter(
+        models.LobbyParticipant.instance_id == body.questId
+    ).all()
+    
+    all_selected = len(selections) == len(participants)
+    all_same_word = all_selected and len(set(s.word for s in selections)) == 1
+    
+    return {
+        "success": True,
+        "allSelected": all_selected,
+        "allSameWord": all_same_word,
+        "selectedWord": body.word,
+        "totalSelections": len(selections),
+        "totalParticipants": len(participants),
+    }
+
+
+@app.get("/api/quests/{quest_id}/word-status", tags=["Quest Photos"])
+def get_word_selection_status(
+    quest_id: str,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get the current status of word selections for a quest."""
+    selections = db.query(models.WordSelection).filter(
+        models.WordSelection.quest_id == quest_id
+    ).all()
+    
+    participants = db.query(models.LobbyParticipant).filter(
+        models.LobbyParticipant.instance_id == quest_id
+    ).all()
+    
+    all_selected = len(selections) == len(participants)
+    all_same_word = all_selected and len(set(s.word for s in selections)) == 1
+    chosen_word = selections[0].word if selections and all_same_word else None
+    
+    return {
+        "allSelected": all_selected,
+        "allSameWord": all_same_word,
+        "chosenWord": chosen_word,
+        "totalSelections": len(selections),
+        "totalParticipants": len(participants),
     }
 
 

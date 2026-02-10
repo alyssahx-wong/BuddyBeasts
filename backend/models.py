@@ -190,3 +190,25 @@ class CheckinCode(Base):
     quest_id = Column(String, nullable=False)
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
     timestamp = Column(Float, nullable=False)
+
+
+class QuestPhoto(Base):
+    __tablename__ = "quest_photos"
+
+    id = Column(String, primary_key=True)
+    quest_id = Column(String, nullable=False)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    image_data = Column(Text, nullable=False)  # base64 encoded image
+    group_memory = Column(String, nullable=True)
+    group_size = Column(Integer, nullable=False, default=1)
+    timestamp = Column(Float, nullable=False)
+
+
+class WordSelection(Base):
+    __tablename__ = "word_selections"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    quest_id = Column(String, nullable=False)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    word = Column(String, nullable=False)
+    timestamp = Column(Float, nullable=False)
