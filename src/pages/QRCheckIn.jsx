@@ -12,7 +12,7 @@ export default function QRCheckIn() {
   const participants = location.state?.participants || []
 
   const { user } = useAuthStore()
-  const { addCrystals, addCoins, completeQuest, monster } = useMonsterStore()
+  const { addCrystals, addCoins, completeQuest, monster, saveGroupPhoto } = useMonsterStore()
   const { trackQuestComplete } = useDataStore()
 
   const [checkedIn, setCheckedIn] = useState(false)
@@ -25,6 +25,10 @@ export default function QRCheckIn() {
   const [memoryWord, setMemoryWord] = useState(null)
   const [groupMemory, setGroupMemory] = useState(null)
   const [signals, setSignals] = useState({ emote: false, reaction: false, memory: false })
+  const [photoPreview, setPhotoPreview] = useState(null)
+  const [photoUploaded, setPhotoUploaded] = useState(false)
+  const [cameraActive, setCameraActive] = useState(false)
+  const [cameraStream, setCameraStream] = useState(null)
 
   useEffect(() => {
     if (!quest) {
@@ -117,6 +121,74 @@ export default function QRCheckIn() {
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
   }
+
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const base64 = event.target?.result
+      setPhotoPreview(base64)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleSavePhoto = () => {
+    if (photoPreview) {
+      saveGroupPhoto({
+        imageBase64: photoPreview,
+        questTitle: quest?.title || 'Shared Moment',
+        questIcon: quest?.icon || '📷',
+        groupMemory: groupMemory || 'Together',
+        groupSize: participants.length,
+      })
+      setPhotoUploaded(true)
+    }
+  }
+
+  const handleStartCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+      })
+      setCameraStream(stream)
+      setCameraActive(true)
+    } catch (err) {
+      console.error('Camera access denied:', err)
+      alert('Camera access is required to take a photo')
+    }
+  }
+
+  const handleTakePhoto = () => {
+    const video = document.getElementById('camera-video')
+    if (video) {
+      const canvas = document.createElement('canvas')
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+      const ctx = canvas.getContext('2d')
+      ctx?.drawImage(video, 0, 0)
+      const photoData = canvas.toDataURL('image/jpeg')
+      setPhotoPreview(photoData)
+      handleStopCamera()
+    }
+  }
+
+  const handleStopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((track) => track.stop())
+      setCameraStream(null)
+    }
+    setCameraActive(false)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach((track) => track.stop())
+      }
+    }
+  }, [cameraStream])
 
   if (!quest) return null
 
@@ -241,7 +313,7 @@ export default function QRCheckIn() {
                   <div className="text-3xl mb-2">🐥 🐥 🐥</div>
                   <p className="text-xs text-pixel-blue font-game">This group felt: {groupMemory}</p>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 mb-6">
                   <button
                     onClick={handleSaveSnapshot}
                     className="pixel-button bg-pixel-blue text-white w-full py-3"
@@ -254,6 +326,90 @@ export default function QRCheckIn() {
                   >
                     Finish
                   </button>
+                </div>
+
+                {/* Photo Upload Section */}
+                <div className="pixel-card p-4 bg-pixel-purple bg-opacity-20">
+                  <p className="text-xs text-pixel-yellow font-pixel mb-3">
+                    5️⃣ Optional Group Photo
+                  </p>
+                  {!cameraActive && !photoPreview ? (
+                    <div>
+                      <p className="text-xs text-pixel-light font-game mb-3">
+                        Take or upload a real photo to remember this moment together.
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={handleStartCamera}
+                          className="pixel-card p-4 text-center hover:border-pixel-blue"
+                        >
+                          <p className="text-2xl mb-2">📷</p>
+                          <p className="text-xs font-game text-pixel-light">
+                            Take Photo
+                          </p>
+                        </button>
+                        <label className="cursor-pointer">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handlePhotoUpload}
+                            className="hidden"
+                          />
+                          <div className="pixel-card p-4 text-center hover:border-pixel-blue">
+                            <p className="text-2xl mb-2">📁</p>
+                            <p className="text-xs font-game text-pixel-light">
+                              Upload Photo
+                            </p>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+                  ) : cameraActive ? (
+                    <div>
+                      <video
+                        id="camera-video"
+                        autoPlay
+                        playsInline
+                        className="w-full max-h-60 object-cover mb-3 pixel-card"
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={handleTakePhoto}
+                          className="pixel-button bg-pixel-blue text-white text-xs py-2"
+                        >
+                          📸 Snap
+                        </button>
+                        <button
+                          onClick={handleStopCamera}
+                          className="pixel-button bg-pixel-pink text-white text-xs py-2"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <img
+                        src={photoPreview}
+                        alt="Preview"
+                        className="w-full max-h-40 object-cover mb-3 pixel-card"
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => setPhotoPreview(null)}
+                          className="pixel-button bg-pixel-pink text-white text-xs py-2"
+                        >
+                          Change Photo
+                        </button>
+                        <button
+                          onClick={handleSavePhoto}
+                          className="pixel-button bg-pixel-blue text-white text-xs py-2"
+                        >
+                          {photoUploaded ? '✓ Saved' : 'Save Photo'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

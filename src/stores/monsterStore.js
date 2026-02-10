@@ -26,6 +26,7 @@ export const useMonsterStore = create(
       monsters: [],
       inventory: [],
       eggs: [],
+      groupPhotos: [],
       
       initializeMonster: (userId) => set((state) => {
         const initialized = {
@@ -221,6 +222,24 @@ export const useMonsterStore = create(
         const nextMonster = state.monsters.find((m) => m.id === monsterId)
         if (!nextMonster) return state
         return { monster: nextMonster }
+      }),
+
+      saveGroupPhoto: (photoData) => set((state) => {
+        const photo = {
+          id: `photo_${Date.now()}`,
+          imageBase64: photoData.imageBase64,
+          questTitle: photoData.questTitle,
+          questIcon: photoData.questIcon,
+          groupMemory: photoData.groupMemory,
+          groupSize: photoData.groupSize,
+          timestamp: Date.now(),
+          date: new Date().toLocaleString(),
+        }
+        return { groupPhotos: [...state.groupPhotos, photo] }
+      }),
+
+      deleteGroupPhoto: (photoId) => set((state) => {
+        return { groupPhotos: state.groupPhotos.filter((p) => p.id !== photoId) }
       }),
     }),
     {

@@ -9,6 +9,7 @@ export default function NavigationBar() {
     { path: '/hub', icon: '🏠', label: 'Hub' },
     { path: '/quests', icon: '📋', label: 'Quests' },
     { path: '/chat', icon: '💬', label: 'Chat' },
+    { path: '/gallery', icon: '📸', label: 'Gallery' },
     { path: '/profile', icon: '👾', label: 'Profile' },
   ]
 

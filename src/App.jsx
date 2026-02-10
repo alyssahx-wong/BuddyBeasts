@@ -12,6 +12,7 @@ import Lobby from './pages/Lobby'
 import QRCheckIn from './pages/QRCheckIn'
 import Profile from './pages/Profile'
 import Chat from './pages/Chat'
+import GroupPhotoGallery from './pages/GroupPhotoGallery'
 
 function ProtectedRoute({ children }) {
   const { user } = useAuthStore()
@@ -60,6 +61,11 @@ function App() {
             <Route path="/chat" element={
               <ProtectedRoute>
                 <Chat />
+              </ProtectedRoute>
+            } />
+            <Route path="/gallery" element={
+              <ProtectedRoute>
+                <GroupPhotoGallery />
               </ProtectedRoute>
             } />
             <Route path="/" element={<Navigate to="/hub" />} />
