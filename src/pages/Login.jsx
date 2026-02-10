@@ -4,6 +4,7 @@ import { GoogleLogin } from '@react-oauth/google'
 import { jwtDecode } from 'jwt-decode'
 import { useAuthStore } from '../stores/authStore'
 import { useMonsterStore } from '../stores/monsterStore'
+import LoginBackground from '../components/LoginBackground'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -21,10 +22,9 @@ export default function Login() {
       }
       
       setUser(user)
-      initializeMonster(user.id)
       
-      // Navigate to hub selection for location/hub assignment
-      navigate('/hub-selection')
+      // Navigate to personality quiz first
+      navigate('/quiz')
     } catch (error) {
       console.error('Login error:', error)
     }
@@ -39,21 +39,21 @@ export default function Login() {
     const demoUser = {
       id: 'demo_' + Date.now(),
       name: 'Demo Player',
-      email: 'demo@karmaloop.com',
+      email: 'demo@buddybeasts.com',
       picture: null,
     }
     
     setUser(demoUser)
-    initializeMonster(demoUser.id)
-    navigate('/hub-selection')
+    navigate('/quiz')
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-pixel-dark to-pixel-purple">
-      <div className="max-w-md w-full pixel-card p-8 text-center">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      <LoginBackground />
+      <div className="max-w-md w-full pixel-card p-8 text-center relative z-10">
         <div className="mb-8">
           <h1 className="font-pixel text-2xl md:text-3xl text-pixel-yellow mb-4 animate-pulse-slow">
-            KarmaLoop
+            BuddyBeasts
           </h1>
           <p className="text-lg md:text-xl text-pixel-light font-game">
             Turn local social connection into a living pixel world

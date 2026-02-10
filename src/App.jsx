@@ -8,12 +8,15 @@ import EvolutionOverlay from './components/EvolutionOverlay'
 
 // Pages
 import Login from './pages/Login'
+import PersonalityQuiz from './pages/PersonalityQuiz'
 import HubSelection from './pages/HubSelection'
 import LivingHub from './pages/LivingHub'
 import QuestBoard from './pages/QuestBoard'
 import Lobby from './pages/Lobby'
 import QRCheckIn from './pages/QRCheckIn'
 import Profile from './pages/Profile'
+import Chat from './pages/Chat'
+import GroupPhotoGallery from './pages/GroupPhotoGallery'
 
 function ProtectedRoute({ children }) {
   const { user } = useAuthStore()
@@ -45,6 +48,11 @@ function App() {
           <EvolutionLayer />
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/quiz" element={
+              <ProtectedRoute>
+                <PersonalityQuiz />
+              </ProtectedRoute>
+            } />
             <Route path="/hub-selection" element={
               <ProtectedRoute>
                 <HubSelection />
@@ -73,6 +81,16 @@ function App() {
             <Route path="/profile" element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            } />
+            <Route path="/chat" element={
+              <ProtectedRoute>
+                <Chat />
+              </ProtectedRoute>
+            } />
+            <Route path="/gallery" element={
+              <ProtectedRoute>
+                <GroupPhotoGallery />
               </ProtectedRoute>
             } />
             <Route path="/" element={<Navigate to="/hub" />} />

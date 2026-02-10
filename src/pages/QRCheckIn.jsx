@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
-import { QRCodeSVG } from 'qrcode.react'
 import { useAuthStore } from '../stores/authStore'
 import { useMonsterStore } from '../stores/monsterStore'
 import { useDataStore } from '../stores/dataStore'
@@ -11,22 +10,34 @@ export default function QRCheckIn() {
   const location = useLocation()
   const quest = location.state?.quest
   const participants = location.state?.participants || []
-  
+
   const { user } = useAuthStore()
-  const { addCrystals, completeQuest, monster } = useMonsterStore()
+  const { addCrystals, addCoins, completeQuest, monster, saveGroupPhoto } = useMonsterStore()
   const { trackQuestComplete } = useDataStore()
-  
-  const [checkInCode, setCheckInCode] = useState('')
+
   const [checkedIn, setCheckedIn] = useState(false)
-  const [showScanner, setShowScanner] = useState(false)
   const [questStartTime] = useState(Date.now())
+
+  const [step, setStep] = useState('emote')
+  const [emoteChoice, setEmoteChoice] = useState(null)
+  const [allEmotesIn, setAllEmotesIn] = useState(false)
+  const [reactionConfirmed, setReactionConfirmed] = useState(false)
+  const [memoryWord, setMemoryWord] = useState(null)
+  const [groupMemory, setGroupMemory] = useState(null)
+  const [signals, setSignals] = useState({ emote: false, reaction: false, memory: false })
+  const [photoPreview, setPhotoPreview] = useState(null)
+  const [photoUploaded, setPhotoUploaded] = useState(false)
+  const [cameraActive, setCameraActive] = useState(false)
+  const [cameraStream, setCameraStream] = useState(null)
 
   useEffect(() => {
     if (!quest) {
       navigate('/quests')
       return
     }
+  }, [quest, navigate])
 
+<<<<<<< HEAD
     // Generate unique check-in code for this quest instance
     const code = `KARMA_${questId}_${Date.now()}`
     setCheckInCode(code)
@@ -62,11 +73,160 @@ export default function QRCheckIn() {
         })
       }, delay)
     }
+=======
+  const performCheckIn = () => {
+    if (checkedIn) return
+    setCheckedIn(true)
+    const isGroup = participants.length > 1
+    const crystalBonus = isGroup ? Math.floor(quest.crystals * 1.5) : quest.crystals
+    const coinBonus = Math.max(10, Math.floor(crystalBonus / 2))
+    addCrystals(crystalBonus)
+    addCoins(coinBonus)
+    completeQuest(quest.type, isGroup)
+    const duration = Math.floor((Date.now() - questStartTime) / 1000 / 60)
+    trackQuestComplete(questId, participants.length, duration)
+>>>>>>> 466c87e841ca528527bbd806b5ef8bef8ee848fd
   }
 
   const handleCancel = () => {
     navigate('/quests')
   }
+
+  const EMOTES = ['🎉 Fun', '😊 Chill', '💪 Productive', '🌿 Calm', '⚡ Energizing']
+  const WORDS = ['Fun', 'Calm', 'Focused', 'Energizing', 'Meaningful']
+
+  const groupReaction = useMemo(() => {
+    if (!emoteChoice) return 'happy bounce'
+    if (emoteChoice.includes('Calm')) return 'calm sit'
+    if (emoteChoice.includes('Productive')) return 'group pose'
+    if (emoteChoice.includes('Energizing')) return 'excited spin'
+    return 'happy bounce'
+  }, [emoteChoice])
+
+  const markSignal = (key) => {
+    setSignals((prev) => ({ ...prev, [key]: true }))
+  }
+
+  const signalCount = Object.values(signals).filter(Boolean).length
+
+  const finishIfQualified = () => {
+    if (signalCount >= 2 && !checkedIn) {
+      performCheckIn()
+    }
+    setStep('snapshot')
+  }
+
+  const handleEmoteSelect = (emote) => {
+    setEmoteChoice(emote)
+    markSignal('emote')
+    setStep('reaction')
+    setAllEmotesIn(false)
+    setTimeout(() => setAllEmotesIn(true), 1200)
+  }
+
+  const handleReactionConfirm = () => {
+    setReactionConfirmed(true)
+    markSignal('reaction')
+    setStep('memory')
+  }
+
+  const handleMemorySelect = (word) => {
+    setMemoryWord(word)
+    markSignal('memory')
+    const otherWord = WORDS.filter((w) => w !== word)[Math.floor(Math.random() * (WORDS.length - 1))]
+    setGroupMemory(`${word} + ${otherWord}`)
+    finishIfQualified()
+  }
+
+  const handleSaveSnapshot = () => {
+    const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+  <rect width="640" height="360" fill="#2A2A3E" />
+  <rect y="220" width="640" height="140" fill="#4A7A55" />
+  <text x="24" y="40" font-size="20" fill="#F7E76B" font-family="monospace">${quest?.title || 'Shared Moment'}</text>
+  <text x="24" y="68" font-size="14" fill="#B9C2FF" font-family="monospace">Group felt: ${groupMemory || 'Together'}</text>
+  <text x="24" y="320" font-size="12" fill="#FFFFFF" font-family="monospace">${new Date().toLocaleString()}</text>
+  <text x="180" y="210" font-size="40">${participants.slice(0, 5).map(() => '🐥').join(' ')}</text>
+</svg>`
+
+    const blob = new Blob([svg], { type: 'image/svg+xml' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `shared-moment-${questId}.svg`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const base64 = event.target?.result
+      setPhotoPreview(base64)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleSavePhoto = () => {
+    if (photoPreview) {
+      saveGroupPhoto({
+        imageBase64: photoPreview,
+        questTitle: quest?.title || 'Shared Moment',
+        questIcon: quest?.icon || '📷',
+        groupMemory: groupMemory || 'Together',
+        groupSize: participants.length,
+      })
+      setPhotoUploaded(true)
+    }
+  }
+
+  const handleStartCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+      })
+      setCameraStream(stream)
+      setCameraActive(true)
+    } catch (err) {
+      console.error('Camera access denied:', err)
+      alert('Camera access is required to take a photo')
+    }
+  }
+
+  const handleTakePhoto = () => {
+    const video = document.getElementById('camera-video')
+    if (video) {
+      const canvas = document.createElement('canvas')
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+      const ctx = canvas.getContext('2d')
+      ctx?.drawImage(video, 0, 0)
+      const photoData = canvas.toDataURL('image/jpeg')
+      setPhotoPreview(photoData)
+      handleStopCamera()
+    }
+  }
+
+  const handleStopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((track) => track.stop())
+      setCameraStream(null)
+    }
+    setCameraActive(false)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach((track) => track.stop())
+      }
+    }
+  }, [cameraStream])
 
   if (!quest) return null
 
@@ -77,7 +237,7 @@ export default function QRCheckIn() {
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between">
             <h1 className="font-pixel text-sm md:text-base text-pixel-yellow">
-              Quest Check-In
+              Shared Moment Proof
             </h1>
             <button
               onClick={handleCancel}
@@ -105,103 +265,192 @@ export default function QRCheckIn() {
                   </p>
                 </div>
               </div>
-              <p className="text-xs text-pixel-light font-game">
-                Meet your group at the location and scan the QR code to check in!
+              <p className="text-xs text-pixel-light font-game mb-2">
+                Celebrate the moment together. No check-ins, just shared vibes.
+              </p>
+              <p className="text-xs text-pixel-yellow font-game">
+                ✓ Optional, low-pressure, and collective
               </p>
             </div>
 
-            {/* Participants */}
-            <div className="pixel-card p-5 mb-6">
-              <h3 className="font-pixel text-xs text-pixel-yellow mb-3">
-                Quest Party ({participants.length})
-              </h3>
-              <div className="space-y-2">
-                {participants.map((participant) => (
-                  <div 
-                    key={participant.id}
-                    className="flex items-center gap-3 p-2 bg-pixel-purple bg-opacity-20 rounded"
-                  >
-                    <div className="text-2xl">
-                      {participant.id === user.id ? '🌟' : '👤'}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-game text-pixel-light">
-                        {participant.name}
-                        {participant.id === user.id && ' (You)'}
-                      </p>
-                      <p className="text-xs text-pixel-blue">
-                        Level {participant.monster.level} {participant.monster.evolution}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* QR Code Display */}
-            <div className="pixel-card p-8 mb-6 text-center bg-white">
-              <h3 className="font-pixel text-xs text-pixel-dark mb-4">
-                Check-In Code
-              </h3>
-              <div className="flex justify-center mb-4">
-                <QRCodeSVG 
-                  value={checkInCode}
-                  size={200}
-                  level="H"
-                  includeMargin={true}
-                />
-              </div>
-              <p className="text-xs font-game text-pixel-dark opacity-75">
-                Show this to your group or scan someone else's code
-              </p>
-            </div>
-
-            {/* Check-In Actions */}
-            <div className="space-y-4">
-              <button
-                onClick={handleCheckIn}
-                className="pixel-button bg-pixel-green hover:bg-pixel-yellow text-white w-full py-6 text-base"
-              >
-                ✓ Confirm Check-In
-              </button>
-              
-              <button
-                onClick={() => setShowScanner(!showScanner)}
-                className="pixel-button bg-pixel-blue hover:bg-pixel-pink text-white w-full py-4"
-              >
-                📸 Scan QR Code
-              </button>
-            </div>
-
-            {/* Scanner Placeholder */}
-            {showScanner && (
-              <div className="mt-4 pixel-card p-6 bg-pixel-dark text-center">
-                <p className="font-game text-pixel-light mb-4">
-                  Camera scanner would appear here
+            {step === 'emote' && (
+              <div className="pixel-card p-6 mb-6">
+                <h3 className="font-pixel text-xs text-pixel-yellow mb-3">
+                  1️⃣ Group Emote Sync
+                </h3>
+                <p className="text-xs text-pixel-light font-game mb-4">
+                  Everyone picks the same vibe. Tap one.
                 </p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {EMOTES.map((emote) => (
+                    <button
+                      key={emote}
+                      onClick={() => handleEmoteSelect(emote)}
+                      className="pixel-card p-4 text-center hover:border-pixel-yellow"
+                    >
+                      <span className="text-lg font-game text-pixel-light">{emote}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {step === 'reaction' && (
+              <div className="pixel-card p-6 mb-6 text-center">
+                <h3 className="font-pixel text-xs text-pixel-yellow mb-3">
+                  2️⃣ Monster Group Reaction
+                </h3>
+                <p className="text-xs text-pixel-light font-game mb-4">
+                  Monsters gather and react together.
+                </p>
+                <div className="text-4xl mb-3 animate-float">🐥 🐥 🐥</div>
                 <p className="text-xs text-pixel-blue font-game mb-4">
-                  (Demo mode: click Confirm Check-In above)
+                  Reaction: {groupReaction}
                 </p>
                 <button
-                  onClick={() => setShowScanner(false)}
-                  className="text-pixel-pink hover:text-pixel-light text-sm font-game"
+                  onClick={handleReactionConfirm}
+                  disabled={!allEmotesIn}
+                  className="pixel-button bg-pixel-green text-white w-full py-4 disabled:opacity-60"
                 >
-                  Close Scanner
+                  {allEmotesIn ? 'That feels right 👍' : 'Waiting for others...'}
                 </button>
               </div>
             )}
 
-            {/* Safety Info */}
-            <div className="mt-6 pixel-card p-4 bg-pixel-purple bg-opacity-20">
-              <h4 className="font-pixel text-xs text-pixel-yellow mb-2">
-                🛡️ Safety Reminders
-              </h4>
-              <ul className="text-xs text-pixel-light font-game space-y-1">
-                <li>• Meet in public, well-lit locations</li>
-                <li>• Keep your location sharing on</li>
-                <li>• Report any concerns immediately</li>
-              </ul>
-            </div>
+            {step === 'memory' && (
+              <div className="pixel-card p-6 mb-6">
+                <h3 className="font-pixel text-xs text-pixel-yellow mb-3">
+                  3️⃣ One-Word Group Memory
+                </h3>
+                <p className="text-xs text-pixel-light font-game mb-4">
+                  In one word, how did this feel?
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {WORDS.map((word) => (
+                    <button
+                      key={word}
+                      onClick={() => handleMemorySelect(word)}
+                      className="pixel-card p-4 text-center hover:border-pixel-yellow"
+                    >
+                      <span className="text-sm font-game text-pixel-light">{word}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {step === 'snapshot' && (
+              <div className="pixel-card p-6 mb-6 text-center">
+                <h3 className="font-pixel text-xs text-pixel-yellow mb-3">
+                  4️⃣ Optional Pixel Snapshot
+                </h3>
+                <p className="text-xs text-pixel-light font-game mb-4">
+                  A playful memory token. Save it or discard it.
+                </p>
+                <div className="pixel-card p-4 mb-4 bg-pixel-dark">
+                  <div className="text-3xl mb-2">🐥 🐥 🐥</div>
+                  <p className="text-xs text-pixel-blue font-game">This group felt: {groupMemory}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                  <button
+                    onClick={handleSaveSnapshot}
+                    className="pixel-button bg-pixel-blue text-white w-full py-3"
+                  >
+                    Save Snapshot
+                  </button>
+                  <button
+                    onClick={() => setStep('complete')}
+                    className="pixel-button bg-pixel-green text-white w-full py-3"
+                  >
+                    Finish
+                  </button>
+                </div>
+
+                {/* Photo Upload Section */}
+                <div className="pixel-card p-4 bg-pixel-purple bg-opacity-20">
+                  <p className="text-xs text-pixel-yellow font-pixel mb-3">
+                    5️⃣ Optional Group Photo
+                  </p>
+                  {!cameraActive && !photoPreview ? (
+                    <div>
+                      <p className="text-xs text-pixel-light font-game mb-3">
+                        Take or upload a real photo to remember this moment together.
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={handleStartCamera}
+                          className="pixel-card p-4 text-center hover:border-pixel-blue"
+                        >
+                          <p className="text-2xl mb-2">📷</p>
+                          <p className="text-xs font-game text-pixel-light">
+                            Take Photo
+                          </p>
+                        </button>
+                        <label className="cursor-pointer">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handlePhotoUpload}
+                            className="hidden"
+                          />
+                          <div className="pixel-card p-4 text-center hover:border-pixel-blue">
+                            <p className="text-2xl mb-2">📁</p>
+                            <p className="text-xs font-game text-pixel-light">
+                              Upload Photo
+                            </p>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+                  ) : cameraActive ? (
+                    <div>
+                      <video
+                        id="camera-video"
+                        autoPlay
+                        playsInline
+                        className="w-full max-h-60 object-cover mb-3 pixel-card"
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={handleTakePhoto}
+                          className="pixel-button bg-pixel-blue text-white text-xs py-2"
+                        >
+                          📸 Snap
+                        </button>
+                        <button
+                          onClick={handleStopCamera}
+                          className="pixel-button bg-pixel-pink text-white text-xs py-2"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <img
+                        src={photoPreview}
+                        alt="Preview"
+                        className="w-full max-h-40 object-cover mb-3 pixel-card"
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => setPhotoPreview(null)}
+                          className="pixel-button bg-pixel-pink text-white text-xs py-2"
+                        >
+                          Change Photo
+                        </button>
+                        <button
+                          onClick={handleSavePhoto}
+                          className="pixel-button bg-pixel-blue text-white text-xs py-2"
+                        >
+                          {photoUploaded ? '✓ Saved' : 'Save Photo'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </>
         ) : (
           /* Success Screen */
@@ -209,7 +458,7 @@ export default function QRCheckIn() {
             <div className="pixel-card p-8 mb-6 bg-pixel-green bg-opacity-20">
               <div className="text-6xl mb-4 animate-float">🎉</div>
               <h2 className="font-pixel text-xl text-pixel-yellow mb-4">
-                Quest Complete!
+                Nice! You completed this together.
               </h2>
               <p className="font-game text-lg text-pixel-light mb-6">
                 You earned <span className="text-pixel-yellow">{Math.floor(quest.crystals * 1.5)}</span> crystals!
@@ -236,11 +485,12 @@ export default function QRCheckIn() {
                 </div>
               </div>
 
-              <div className="animate-pulse-slow">
-                <p className="font-game text-pixel-blue">
-                  Returning to hub...
-                </p>
-              </div>
+              <button
+                onClick={() => navigate('/hub')}
+                className="pixel-button bg-pixel-blue text-white w-full py-4"
+              >
+                Return to Hub
+              </button>
             </div>
 
             {/* Monster Evolution Check */}

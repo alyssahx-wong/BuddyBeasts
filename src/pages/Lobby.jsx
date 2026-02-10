@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { useMonsterStore } from '../stores/monsterStore'
 import { useDataStore } from '../stores/dataStore'
+import { useChatStore } from '../stores/chatStore'
 import PixelMonster from '../components/PixelMonster'
 import coffeeBg from '../icons/coffee.png'
 import studyBg from '../icons/study.png'
@@ -24,6 +25,7 @@ export default function Lobby() {
   const { user } = useAuthStore()
   const { monster } = useMonsterStore()
   const { trackQuestStart } = useDataStore()
+  const { addQuestParticipants } = useChatStore()
   
   const [participants, setParticipants] = useState([])
   const [isReady, setIsReady] = useState(false)
@@ -61,6 +63,7 @@ export default function Lobby() {
               evolution: ['baby', 'teen', 'adult'][Math.floor(Math.random() * 3)],
               monsterType: Math.floor(Math.random() * 9) + 1,
               level: Math.floor(Math.random() * 10) + 1,
+              activeSkin: 'default',
             },
             isReady: Math.random() > 0.5,
             isHost: false,
@@ -81,6 +84,19 @@ export default function Lobby() {
     setAllReady(ready)
 
     if (ready && !countdown) {
+      // Create quest chat conversation when starting
+      if (participants.length > 0) {
+        addQuestParticipants(
+          questId,
+          quest.title,
+          participants.map((p) => ({
+            id: p.id,
+            name: p.name,
+            avatar: p.id === user.id ? user.picture : null,
+          }))
+        )
+      }
+
       // Start countdown when all ready
       let count = 5
       setCountdown(count)
@@ -93,7 +109,7 @@ export default function Lobby() {
         }
       }, 1000)
     }
-  }, [participants, isReady, quest, questId, user.id, countdown, navigate])
+  }, [participants, isReady, quest, questId, user.id, user.picture, countdown, navigate, addQuestParticipants])
 
   const handleReady = () => {
     setIsReady(!isReady)
@@ -107,12 +123,8 @@ export default function Lobby() {
   }
 
   const handleEmote = (emote) => {
-    const id = Date.now() + Math.random()
-    const left = Math.random() * 60 + 20 // 20-80% from left
-    setFloatingEmotes(prev => [...prev, { id, emote, left }])
-    setTimeout(() => {
-      setFloatingEmotes(prev => prev.filter(e => e.id !== id))
-    }, 1500)
+    // Show floating emote animation (simplified version)
+    console.log(`${user.name} sent ${emote}`)
   }
 
   if (!quest) return null
@@ -184,17 +196,25 @@ export default function Lobby() {
               {participants.map((participant, index) => (
                 <div
                   key={participant.id}
-                  className="text-center"
+                  className="text-center relative"
                   style={{
                     animation: `float ${2 + index * 0.5}s ease-in-out infinite`
                   }}
                 >
+                  {participant.id === user.id && floatingEmote && (
+                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-3xl animate-emote-pop z-10">
+                      {floatingEmote}
+                    </div>
+                  )}
                   <PixelMonster
                     evolution={participant.monster.evolution}
                     monsterType={participant.monster.monsterType}
                     size="medium"
                     animated={true}
                     isPlayer={participant.id === user.id}
+                    skin={participant.monster?.activeSkin || 'default'}
+                    monsterId={participant.monster?.monsterId}
+                    usePixelArt={true}
                   />
                   <div className="mt-2 pixel-card p-2 bg-pixel-dark bg-opacity-75 inline-block">
                     <p className="font-game text-xs text-white">
