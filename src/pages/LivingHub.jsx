@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { useMonsterStore } from '../stores/monsterStore'
@@ -12,9 +12,6 @@ export default function LivingHub() {
   const { monster } = useMonsterStore()
   const { onlineUsers, startPolling, stopPolling } = useHubStore()
   const [showWelcome, setShowWelcome] = useState(true)
-  const [monsterPosition, setMonsterPosition] = useState({ x: 50, y: 60 })
-  const [isMoving, setIsMoving] = useState(false)
-  const hubSceneRef = useRef(null)
 
   useEffect(() => {
     if (!currentHub) {
@@ -34,22 +31,6 @@ export default function LivingHub() {
     }
   }, [currentHub, navigate, startPolling, stopPolling])
 
-  const handleSceneClick = (e) => {
-    if (!hubSceneRef.current) return
-
-    const rect = hubSceneRef.current.getBoundingClientRect()
-    const x = ((e.clientX - rect.left) / rect.width) * 100
-    const y = ((e.clientY - rect.top) / rect.height) * 100
-
-    // Keep monster within bounds
-    const boundedX = Math.max(5, Math.min(95, x))
-    const boundedY = Math.max(15, Math.min(85, y))
-
-    setMonsterPosition({ x: boundedX, y: boundedY })
-    setIsMoving(true)
-    setTimeout(() => setIsMoving(false), 500)
-  }
-
   if (!currentHub) return null
 
   return (
@@ -62,14 +43,14 @@ export default function LivingHub() {
               {currentHub.name}
             </h1>
             <p className="text-xs text-pixel-light font-game mt-1">
-              👥 {onlineUsers.length + 1} monsters online
+              {onlineUsers.length + 1} monsters online
             </p>
           </div>
           <div className="flex items-center gap-3">
             {/* Crystals + Level Bar */}
             <div className="text-right">
               <p className="text-xs font-cute text-pixel-yellow">
-                💎 {monster.crystals} <span className="text-pixel-light">· Lv.{monster.level}</span>
+                {monster.crystals} <span className="text-pixel-light">Lv.{monster.level}</span>
               </p>
               <div className="w-28 h-2 bg-pixel-dark border border-pixel-purple rounded-full overflow-hidden mt-1">
                 <div
@@ -100,7 +81,7 @@ export default function LivingHub() {
         <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-20 animate-float">
           <div className="pixel-card p-4 bg-pixel-green bg-opacity-90">
             <p className="font-game text-white text-center">
-              Welcome to {currentHub.name}! 👋
+              Welcome to {currentHub.name}!
             </p>
           </div>
         </div>
@@ -108,7 +89,6 @@ export default function LivingHub() {
 
       {/* Hub Scene */}
       <div className="relative max-w-4xl mx-auto mt-8 px-4">
-<<<<<<< HEAD
         {/* Pixel Art Background */}
         <div className="pixel-card min-h-[400px] md:min-h-[500px] p-6 relative overflow-hidden" style={{background: "url('/fireside-bg.svg') center/cover no-repeat", imageRendering: 'pixelated'}}>
 
@@ -124,77 +104,6 @@ export default function LivingHub() {
               />
               <div className="mt-2 px-3 py-1.5 bg-pixel-pink rounded-lg inline-block border-2 border-pixel-light">
                 <p className="font-cute text-sm text-white font-bold">
-=======
-        {/* Enhanced Pixel Art Background with Click Interaction */}
-        <div
-          ref={hubSceneRef}
-          onClick={handleSceneClick}
-          className="pixel-card min-h-[500px] md:min-h-[600px] relative overflow-hidden cursor-pointer"
-          style={{
-            background: 'linear-gradient(to bottom, #87CEEB 0%, #87CEEB 60%, #90EE90 60%, #90EE90 100%)',
-            imageRendering: 'pixelated',
-          }}
-        >
-          {/* Sky Layer */}
-          <div className="absolute inset-0 pointer-events-none">
-            {/* Sun */}
-            <div className="absolute top-8 right-12 w-16 h-16 bg-yellow-300 rounded-full shadow-lg animate-pulse-slow" />
-            
-            {/* Clouds */}
-            <div className="absolute top-12 left-20 text-6xl opacity-80 animate-float">☁️</div>
-            <div className="absolute top-24 right-32 text-5xl opacity-70 animate-float" style={{ animationDelay: '1s' }}>☁️</div>
-            <div className="absolute top-32 left-1/3 text-4xl opacity-60 animate-float" style={{ animationDelay: '2s' }}>☁️</div>
-          </div>
-
-          {/* Background Decorations */}
-          <div className="absolute bottom-0 left-0 right-0 pointer-events-none">
-            {/* Trees */}
-            <div className="absolute bottom-16 left-8 text-7xl transform scale-y-110">🌳</div>
-            <div className="absolute bottom-16 right-12 text-7xl transform scale-y-110">🌳</div>
-            <div className="absolute bottom-20 left-32 text-5xl opacity-80">🌲</div>
-            <div className="absolute bottom-20 right-40 text-6xl opacity-75">🌲</div>
-            
-            {/* Flowers and Grass */}
-            <div className="absolute bottom-24 left-1/4 text-3xl">🌸</div>
-            <div className="absolute bottom-28 right-1/3 text-3xl">🌼</div>
-            <div className="absolute bottom-24 left-1/2 text-2xl">🌺</div>
-            <div className="absolute bottom-20 left-1/3 text-2xl">🌻</div>
-          </div>
-
-          {/* Ground Pattern */}
-          <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none">
-            <div
-              className="w-full h-full opacity-20"
-              style={{
-                backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 15px, rgba(0,0,0,0.1) 15px, rgba(0,0,0,0.1) 16px)',
-              }}
-            />
-          </div>
-
-          {/* Player's Monster */}
-          <div
-            className="absolute transition-all duration-700 ease-out z-20"
-            style={{
-              left: `${monsterPosition.x}%`,
-              top: `${monsterPosition.y}%`,
-              transform: 'translate(-50%, -50%)',
-            }}
-          >
-            <div className="text-center pointer-events-none">
-              <div className={`${isMoving ? 'animate-bounce' : ''}`}>
-                <PixelMonster 
-                  evolution={monster.evolution} 
-                  size="large"
-                  animated={true}
-                  isPlayer={true}
-                  equippedItems={monster.equippedItems}
-                  monsterId={monster.monsterId}
-                  usePixelArt={true}
-                />
-              </div>
-              <div className="mt-2 pixel-card p-2 bg-pixel-yellow inline-block shadow-lg">
-                <p className="font-pixel text-xs text-pixel-dark whitespace-nowrap">
->>>>>>> 466c87e841ca528527bbd806b5ef8bef8ee848fd
                   {user.name} (You)
                 </p>
               </div>
@@ -202,31 +111,31 @@ export default function LivingHub() {
           </div>
 
           {/* Other Online Monsters */}
-          {onlineUsers.slice(0, 6).map((onlineUser, index) => {
+          {onlineUsers.slice(0, 8).map((onlineUser, index) => {
             const positions = [
-              { top: '30%', left: '20%' },
-              { top: '45%', left: '75%' },
-              { top: '55%', left: '35%' },
-              { top: '35%', left: '65%' },
-              { top: '60%', left: '15%' },
-              { top: '40%', left: '85%' },
+              { bottom: '25%', left: '15%' },
+              { bottom: '35%', right: '20%' },
+              { bottom: '45%', left: '25%' },
+              { bottom: '30%', right: '35%' },
+              { bottom: '40%', left: '60%' },
+              { bottom: '25%', right: '50%' },
+              { bottom: '35%', left: '40%' },
+              { bottom: '50%', right: '15%' },
             ]
             const pos = positions[index % positions.length]
 
             return (
               <div
                 key={onlineUser.id}
-                className="absolute transition-all duration-1000 z-10"
+                className="absolute transition-all duration-1000"
                 style={pos}
               >
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation()
+                  onClick={() => {
                     console.log('Interact with', onlineUser.name)
                   }}
-                  className="text-center hover:scale-110 transition-transform pointer-events-auto"
+                  className="text-center hover:scale-110 transition-transform"
                 >
-<<<<<<< HEAD
                   <PixelMonster
                     evolution={onlineUser.monster?.evolution || 'baby'}
                     monsterType={onlineUser.monster?.monsterType}
@@ -234,18 +143,6 @@ export default function LivingHub() {
                     animated={true}
                   />
                   <div className="mt-1 bg-pixel-dark bg-opacity-80 px-2 py-1 rounded-lg text-xs font-cute text-pixel-light">
-=======
-                  <div className="animate-float" style={{ animationDelay: `${index * 0.5}s` }}>
-                    <PixelMonster 
-                      evolution={onlineUser.monster?.evolution || 'baby'} 
-                      size="medium"
-                      animated={true}
-                      monsterId={onlineUser.monster?.monsterId}
-                      usePixelArt={true}
-                    />
-                  </div>
-                  <div className="mt-1 bg-pixel-dark bg-opacity-90 px-2 py-1 rounded text-xs font-game text-white whitespace-nowrap shadow-md">
->>>>>>> 466c87e841ca528527bbd806b5ef8bef8ee848fd
                     {onlineUser.name}
                   </div>
                 </button>
@@ -254,9 +151,9 @@ export default function LivingHub() {
           })}
 
           {/* Interaction Prompt */}
-          <div className="absolute top-4 left-4 pixel-card p-3 bg-pixel-dark bg-opacity-90 max-w-xs shadow-lg z-30 pointer-events-none">
+          <div className="absolute top-4 left-4 pixel-card p-3 bg-pixel-dark bg-opacity-80 max-w-xs">
             <p className="text-xs font-game text-pixel-light">
-              💡 Click anywhere to move your monster!
+              Tap monsters to wave or join their quest lobby
             </p>
           </div>
         </div>
@@ -282,7 +179,7 @@ export default function LivingHub() {
 
         {/* Active Quest */}
         <div className="mt-6">
-          <h3 className="font-pixel text-xs text-pixel-yellow mb-3">🎯 Active Quest</h3>
+          <h3 className="font-pixel text-xs text-pixel-yellow mb-3">Active Quest</h3>
           <div className="pixel-card p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="text-2xl">☕</div>
@@ -295,14 +192,14 @@ export default function LivingHub() {
               onClick={() => navigate('/quests')}
               className="px-3 py-2 bg-pixel-green rounded font-cute text-xs text-pixel-dark font-bold hover:bg-pixel-yellow transition-colors"
             >
-              LOBBY →
+              LOBBY
             </button>
           </div>
         </div>
 
         {/* Recommended For You */}
         <div className="mt-6">
-          <h3 className="font-pixel text-xs text-pixel-yellow mb-3">✨ Recommended For You</h3>
+          <h3 className="font-pixel text-xs text-pixel-yellow mb-3">Recommended For You</h3>
           <div className="space-y-3">
             <button
               onClick={() => navigate('/quests')}

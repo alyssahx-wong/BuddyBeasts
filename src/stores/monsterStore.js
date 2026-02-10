@@ -7,11 +7,7 @@ export const useMonsterStore = create(
       monster: {
         id: null,
         name: 'Buddy',
-<<<<<<< HEAD
         monsterType: Math.floor(Math.random() * 9) + 1,
-=======
-        monsterId: 1,
->>>>>>> 466c87e841ca528527bbd806b5ef8bef8ee848fd
         level: 1,
         crystals: 0,
         coins: 0,
@@ -32,13 +28,13 @@ export const useMonsterStore = create(
       inventory: [],
       eggs: [],
       groupPhotos: [],
-      
+
       initializeMonster: (userId, quizData = {}) => set((state) => {
         const initialized = {
           ...state.monster,
           id: userId,
           name: quizData.name || 'Buddy',
-          monsterId: quizData.monsterId || 1,
+          monsterType: quizData.monsterType || state.monster.monsterType,
         }
         const hasMonster = state.monsters.some((m) => m.id === userId)
         return {
@@ -46,10 +42,9 @@ export const useMonsterStore = create(
           monsters: hasMonster ? state.monsters : [...state.monsters, initialized],
         }
       }),
-      
+
       addCrystals: (amount) => set((state) => {
         const newCrystals = state.monster.crystals + amount
-<<<<<<< HEAD
         const newLevel = Math.floor(newCrystals / 100) + 1
         const oldLevel = state.monster.level
 
@@ -61,14 +56,16 @@ export const useMonsterStore = create(
           justEvolved = true
         }
 
+        const updatedMonster = {
+          ...state.monster,
+          crystals: newCrystals,
+          level: newLevel,
+          evolution: newEvolution,
+          justEvolved,
+        }
         return {
-          monster: {
-            ...state.monster,
-            crystals: newCrystals,
-            level: newLevel,
-            evolution: newEvolution,
-            justEvolved,
-          }
+          monster: updatedMonster,
+          monsters: state.monsters.map((m) => (m.id === updatedMonster.id ? updatedMonster : m)),
         }
       }),
 
@@ -76,18 +73,8 @@ export const useMonsterStore = create(
         monster: {
           ...state.monster,
           justEvolved: false,
-=======
-        const updatedMonster = {
-          ...state.monster,
-          crystals: newCrystals,
-          level: Math.floor(newCrystals / 100) + 1,
->>>>>>> 466c87e841ca528527bbd806b5ef8bef8ee848fd
         }
-        return {
-          monster: updatedMonster,
-          monsters: state.monsters.map((m) => (m.id === updatedMonster.id ? updatedMonster : m)),
-        }
-      }),
+      })),
 
       addCoins: (amount) => set((state) => {
         const updatedMonster = {
@@ -99,11 +86,11 @@ export const useMonsterStore = create(
           monsters: state.monsters.map((m) => (m.id === updatedMonster.id ? updatedMonster : m)),
         }
       }),
-      
+
       completeQuest: (questType, isGroup) => set((state) => {
         const newPreferred = { ...state.monster.preferredQuestTypes }
         newPreferred[questType] = (newPreferred[questType] || 0) + 1
-        
+
         const updatedMonster = {
           ...state.monster,
           questsCompleted: state.monster.questsCompleted + 1,
@@ -116,7 +103,7 @@ export const useMonsterStore = create(
           monsters: state.monsters.map((m) => (m.id === updatedMonster.id ? updatedMonster : m)),
         }
       }),
-      
+
       evolveMonster: (newEvolution, traits) => set((state) => {
         const updatedMonster = {
           ...state.monster,
@@ -128,7 +115,7 @@ export const useMonsterStore = create(
           monsters: state.monsters.map((m) => (m.id === updatedMonster.id ? updatedMonster : m)),
         }
       }),
-      
+
       updatePreferredGroupSize: (size) => set((state) => {
         const updatedMonster = {
           ...state.monster,

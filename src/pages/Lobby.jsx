@@ -21,12 +21,12 @@ export default function Lobby() {
   const { questId } = useParams()
   const location = useLocation()
   const quest = location.state?.quest
-  
+
   const { user } = useAuthStore()
   const { monster } = useMonsterStore()
   const { trackQuestStart } = useDataStore()
   const { addQuestParticipants } = useChatStore()
-  
+
   const [participants, setParticipants] = useState([])
   const [isReady, setIsReady] = useState(false)
   const [allReady, setAllReady] = useState(false)
@@ -63,7 +63,6 @@ export default function Lobby() {
               evolution: ['baby', 'teen', 'adult'][Math.floor(Math.random() * 3)],
               monsterType: Math.floor(Math.random() * 9) + 1,
               level: Math.floor(Math.random() * 10) + 1,
-              activeSkin: 'default',
             },
             isReady: Math.random() > 0.5,
             isHost: false,
@@ -79,7 +78,7 @@ export default function Lobby() {
 
   useEffect(() => {
     // Check if all participants are ready
-    const ready = participants.length >= quest.minParticipants && 
+    const ready = participants.length >= quest.minParticipants &&
                   participants.every(p => p.isReady || p.id === user.id && isReady)
     setAllReady(ready)
 
@@ -113,7 +112,7 @@ export default function Lobby() {
 
   const handleReady = () => {
     setIsReady(!isReady)
-    setParticipants(prev => prev.map(p => 
+    setParticipants(prev => prev.map(p =>
       p.id === user.id ? { ...p, isReady: !isReady } : p
     ))
   }
@@ -123,8 +122,12 @@ export default function Lobby() {
   }
 
   const handleEmote = (emote) => {
-    // Show floating emote animation (simplified version)
-    console.log(`${user.name} sent ${emote}`)
+    const id = Date.now() + Math.random()
+    const left = Math.random() * 60 + 20
+    setFloatingEmotes(prev => [...prev, { id, emote, left }])
+    setTimeout(() => {
+      setFloatingEmotes(prev => prev.filter(e => e.id !== id))
+    }, 1500)
   }
 
   if (!quest) return null
@@ -171,13 +174,13 @@ export default function Lobby() {
                 {quest.description}
               </p>
               <div className="flex gap-3 text-xs font-game">
-                <span className="text-pixel-green">⏱️ {quest.duration} min</span>
-                <span className="text-pixel-yellow">💎 {quest.crystals} crystals</span>
+                <span className="text-pixel-green">{quest.duration} min</span>
+                <span className="text-pixel-yellow">{quest.crystals} crystals</span>
               </div>
             </div>
           </div>
           <p className="text-xs text-pixel-blue font-game">
-            📍 {quest.location}
+            {quest.location}
           </p>
         </div>
 
@@ -196,25 +199,17 @@ export default function Lobby() {
               {participants.map((participant, index) => (
                 <div
                   key={participant.id}
-                  className="text-center relative"
+                  className="text-center"
                   style={{
                     animation: `float ${2 + index * 0.5}s ease-in-out infinite`
                   }}
                 >
-                  {participant.id === user.id && floatingEmote && (
-                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-3xl animate-emote-pop z-10">
-                      {floatingEmote}
-                    </div>
-                  )}
                   <PixelMonster
                     evolution={participant.monster.evolution}
                     monsterType={participant.monster.monsterType}
                     size="medium"
                     animated={true}
                     isPlayer={participant.id === user.id}
-                    skin={participant.monster?.activeSkin || 'default'}
-                    monsterId={participant.monster?.monsterId}
-                    usePixelArt={true}
                   />
                   <div className="mt-2 pixel-card p-2 bg-pixel-dark bg-opacity-75 inline-block">
                     <p className="font-game text-xs text-white">
@@ -223,9 +218,9 @@ export default function Lobby() {
                     </p>
                     <p className="text-xs mt-1">
                       {participant.isReady ? (
-                        <span className="text-pixel-green">✓ Ready</span>
+                        <span className="text-pixel-green">Ready</span>
                       ) : (
-                        <span className="text-pixel-yellow">⏳ Waiting</span>
+                        <span className="text-pixel-yellow">Waiting</span>
                       )}
                     </p>
                   </div>
@@ -277,7 +272,7 @@ export default function Lobby() {
           {participants.length < quest.minParticipants && (
             <div className="pixel-card p-4 bg-pixel-yellow bg-opacity-20 text-center">
               <p className="font-game text-pixel-yellow">
-                ⏳ Waiting for {quest.minParticipants - participants.length} more player(s)
+                Waiting for {quest.minParticipants - participants.length} more player(s)
               </p>
             </div>
           )}
@@ -292,13 +287,13 @@ export default function Lobby() {
               }
             `}
           >
-            {isReady ? '✓ Ready!' : '🎯 I\'m Ready'}
+            {isReady ? 'Ready!' : 'I\'m Ready'}
           </button>
 
           {allReady && !countdown && (
             <div className="pixel-card p-4 bg-pixel-green bg-opacity-20 text-center animate-pulse">
               <p className="font-game text-pixel-green">
-                ✓ All players ready! Quest starting soon...
+                All players ready! Quest starting soon...
               </p>
             </div>
           )}
@@ -307,7 +302,7 @@ export default function Lobby() {
         {/* Info */}
         <div className="mt-6 pixel-card p-4 bg-pixel-purple bg-opacity-20">
           <p className="text-xs text-pixel-light font-game text-center">
-            💡 Once everyone is ready, you'll receive the meeting location and QR check-in code
+            Once everyone is ready, you'll receive the meeting location and QR check-in code
           </p>
         </div>
       </div>

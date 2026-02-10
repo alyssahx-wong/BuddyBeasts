@@ -37,43 +37,6 @@ export default function QRCheckIn() {
     }
   }, [quest, navigate])
 
-<<<<<<< HEAD
-    // Generate unique check-in code for this quest instance
-    const code = `KARMA_${questId}_${Date.now()}`
-    setCheckInCode(code)
-  }, [quest, questId, navigate])
-
-  const handleCheckIn = () => {
-    if (!checkedIn) {
-      // Simulate QR scan success
-      setCheckedIn(true)
-      
-      // Reward the user
-      const isGroup = participants.length > 1
-      const crystalBonus = isGroup ? Math.floor(quest.crystals * 1.5) : quest.crystals
-      
-      addCrystals(crystalBonus)
-      completeQuest(quest.type, isGroup)
-      
-      const duration = Math.floor((Date.now() - questStartTime) / 1000 / 60)
-      trackQuestComplete(questId, participants.length, duration)
-
-      // Navigate to hub after delay — longer if evolution animation is playing
-      const newLevel = Math.floor((monster.crystals + crystalBonus) / 100) + 1
-      const willEvolve = monster.level < 5 && newLevel >= 5 && monster.evolution === 'baby'
-      const delay = willEvolve ? 8000 : 3000
-
-      setTimeout(() => {
-        navigate('/hub', {
-          state: {
-            questCompleted: true,
-            crystalsEarned: crystalBonus,
-            questName: quest.title
-          }
-        })
-      }, delay)
-    }
-=======
   const performCheckIn = () => {
     if (checkedIn) return
     setCheckedIn(true)
@@ -81,11 +44,10 @@ export default function QRCheckIn() {
     const crystalBonus = isGroup ? Math.floor(quest.crystals * 1.5) : quest.crystals
     const coinBonus = Math.max(10, Math.floor(crystalBonus / 2))
     addCrystals(crystalBonus)
-    addCoins(coinBonus)
+    if (addCoins) addCoins(coinBonus)
     completeQuest(quest.type, isGroup)
     const duration = Math.floor((Date.now() - questStartTime) / 1000 / 60)
     trackQuestComplete(questId, participants.length, duration)
->>>>>>> 466c87e841ca528527bbd806b5ef8bef8ee848fd
   }
 
   const handleCancel = () => {
@@ -146,7 +108,6 @@ export default function QRCheckIn() {
   <text x="24" y="40" font-size="20" fill="#F7E76B" font-family="monospace">${quest?.title || 'Shared Moment'}</text>
   <text x="24" y="68" font-size="14" fill="#B9C2FF" font-family="monospace">Group felt: ${groupMemory || 'Together'}</text>
   <text x="24" y="320" font-size="12" fill="#FFFFFF" font-family="monospace">${new Date().toLocaleString()}</text>
-  <text x="180" y="210" font-size="40">${participants.slice(0, 5).map(() => '🐥').join(' ')}</text>
 </svg>`
 
     const blob = new Blob([svg], { type: 'image/svg+xml' })
@@ -173,7 +134,7 @@ export default function QRCheckIn() {
   }
 
   const handleSavePhoto = () => {
-    if (photoPreview) {
+    if (photoPreview && saveGroupPhoto) {
       saveGroupPhoto({
         imageBase64: photoPreview,
         questTitle: quest?.title || 'Shared Moment',
@@ -269,14 +230,14 @@ export default function QRCheckIn() {
                 Celebrate the moment together. No check-ins, just shared vibes.
               </p>
               <p className="text-xs text-pixel-yellow font-game">
-                ✓ Optional, low-pressure, and collective
+                Optional, low-pressure, and collective
               </p>
             </div>
 
             {step === 'emote' && (
               <div className="pixel-card p-6 mb-6">
                 <h3 className="font-pixel text-xs text-pixel-yellow mb-3">
-                  1️⃣ Group Emote Sync
+                  1. Group Emote Sync
                 </h3>
                 <p className="text-xs text-pixel-light font-game mb-4">
                   Everyone picks the same vibe. Tap one.
@@ -298,7 +259,7 @@ export default function QRCheckIn() {
             {step === 'reaction' && (
               <div className="pixel-card p-6 mb-6 text-center">
                 <h3 className="font-pixel text-xs text-pixel-yellow mb-3">
-                  2️⃣ Monster Group Reaction
+                  2. Monster Group Reaction
                 </h3>
                 <p className="text-xs text-pixel-light font-game mb-4">
                   Monsters gather and react together.
@@ -312,7 +273,7 @@ export default function QRCheckIn() {
                   disabled={!allEmotesIn}
                   className="pixel-button bg-pixel-green text-white w-full py-4 disabled:opacity-60"
                 >
-                  {allEmotesIn ? 'That feels right 👍' : 'Waiting for others...'}
+                  {allEmotesIn ? 'That feels right' : 'Waiting for others...'}
                 </button>
               </div>
             )}
@@ -320,7 +281,7 @@ export default function QRCheckIn() {
             {step === 'memory' && (
               <div className="pixel-card p-6 mb-6">
                 <h3 className="font-pixel text-xs text-pixel-yellow mb-3">
-                  3️⃣ One-Word Group Memory
+                  3. One-Word Group Memory
                 </h3>
                 <p className="text-xs text-pixel-light font-game mb-4">
                   In one word, how did this feel?
@@ -342,7 +303,7 @@ export default function QRCheckIn() {
             {step === 'snapshot' && (
               <div className="pixel-card p-6 mb-6 text-center">
                 <h3 className="font-pixel text-xs text-pixel-yellow mb-3">
-                  4️⃣ Optional Pixel Snapshot
+                  4. Optional Pixel Snapshot
                 </h3>
                 <p className="text-xs text-pixel-light font-game mb-4">
                   A playful memory token. Save it or discard it.
@@ -369,7 +330,7 @@ export default function QRCheckIn() {
                 {/* Photo Upload Section */}
                 <div className="pixel-card p-4 bg-pixel-purple bg-opacity-20">
                   <p className="text-xs text-pixel-yellow font-pixel mb-3">
-                    5️⃣ Optional Group Photo
+                    5. Optional Group Photo
                   </p>
                   {!cameraActive && !photoPreview ? (
                     <div>
@@ -415,7 +376,7 @@ export default function QRCheckIn() {
                           onClick={handleTakePhoto}
                           className="pixel-button bg-pixel-blue text-white text-xs py-2"
                         >
-                          📸 Snap
+                          Snap
                         </button>
                         <button
                           onClick={handleStopCamera}
@@ -443,7 +404,7 @@ export default function QRCheckIn() {
                           onClick={handleSavePhoto}
                           className="pixel-button bg-pixel-blue text-white text-xs py-2"
                         >
-                          {photoUploaded ? '✓ Saved' : 'Save Photo'}
+                          {photoUploaded ? 'Saved' : 'Save Photo'}
                         </button>
                       </div>
                     </div>
@@ -463,7 +424,7 @@ export default function QRCheckIn() {
               <p className="font-game text-lg text-pixel-light mb-6">
                 You earned <span className="text-pixel-yellow">{Math.floor(quest.crystals * 1.5)}</span> crystals!
               </p>
-              
+
               <div className="grid grid-cols-3 gap-4 text-center mb-6">
                 <div>
                   <p className="text-3xl mb-2">💎</p>
@@ -492,16 +453,6 @@ export default function QRCheckIn() {
                 Return to Hub
               </button>
             </div>
-
-            {/* Monster Evolution Check */}
-            {monster.crystals + Math.floor(quest.crystals * 1.5) >= (monster.level * 100) && (
-              <div className="pixel-card p-6 bg-pixel-pink bg-opacity-20 animate-pulse">
-                <p className="text-4xl mb-2">🌟</p>
-                <p className="font-pixel text-sm text-pixel-yellow">
-                  Your monster is ready to evolve!
-                </p>
-              </div>
-            )}
           </div>
         )}
       </div>
