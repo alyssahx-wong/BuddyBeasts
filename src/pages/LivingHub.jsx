@@ -150,12 +150,13 @@ export default function LivingHub() {
           >
             <div className="text-center pointer-events-none">
               <div className={`${isMoving ? 'animate-bounce' : ''}`}>
-              <PixelMonster 
-                evolution={monster.evolution} 
-                size="large"
-                animated={true}
-                isPlayer={true}
-              />
+                <PixelMonster 
+                  evolution={monster.evolution} 
+                  size="large"
+                  animated={true}
+                  isPlayer={true}
+                  equippedItems={monster.equippedItems}
+                />
               </div>
               <div className="mt-2 pixel-card p-2 bg-pixel-yellow inline-block shadow-lg">
                 <p className="font-pixel text-xs text-pixel-dark whitespace-nowrap">

@@ -9,6 +9,7 @@ export const useMonsterStore = create(
         name: 'Buddy',
         level: 1,
         crystals: 0,
+        coins: 0,
         evolution: 'baby',
         traits: [],
         questsCompleted: 0,
@@ -17,70 +18,209 @@ export const useMonsterStore = create(
         preferredGroupSize: 'small',
         unlockedSkins: ['default'],
         activeSkin: 'default',
+        equippedItems: {
+          hat: null,
+          outfit: null,
+        },
       },
+      monsters: [],
+      inventory: [],
+      eggs: [],
       
-      initializeMonster: (userId) => set((state) => ({
-        monster: {
+      initializeMonster: (userId) => set((state) => {
+        const initialized = {
           ...state.monster,
           id: userId,
         }
-      })),
-      
-      addCrystals: (amount) => set((state) => ({
-        monster: {
-          ...state.monster,
-          crystals: state.monster.crystals + amount,
-          level: Math.floor((state.monster.crystals + amount) / 100) + 1,
+        const hasMonster = state.monsters.some((m) => m.id === userId)
+        return {
+          monster: initialized,
+          monsters: hasMonster ? state.monsters : [...state.monsters, initialized],
         }
-      })),
+      }),
+      
+      addCrystals: (amount) => set((state) => {
+        const newCrystals = state.monster.crystals + amount
+        const updatedMonster = {
+          ...state.monster,
+          crystals: newCrystals,
+          level: Math.floor(newCrystals / 100) + 1,
+        }
+        return {
+          monster: updatedMonster,
+          monsters: state.monsters.map((m) => (m.id === updatedMonster.id ? updatedMonster : m)),
+        }
+      }),
+
+      addCoins: (amount) => set((state) => {
+        const updatedMonster = {
+          ...state.monster,
+          coins: state.monster.coins + amount,
+        }
+        return {
+          monster: updatedMonster,
+          monsters: state.monsters.map((m) => (m.id === updatedMonster.id ? updatedMonster : m)),
+        }
+      }),
       
       completeQuest: (questType, isGroup) => set((state) => {
         const newPreferred = { ...state.monster.preferredQuestTypes }
         newPreferred[questType] = (newPreferred[questType] || 0) + 1
         
+        const updatedMonster = {
+          ...state.monster,
+          questsCompleted: state.monster.questsCompleted + 1,
+          socialScore: isGroup ? state.monster.socialScore + 10 : state.monster.socialScore + 3,
+          preferredQuestTypes: newPreferred,
+        }
+
         return {
-          monster: {
-            ...state.monster,
-            questsCompleted: state.monster.questsCompleted + 1,
-            socialScore: isGroup ? state.monster.socialScore + 10 : state.monster.socialScore + 3,
-            preferredQuestTypes: newPreferred,
-          }
+          monster: updatedMonster,
+          monsters: state.monsters.map((m) => (m.id === updatedMonster.id ? updatedMonster : m)),
         }
       }),
       
-      evolveMonster: (newEvolution, traits) => set((state) => ({
-        monster: {
+      evolveMonster: (newEvolution, traits) => set((state) => {
+        const updatedMonster = {
           ...state.monster,
           evolution: newEvolution,
           traits: [...state.monster.traits, ...traits],
         }
-      })),
+        return {
+          monster: updatedMonster,
+          monsters: state.monsters.map((m) => (m.id === updatedMonster.id ? updatedMonster : m)),
+        }
+      }),
       
-      updatePreferredGroupSize: (size) => set((state) => ({
-        monster: {
+      updatePreferredGroupSize: (size) => set((state) => {
+        const updatedMonster = {
           ...state.monster,
           preferredGroupSize: size,
         }
-      })),
+        return {
+          monster: updatedMonster,
+          monsters: state.monsters.map((m) => (m.id === updatedMonster.id ? updatedMonster : m)),
+        }
+      }),
 
       unlockSkin: (skinId) => set((state) => {
         if (state.monster.unlockedSkins.includes(skinId)) return state
+        const updatedMonster = {
+          ...state.monster,
+          unlockedSkins: [...state.monster.unlockedSkins, skinId],
+        }
         return {
-          monster: {
-            ...state.monster,
-            unlockedSkins: [...state.monster.unlockedSkins, skinId],
-          },
+          monster: updatedMonster,
+          monsters: state.monsters.map((m) => (m.id === updatedMonster.id ? updatedMonster : m)),
         }
       }),
 
       setActiveSkin: (skinId) => set((state) => {
         if (!state.monster.unlockedSkins.includes(skinId)) return state
+        const updatedMonster = {
+          ...state.monster,
+          activeSkin: skinId,
+        }
         return {
-          monster: {
-            ...state.monster,
-            activeSkin: skinId,
+          monster: updatedMonster,
+          monsters: state.monsters.map((m) => (m.id === updatedMonster.id ? updatedMonster : m)),
+        }
+      }),
+
+      addItemToInventory: (itemId) => set((state) => {
+        if (state.inventory.includes(itemId)) return state
+        return { inventory: [...state.inventory, itemId] }
+      }),
+
+      equipItem: (slot, itemId) => set((state) => {
+        if (!state.inventory.includes(itemId)) return state
+        const updatedMonster = {
+          ...state.monster,
+          equippedItems: {
+            ...state.monster.equippedItems,
+            [slot]: itemId,
           },
         }
+        return {
+          monster: updatedMonster,
+          monsters: state.monsters.map((m) => (m.id === updatedMonster.id ? updatedMonster : m)),
+        }
+      }),
+
+      unequipItem: (slot) => set((state) => {
+        const updatedMonster = {
+          ...state.monster,
+          equippedItems: {
+            ...state.monster.equippedItems,
+            [slot]: null,
+          },
+        }
+        return {
+          monster: updatedMonster,
+          monsters: state.monsters.map((m) => (m.id === updatedMonster.id ? updatedMonster : m)),
+        }
+      }),
+
+      buyItem: (item) => set((state) => {
+        if (state.monster.coins < item.cost) return state
+        if (state.inventory.includes(item.id)) return state
+        const updatedMonster = {
+          ...state.monster,
+          coins: state.monster.coins - item.cost,
+        }
+        return {
+          monster: updatedMonster,
+          monsters: state.monsters.map((m) => (m.id === updatedMonster.id ? updatedMonster : m)),
+          inventory: [...state.inventory, item.id],
+        }
+      }),
+
+      buyEgg: (egg) => set((state) => {
+        if (state.monster.coins < egg.cost) return state
+        const updatedMonster = {
+          ...state.monster,
+          coins: state.monster.coins - egg.cost,
+        }
+        return {
+          monster: updatedMonster,
+          monsters: state.monsters.map((m) => (m.id === updatedMonster.id ? updatedMonster : m)),
+          eggs: [...state.eggs, { ...egg, id: `${egg.id}_${Date.now()}` }],
+        }
+      }),
+
+      hatchEgg: (eggId) => set((state) => {
+        const egg = state.eggs.find((e) => e.id === eggId)
+        if (!egg) return state
+
+        const evolutions = ['baby', 'teen', 'adult', 'leader', 'support']
+        const newEvolution = evolutions[Math.floor(Math.random() * evolutions.length)]
+        const newMonster = {
+          id: `${state.monster.id}_m${Date.now()}`,
+          name: egg.name || 'Hatchling',
+          level: 1,
+          crystals: 0,
+          coins: 0,
+          evolution: newEvolution,
+          traits: [egg.rarity || 'common'],
+          questsCompleted: 0,
+          socialScore: 0,
+          preferredQuestTypes: {},
+          preferredGroupSize: 'small',
+          unlockedSkins: ['default'],
+          activeSkin: 'default',
+          equippedItems: { hat: null, outfit: null },
+        }
+
+        return {
+          eggs: state.eggs.filter((e) => e.id !== eggId),
+          monsters: [...state.monsters, newMonster],
+        }
+      }),
+
+      setActiveMonster: (monsterId) => set((state) => {
+        const nextMonster = state.monsters.find((m) => m.id === monsterId)
+        if (!nextMonster) return state
+        return { monster: nextMonster }
       }),
     }),
     {

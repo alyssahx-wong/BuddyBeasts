@@ -15,7 +15,7 @@ export default function QRCheckIn() {
   const scannerRef = useRef(null)
 
   const { user } = useAuthStore()
-  const { addCrystals, completeQuest, monster } = useMonsterStore()
+  const { addCrystals, addCoins, completeQuest, monster } = useMonsterStore()
   const { trackQuestComplete } = useDataStore()
 
   const [checkInCode, setCheckInCode] = useState('')
@@ -74,13 +74,15 @@ export default function QRCheckIn() {
     setCheckedIn(true)
     const isGroup = participants.length > 1
     const crystalBonus = isGroup ? Math.floor(quest.crystals * 1.5) : quest.crystals
+    const coinBonus = Math.max(10, Math.floor(crystalBonus / 2))
     addCrystals(crystalBonus)
+    addCoins(coinBonus)
     completeQuest(quest.type, isGroup)
     const duration = Math.floor((Date.now() - questStartTime) / 1000 / 60)
     trackQuestComplete(questId, participants.length, duration)
     setTimeout(() => {
       navigate('/hub', {
-        state: { questCompleted: true, crystalsEarned: crystalBonus, questName: quest.title },
+        state: { questCompleted: true, crystalsEarned: crystalBonus, coinsEarned: coinBonus, questName: quest.title },
       })
     }, 3000)
   }
