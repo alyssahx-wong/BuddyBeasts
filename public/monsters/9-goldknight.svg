@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges">
+  <!-- Yellow round body -->
+  <rect x="14" y="28" width="36" height="26" rx="14" fill="#e8c040"/>
+  <rect x="10" y="34" width="44" height="20" rx="10" fill="#e8c040"/>
+  <!-- Lighter belly -->
+  <rect x="22" y="38" width="20" height="12" rx="6" fill="#f0d870"/>
+  <!-- Blue hat/helmet -->
+  <rect x="20" y="16" width="24" height="14" rx="4" fill="#4070b0"/>
+  <rect x="18" y="26" width="28" height="4" fill="#4070b0"/>
+  <!-- Hat gem/light -->
+  <circle cx="32" cy="14" r="3" fill="#ffdd40"/>
+  <circle cx="32" cy="14" r="1.5" fill="#fff8a0"/>
+  <!-- Sparkle from gem -->
+  <rect x="31" y="8" width="2" height="4" fill="#ffdd40" opacity="0.7"/>
+  <rect x="28" y="13" width="2" height="2" fill="#ffdd40" opacity="0.5"/>
+  <rect x="36" y="12" width="2" height="2" fill="#ffdd40" opacity="0.5"/>
+  <!-- Eyes -->
+  <circle cx="24" cy="36" r="5" fill="#1a1a2e"/>
+  <circle cx="40" cy="36" r="5" fill="#1a1a2e"/>
+  <circle cx="25" cy="35" r="2" fill="white"/>
+  <circle cx="41" cy="35" r="2" fill="white"/>
+  <!-- Open mouth (surprised) -->
+  <ellipse cx="32" cy="44" rx="4" ry="3" fill="#1a1a2e"/>
+  <ellipse cx="32" cy="43" rx="3" ry="2" fill="#c09030"/>
+  <!-- Sword -->
+  <rect x="50" y="28" width="3" height="18" fill="#c0c0d0"/>
+  <rect x="49" y="26" width="5" height="4" rx="1" fill="#d0d0e0"/>
+  <rect x="47" y="44" width="9" height="3" rx="1" fill="#a08030"/>
+  <rect x="50" y="46" width="3" height="4" fill="#805020"/>
+  <!-- Feet -->
+  <rect x="18" y="52" width="10" height="4" rx="2" fill="#d0a830"/>
+  <rect x="36" y="52" width="10" height="4" rx="2" fill="#d0a830"/>
+</svg>

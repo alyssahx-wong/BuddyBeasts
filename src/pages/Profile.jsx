@@ -195,6 +195,7 @@ export default function Profile() {
           <div className="mb-4">
             <PixelMonster
               evolution={monster.evolution}
+              monsterType={monster.monsterType}
               size="large"
               animated={true}
               isPlayer={true}

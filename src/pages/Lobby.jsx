@@ -2,18 +2,46 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import PixelMonster from '../components/PixelMonster'
+<<<<<<< HEAD
 import api from '../api'
+=======
+import coffeeBg from '../icons/coffee.png'
+import studyBg from '../icons/study.png'
+import outdoorBg from '../icons/outdoor.png'
+
+const CATEGORY_BG = {
+  coffee: coffeeBg,
+  study: studyBg,
+  walk: outdoorBg,
+  help: coffeeBg,
+}
+>>>>>>> junhern
 
 export default function Lobby() {
   const navigate = useNavigate()
   const { questId } = useParams()
+<<<<<<< HEAD
   const { user } = useAuthStore()
 
   const [lobby, setLobby] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [countdown, setCountdown] = useState(null)
-  const [floatingEmote, setFloatingEmote] = useState(null)
+=======
+  const location = useLocation()
+  const quest = location.state?.quest
 
+  const { user } = useAuthStore()
+  const { monster } = useMonsterStore()
+  const { trackQuestStart } = useDataStore()
+  const { addQuestParticipants } = useChatStore()
+
+  const [participants, setParticipants] = useState([])
+  const [isReady, setIsReady] = useState(false)
+  const [allReady, setAllReady] = useState(false)
+>>>>>>> junhern
+  const [countdown, setCountdown] = useState(null)
+  const [floatingEmotes, setFloatingEmotes] = useState([])
+
+<<<<<<< HEAD
   const fetchLobby = useCallback(async () => {
     try {
       const { data } = await api.get(`/api/lobbies/${questId}`)
@@ -23,6 +51,69 @@ export default function Lobby() {
       console.error('Failed to fetch lobby:', err)
       if (err.response?.status === 404) {
         navigate('/quests')
+=======
+  useEffect(() => {
+    if (!quest) {
+      navigate('/quests')
+      return
+    }
+
+    // Track quest start
+    trackQuestStart(questId, quest.type)
+
+    // Add current user to participants
+    const currentUser = {
+      id: user.id,
+      name: user.name,
+      monster: monster,
+      isReady: false,
+      isHost: true,
+    }
+    setParticipants([currentUser])
+
+    // Simulate other participants joining
+    const joinInterval = setInterval(() => {
+      setParticipants(prev => {
+        if (prev.length < quest.maxParticipants && Math.random() > 0.3) {
+          const newParticipant = {
+            id: `user_${Date.now()}_${Math.random()}`,
+            name: `Player${Math.floor(Math.random() * 100)}`,
+            monster: {
+              evolution: ['baby', 'teen', 'adult'][Math.floor(Math.random() * 3)],
+              monsterType: Math.floor(Math.random() * 9) + 1,
+              level: Math.floor(Math.random() * 10) + 1,
+            },
+            isReady: Math.random() > 0.5,
+            isHost: false,
+          }
+          return [...prev, newParticipant]
+        }
+        return prev
+      })
+    }, 3000)
+
+    return () => clearInterval(joinInterval)
+  }, [quest, questId, user, monster, trackQuestStart, navigate])
+
+  useEffect(() => {
+    // Check if all participants are ready
+    const ready = participants.length >= quest.minParticipants &&
+                  participants.every(p => p.isReady || p.id === user.id && isReady)
+    setAllReady(ready)
+
+    if (ready && !countdown) {
+      // Create quest chat conversation when starting
+      if (participants.length > 0) {
+        addQuestParticipants(
+          questId,
+          quest.title,
+          participants.map((p) => ({
+            id: p.id,
+            name: p.name,
+            avatar: p.id === user.id ? user.picture : null,
+          }))
+        )
+>>>>>>> junhern
       }
       return null
     } finally {
@@ -57,6 +148,7 @@ export default function Lobby() {
     }
   }, [lobby?.allReady, countdown, questId, navigate])
 
+<<<<<<< HEAD
   const handleReady = async () => {
     try {
       const { data } = await api.put(`/api/lobbies/${questId}/ready`)
@@ -64,6 +156,13 @@ export default function Lobby() {
     } catch (err) {
       console.error('Failed to toggle ready:', err)
     }
+=======
+  const handleReady = () => {
+    setIsReady(!isReady)
+    setParticipants(prev => prev.map(p =>
+      p.id === user.id ? { ...p, isReady: !isReady } : p
+    ))
+>>>>>>> junhern
   }
 
   const handleLeave = async () => {
@@ -75,6 +174,7 @@ export default function Lobby() {
     navigate('/quests')
   }
 
+<<<<<<< HEAD
   const handleEmote = async (emote) => {
     setFloatingEmote(emote)
     setTimeout(() => setFloatingEmote(null), 2000)
@@ -83,6 +183,15 @@ export default function Lobby() {
     } catch {
       // ephemeral, ignore errors
     }
+=======
+  const handleEmote = (emote) => {
+    const id = Date.now() + Math.random()
+    const left = Math.random() * 60 + 20
+    setFloatingEmotes(prev => [...prev, { id, emote, left }])
+    setTimeout(() => {
+      setFloatingEmotes(prev => prev.filter(e => e.id !== id))
+    }, 1500)
+>>>>>>> junhern
   }
 
   if (loading) {
@@ -142,22 +251,24 @@ export default function Lobby() {
                 {quest.description}
               </p>
               <div className="flex gap-3 text-xs font-game">
-                <span className="text-pixel-green">⏱️ {quest.duration} min</span>
-                <span className="text-pixel-yellow">💎 {quest.crystals} crystals</span>
+                <span className="text-pixel-green">{quest.duration} min</span>
+                <span className="text-pixel-yellow">{quest.crystals} crystals</span>
               </div>
             </div>
           </div>
           <p className="text-xs text-pixel-blue font-game">
-            📍 {quest.location}
+            {quest.location}
           </p>
         </div>
 
         {/* Campfire Scene */}
-        <div className="pixel-card min-h-[300px] bg-gradient-to-b from-pixel-purple to-pixel-dark bg-opacity-30 p-6 mb-6 relative overflow-hidden">
-          {/* Campfire */}
-          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-4xl animate-pulse-slow">
-            🔥
-          </div>
+        <div
+          className="pixel-card min-h-[300px] p-6 mb-6 relative overflow-hidden"
+          style={{
+            background: `linear-gradient(to bottom, rgba(26,26,46,0.6), rgba(26,26,46,0.85)), url(${CATEGORY_BG[quest.category] || coffeeBg}) center/cover no-repeat`,
+            imageRendering: 'pixelated',
+          }}
+        >
 
           {/* Participants around campfire */}
           <div className="relative h-full flex items-center justify-center">
@@ -165,24 +276,21 @@ export default function Lobby() {
               {participants.map((participant, index) => (
                 <div
                   key={participant.id}
-                  className="text-center relative"
+                  className="text-center"
                   style={{
                     animation: `float ${2 + index * 0.5}s ease-in-out infinite`
                   }}
                 >
-                  {participant.id === user.id && floatingEmote && (
-                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-3xl animate-emote-pop z-10">
-                      {floatingEmote}
-                    </div>
-                  )}
                   <PixelMonster
+<<<<<<< HEAD
                     evolution={participant.monster?.evolution || 'baby'}
+=======
+                    evolution={participant.monster.evolution}
+                    monsterType={participant.monster.monsterType}
+>>>>>>> junhern
                     size="medium"
                     animated={true}
                     isPlayer={participant.id === user.id}
-                    skin={participant.monster?.activeSkin || 'default'}
-                    monsterId={participant.monster?.monsterId}
-                    usePixelArt={true}
                   />
                   <div className="mt-2 pixel-card p-2 bg-pixel-dark bg-opacity-75 inline-block">
                     <p className="font-game text-xs text-white">
@@ -191,9 +299,9 @@ export default function Lobby() {
                     </p>
                     <p className="text-xs mt-1">
                       {participant.isReady ? (
-                        <span className="text-pixel-green">✓ Ready</span>
+                        <span className="text-pixel-green">Ready</span>
                       ) : (
-                        <span className="text-pixel-yellow">⏳ Waiting</span>
+                        <span className="text-pixel-yellow">Waiting</span>
                       )}
                     </p>
                   </div>
@@ -204,24 +312,48 @@ export default function Lobby() {
         </div>
 
         {/* Emote Actions */}
-        <div className="grid grid-cols-4 gap-3 mb-6">
-          {['👋', '😊', '👍', '🎉'].map((emote) => (
-            <button
-              key={emote}
-              onClick={() => handleEmote(emote)}
-              className="pixel-button bg-pixel-purple hover:bg-pixel-pink text-white py-4 text-2xl"
+        <div className="relative">
+          {/* Floating emotes */}
+          {floatingEmotes.map(({ id, emote, left }) => (
+            <span
+              key={id}
+              className="absolute text-3xl pointer-events-none"
+              style={{
+                left: `${left}%`,
+                bottom: '100%',
+                animation: 'emote-float 1.5s ease-out forwards',
+              }}
             >
               {emote}
-            </button>
+            </span>
           ))}
+          <div className="grid grid-cols-4 gap-3 mb-6">
+            {['👋', '😊', '👍', '🎉'].map((emote) => (
+              <button
+                key={emote}
+                onClick={() => handleEmote(emote)}
+                className="pixel-button bg-pixel-purple hover:bg-pixel-pink text-white py-4 text-2xl active:scale-90 transition-transform"
+              >
+                {emote}
+              </button>
+            ))}
+          </div>
         </div>
+
+        <style>{`
+          @keyframes emote-float {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            50% { opacity: 0.8; transform: translateY(-60px) scale(1.2); }
+            100% { opacity: 0; transform: translateY(-120px) scale(0.8); }
+          }
+        `}</style>
 
         {/* Ready Check */}
         <div className="space-y-4">
           {participants.length < quest.minParticipants && (
             <div className="pixel-card p-4 bg-pixel-yellow bg-opacity-20 text-center">
               <p className="font-game text-pixel-yellow">
-                ⏳ Waiting for {quest.minParticipants - participants.length} more player(s)
+                Waiting for {quest.minParticipants - participants.length} more player(s)
               </p>
             </div>
           )}
@@ -236,13 +368,13 @@ export default function Lobby() {
               }
             `}
           >
-            {isReady ? '✓ Ready!' : '🎯 I\'m Ready'}
+            {isReady ? 'Ready!' : 'I\'m Ready'}
           </button>
 
           {lobby.allReady && !countdown && (
             <div className="pixel-card p-4 bg-pixel-green bg-opacity-20 text-center animate-pulse">
               <p className="font-game text-pixel-green">
-                ✓ All players ready! Quest starting soon...
+                All players ready! Quest starting soon...
               </p>
             </div>
           )}
@@ -251,7 +383,7 @@ export default function Lobby() {
         {/* Info */}
         <div className="mt-6 pixel-card p-4 bg-pixel-purple bg-opacity-20">
           <p className="text-xs text-pixel-light font-game text-center">
-            💡 Once everyone is ready, you'll receive the meeting location and QR check-in code
+            Once everyone is ready, you'll receive the meeting location and QR check-in code
           </p>
         </div>
       </div>

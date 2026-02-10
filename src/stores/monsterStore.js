@@ -8,7 +8,7 @@ export const useMonsterStore = create(
       monster: {
         id: null,
         name: 'Buddy',
-        monsterId: 1,
+        monsterType: Math.floor(Math.random() * 9) + 1,
         level: 1,
         crystals: 0,
         coins: 0,
@@ -30,6 +30,7 @@ export const useMonsterStore = create(
       eggs: [],
       groupPhotos: [],
 
+<<<<<<< HEAD
       // ── Backend-synced methods ──
 
       fetchMonster: async () => {
@@ -46,12 +47,14 @@ export const useMonsterStore = create(
         }
       },
 
+=======
+>>>>>>> junhern
       initializeMonster: (userId, quizData = {}) => set((state) => {
         const initialized = {
           ...state.monster,
           id: userId,
           name: quizData.name || 'Buddy',
-          monsterId: quizData.monsterId || 1,
+          monsterType: quizData.monsterType || state.monster.monsterType,
         }
         const hasMonster = state.monsters.some((m) => m.id === userId)
         return {
@@ -60,6 +63,7 @@ export const useMonsterStore = create(
         }
       }),
 
+<<<<<<< HEAD
       addCrystals: async (amount) => {
         try {
           const { data } = await api.post('/api/monsters/me/crystals', { amount })
@@ -70,8 +74,36 @@ export const useMonsterStore = create(
           return data
         } catch {
           return null
+=======
+      addCrystals: (amount) => set((state) => {
+        const newCrystals = state.monster.crystals + amount
+        const newLevel = Math.floor(newCrystals / 100) + 1
+        const oldLevel = state.monster.level
+
+        // Auto-evolve from baby to teen at level 5
+        let newEvolution = state.monster.evolution
+        let justEvolved = false
+        if (oldLevel < 5 && newLevel >= 5 && state.monster.evolution === 'baby') {
+          newEvolution = 'teen'
+          justEvolved = true
+        }
+
+        const updatedMonster = {
+          ...state.monster,
+          crystals: newCrystals,
+          level: newLevel,
+          evolution: newEvolution,
+          justEvolved,
+>>>>>>> junhern
         }
       },
+
+      clearJustEvolved: () => set((state) => ({
+        monster: {
+          ...state.monster,
+          justEvolved: false,
+        }
+      })),
 
       addCoins: (amount) => set((state) => {
         const updatedMonster = {
@@ -83,6 +115,20 @@ export const useMonsterStore = create(
           monsters: state.monsters.map((m) => (m.id === updatedMonster.id ? updatedMonster : m)),
         }
       }),
+<<<<<<< HEAD
+=======
+
+      completeQuest: (questType, isGroup) => set((state) => {
+        const newPreferred = { ...state.monster.preferredQuestTypes }
+        newPreferred[questType] = (newPreferred[questType] || 0) + 1
+
+        const updatedMonster = {
+          ...state.monster,
+          questsCompleted: state.monster.questsCompleted + 1,
+          socialScore: isGroup ? state.monster.socialScore + 10 : state.monster.socialScore + 3,
+          preferredQuestTypes: newPreferred,
+        }
+>>>>>>> junhern
 
       completeQuest: async (questType, isGroup) => {
         try {
@@ -98,6 +144,7 @@ export const useMonsterStore = create(
         } catch {
           return null
         }
+<<<<<<< HEAD
       },
 
       evolveMonster: async (newEvolution, traits) => {
@@ -113,6 +160,15 @@ export const useMonsterStore = create(
           return data
         } catch (err) {
           throw err
+=======
+      }),
+
+      evolveMonster: (newEvolution, traits) => set((state) => {
+        const updatedMonster = {
+          ...state.monster,
+          evolution: newEvolution,
+          traits: [...state.monster.traits, ...traits],
+>>>>>>> junhern
         }
       },
 
@@ -127,7 +183,11 @@ export const useMonsterStore = create(
         } catch {
           return null
         }
+<<<<<<< HEAD
       },
+=======
+      }),
+>>>>>>> junhern
 
       updatePreferredGroupSize: (size) => set((state) => {
         const updatedMonster = {
