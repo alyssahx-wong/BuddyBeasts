@@ -1,5 +1,5 @@
 """
-KarmaLoop / Gatherlings — FastAPI Backend
+BuddyBeasts / Gatherlings — FastAPI Backend
 ==========================================
 PostgreSQL-backed (Neon) backend that mirrors every feature of the React frontend.
 Run:  python main.py          → http://localhost:8000/docs
@@ -355,7 +355,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(
     title="Gatherlings API",
     version="1.0.0",
-    description="Backend API for the KarmaLoop / Gatherlings community-building platform.",
+    description="Backend API for the BuddyBeasts / Gatherlings community-building platform.",
     lifespan=lifespan,
 )
 
@@ -934,7 +934,7 @@ def leave_lobby(instance_id: str, user: dict = Depends(get_current_user), db: Se
 
 @app.get("/api/checkin/{quest_id}/code", tags=["Check-in"])
 def generate_checkin_code(quest_id: str, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
-    code = f"KARMA_{quest_id}_{int(time.time() * 1000)}"
+    code = f"BUDDY_{quest_id}_{int(time.time() * 1000)}"
     db.add(models.CheckinCode(code=code, quest_id=quest_id, user_id=user["id"], timestamp=time.time()))
     db.commit()
     return {"code": code, "questId": quest_id}

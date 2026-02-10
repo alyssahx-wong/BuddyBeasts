@@ -151,7 +151,7 @@ export const useChatStore = create(
       clearChat: () => set({ messages: [], conversations: [], currentConversationId: null }),
     }),
     {
-      name: 'karmaloop-chat',
+      name: 'buddybeasts-chat',
     }
   )
 )
