@@ -46,14 +46,15 @@ export default function PixelMonster({
   return (
     <div 
       className={`
-        pixel-border inline-block
+        pixelated inline-block
         ${animated ? 'animate-float' : ''}
         ${isPlayer ? 'drop-shadow-lg' : ''}
         ${sizeClasses[size]}
         ${className}
       `}
       style={{
-        filter: isPlayer ? 'drop-shadow(0 0 8px rgba(255, 230, 109, 0.6))' : 'none'
+        filter: isPlayer ? 'drop-shadow(0 0 8px rgba(255, 230, 109, 0.6))' : 'none',
+        imageRendering: 'pixelated',
       }}
     >
       {sprite}

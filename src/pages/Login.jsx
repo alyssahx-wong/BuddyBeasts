@@ -4,6 +4,7 @@ import { GoogleLogin } from '@react-oauth/google'
 import { jwtDecode } from 'jwt-decode'
 import { useAuthStore } from '../stores/authStore'
 import { useMonsterStore } from '../stores/monsterStore'
+import LoginBackground from '../components/LoginBackground'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -49,8 +50,9 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-pixel-dark to-pixel-purple">
-      <div className="max-w-md w-full pixel-card p-8 text-center">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      <LoginBackground />
+      <div className="max-w-md w-full pixel-card p-8 text-center relative z-10">
         <div className="mb-8">
           <h1 className="font-pixel text-2xl md:text-3xl text-pixel-yellow mb-4 animate-pulse-slow">
             KarmaLoop

@@ -11,6 +11,7 @@ import QuestBoard from './pages/QuestBoard'
 import Lobby from './pages/Lobby'
 import QRCheckIn from './pages/QRCheckIn'
 import Profile from './pages/Profile'
+import Chat from './pages/Chat'
 
 function ProtectedRoute({ children }) {
   const { user } = useAuthStore()
@@ -54,6 +55,11 @@ function App() {
             <Route path="/profile" element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            } />
+            <Route path="/chat" element={
+              <ProtectedRoute>
+                <Chat />
               </ProtectedRoute>
             } />
             <Route path="/" element={<Navigate to="/hub" />} />

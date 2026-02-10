@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { useMonsterStore } from '../stores/monsterStore'
 import { useDataStore } from '../stores/dataStore'
+import { useChatStore } from '../stores/chatStore'
 import PixelMonster from '../components/PixelMonster'
 
 export default function Lobby() {
@@ -14,6 +15,7 @@ export default function Lobby() {
   const { user } = useAuthStore()
   const { monster } = useMonsterStore()
   const { trackQuestStart } = useDataStore()
+  const { addQuestParticipants } = useChatStore()
   
   const [participants, setParticipants] = useState([])
   const [isReady, setIsReady] = useState(false)
@@ -69,6 +71,19 @@ export default function Lobby() {
     setAllReady(ready)
 
     if (ready && !countdown) {
+      // Create quest chat conversation when starting
+      if (participants.length > 0) {
+        addQuestParticipants(
+          questId,
+          quest.title,
+          participants.map((p) => ({
+            id: p.id,
+            name: p.name,
+            avatar: p.id === user.id ? user.picture : null,
+          }))
+        )
+      }
+
       // Start countdown when all ready
       let count = 5
       setCountdown(count)
@@ -81,7 +96,7 @@ export default function Lobby() {
         }
       }, 1000)
     }
-  }, [participants, isReady, quest, questId, user.id, countdown, navigate])
+  }, [participants, isReady, quest, questId, user.id, user.picture, countdown, navigate, addQuestParticipants])
 
   const handleReady = () => {
     setIsReady(!isReady)

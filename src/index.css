@@ -29,6 +29,19 @@ body {
   image-rendering: crisp-edges;
 }
 
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* Ensure emojis render as pixelated */
+canvas, img {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
 /* Custom scrollbar for pixel aesthetic */
 ::-webkit-scrollbar {
   width: 12px;

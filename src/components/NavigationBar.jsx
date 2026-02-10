@@ -8,6 +8,7 @@ export default function NavigationBar() {
   const navItems = [
     { path: '/hub', icon: '🏠', label: 'Hub' },
     { path: '/quests', icon: '📋', label: 'Quests' },
+    { path: '/chat', icon: '💬', label: 'Chat' },
     { path: '/profile', icon: '👾', label: 'Profile' },
   ]
 
