@@ -1,16 +1,16 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
-import { useMonsterStore } from '../stores/monsterStore'
 import { useHubStore } from '../stores/hubStore'
 import PixelMonster from '../components/PixelMonster'
 import NavigationBar from '../components/NavigationBar'
+import api from '../api'
 
 export default function LivingHub() {
   const navigate = useNavigate()
   const { user, currentHub } = useAuthStore()
-  const { monster } = useMonsterStore()
   const { onlineUsers, startPolling, stopPolling } = useHubStore()
+  const [monster, setMonster] = useState({ evolution: 'baby', level: 1 })
   const [showWelcome, setShowWelcome] = useState(true)
   const [monsterPosition, setMonsterPosition] = useState({ x: 50, y: 60 })
   const [isMoving, setIsMoving] = useState(false)
@@ -21,6 +21,11 @@ export default function LivingHub() {
       navigate('/hub-selection')
       return
     }
+
+    // Fetch the player's own monster from the backend
+    api.get('/api/monsters/me').then(({ data }) => {
+      if (data && data.id) setMonster(data)
+    }).catch(() => {})
 
     // Start polling for online users
     startPolling(currentHub.id)

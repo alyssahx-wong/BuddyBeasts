@@ -1,43 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
-import { useHubStore } from '../stores/hubStore'
-
-// Mock hubs data (replace with real API later)
-const MOCK_HUBS = [
-  {
-    id: 'hub_campus_main',
-    name: 'Main Campus Hub',
-    location: 'University Campus',
-    distance: 0.5,
-    activeUsers: 24,
-    coordinates: { lat: 43.6532, lng: -79.3832 }
-  },
-  {
-    id: 'hub_downtown',
-    name: 'Downtown Community',
-    location: 'Downtown Core',
-    distance: 2.1,
-    activeUsers: 18,
-    coordinates: { lat: 43.6426, lng: -79.3871 }
-  },
-  {
-    id: 'hub_eastside',
-    name: 'East Side Neighborhood',
-    location: 'East Toronto',
-    distance: 3.8,
-    activeUsers: 12,
-    coordinates: { lat: 43.6629, lng: -79.3506 }
-  },
-  {
-    id: 'hub_westend',
-    name: 'West End Village',
-    location: 'West Toronto',
-    distance: 4.2,
-    activeUsers: 15,
-    coordinates: { lat: 43.6476, lng: -79.4163 }
-  },
-]
+import api from '../api'
 
 export default function HubSelection() {
   const navigate = useNavigate()
@@ -45,31 +9,45 @@ export default function HubSelection() {
   const [location, setLocation] = useState(null)
   const [locationError, setLocationError] = useState(null)
   const [selectedHub, setSelectedHub] = useState(null)
-  const [hubs, setHubs] = useState(MOCK_HUBS)
+  const [hubs, setHubs] = useState([])
   const [isLoadingLocation, setIsLoadingLocation] = useState(true)
+  const [joining, setJoining] = useState(false)
+
+  // Fetch hubs from backend, optionally with user coordinates
+  const fetchHubs = async (coords) => {
+    try {
+      const params = {}
+      if (coords) {
+        params.lat = coords.lat
+        params.lng = coords.lng
+      }
+      const { data } = await api.get('/api/hubs', { params })
+      setHubs(data)
+      if (data.length > 0) {
+        setSelectedHub(data[0])
+      }
+    } catch (err) {
+      console.error('Failed to fetch hubs:', err)
+    }
+  }
 
   useEffect(() => {
-    // Try to get user's location
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setLocation({
+          const coords = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
-          })
+          }
+          setLocation(coords)
           setIsLoadingLocation(false)
-          
-          // Auto-select nearest hub
-          const nearest = MOCK_HUBS[0]
-          setSelectedHub(nearest)
+          fetchHubs(coords)
         },
         (error) => {
           console.error('Geolocation error:', error)
           setLocationError('Unable to access location. Please select a hub manually.')
           setIsLoadingLocation(false)
-          
-          // Auto-select first hub as default
-          setSelectedHub(MOCK_HUBS[0])
+          fetchHubs(null)
         },
         {
           enableHighAccuracy: true,
@@ -80,14 +58,21 @@ export default function HubSelection() {
     } else {
       setLocationError('Geolocation not supported. Please select a hub manually.')
       setIsLoadingLocation(false)
-      setSelectedHub(MOCK_HUBS[0])
+      fetchHubs(null)
     }
   }, [])
 
-  const handleJoinHub = () => {
-    if (selectedHub) {
+  const handleJoinHub = async () => {
+    if (!selectedHub) return
+    try {
+      setJoining(true)
+      await api.post(`/api/hubs/${selectedHub.id}/join`)
       setCurrentHub(selectedHub)
       navigate('/hub')
+    } catch (err) {
+      console.error('Failed to join hub:', err)
+    } finally {
+      setJoining(false)
     }
   }
 
@@ -150,7 +135,7 @@ export default function HubSelection() {
                   <div className="text-2xl animate-pulse-slow">✓</div>
                 )}
               </div>
-              
+
               <div className="flex gap-4 mt-4 text-sm font-game">
                 {location && (
                   <span className="text-pixel-green">
@@ -168,10 +153,10 @@ export default function HubSelection() {
         {/* Join Button */}
         <button
           onClick={handleJoinHub}
-          disabled={!selectedHub}
-          className="pixel-button bg-pixel-yellow hover:bg-pixel-pink text-pixel-dark w-full py-4 text-base"
+          disabled={!selectedHub || joining}
+          className="pixel-button bg-pixel-yellow hover:bg-pixel-pink text-pixel-dark w-full py-4 text-base disabled:opacity-50"
         >
-          Join {selectedHub?.name || 'Hub'}
+          {joining ? 'Joining...' : `Join ${selectedHub?.name || 'Hub'}`}
         </button>
 
         {/* Info */}

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import api from '../api'
 
 export const useMonsterStore = create(
   persist(
@@ -28,7 +29,23 @@ export const useMonsterStore = create(
       inventory: [],
       eggs: [],
       groupPhotos: [],
-      
+
+      // ── Backend-synced methods ──
+
+      fetchMonster: async () => {
+        try {
+          const { data } = await api.get('/api/monsters/me')
+          if (data && data.id) {
+            set((state) => ({
+              monster: { ...state.monster, ...data },
+            }))
+          }
+          return data
+        } catch {
+          return null
+        }
+      },
+
       initializeMonster: (userId, quizData = {}) => set((state) => {
         const initialized = {
           ...state.monster,
@@ -42,60 +59,76 @@ export const useMonsterStore = create(
           monsters: hasMonster ? state.monsters : [...state.monsters, initialized],
         }
       }),
-      
-      addCrystals: (amount) => set((state) => {
-        const newCrystals = state.monster.crystals + amount
-        const updatedMonster = {
-          ...state.monster,
-          crystals: newCrystals,
-          level: Math.floor(newCrystals / 100) + 1,
+
+      addCrystals: async (amount) => {
+        try {
+          const { data } = await api.post('/api/monsters/me/crystals', { amount })
+          set((state) => ({
+            monster: { ...state.monster, ...data },
+            monsters: state.monsters.map((m) => (m.id === data.id ? { ...m, ...data } : m)),
+          }))
+          return data
+        } catch {
+          return null
         }
-        return {
-          monster: updatedMonster,
-          monsters: state.monsters.map((m) => (m.id === updatedMonster.id ? updatedMonster : m)),
-        }
-      }),
+      },
 
       addCoins: (amount) => set((state) => {
         const updatedMonster = {
           ...state.monster,
-          coins: state.monster.coins + amount,
+          coins: (state.monster.coins || 0) + amount,
         }
         return {
           monster: updatedMonster,
           monsters: state.monsters.map((m) => (m.id === updatedMonster.id ? updatedMonster : m)),
         }
       }),
-      
-      completeQuest: (questType, isGroup) => set((state) => {
-        const newPreferred = { ...state.monster.preferredQuestTypes }
-        newPreferred[questType] = (newPreferred[questType] || 0) + 1
-        
-        const updatedMonster = {
-          ...state.monster,
-          questsCompleted: state.monster.questsCompleted + 1,
-          socialScore: isGroup ? state.monster.socialScore + 10 : state.monster.socialScore + 3,
-          preferredQuestTypes: newPreferred,
-        }
 
-        return {
-          monster: updatedMonster,
-          monsters: state.monsters.map((m) => (m.id === updatedMonster.id ? updatedMonster : m)),
+      completeQuest: async (questType, isGroup) => {
+        try {
+          const { data } = await api.post('/api/monsters/me/complete-quest', {
+            questType,
+            isGroup,
+          })
+          set((state) => ({
+            monster: { ...state.monster, ...data },
+            monsters: state.monsters.map((m) => (m.id === data.id ? { ...m, ...data } : m)),
+          }))
+          return data
+        } catch {
+          return null
         }
-      }),
-      
-      evolveMonster: (newEvolution, traits) => set((state) => {
-        const updatedMonster = {
-          ...state.monster,
-          evolution: newEvolution,
-          traits: [...state.monster.traits, ...traits],
+      },
+
+      evolveMonster: async (newEvolution, traits) => {
+        try {
+          const { data } = await api.post('/api/monsters/me/evolve', {
+            evolution: newEvolution,
+            traits,
+          })
+          set((state) => ({
+            monster: { ...state.monster, ...data },
+            monsters: state.monsters.map((m) => (m.id === data.id ? { ...m, ...data } : m)),
+          }))
+          return data
+        } catch (err) {
+          throw err
         }
-        return {
-          monster: updatedMonster,
-          monsters: state.monsters.map((m) => (m.id === updatedMonster.id ? updatedMonster : m)),
+      },
+
+      renameMonster: async (name) => {
+        try {
+          const { data } = await api.put('/api/monsters/me/name', { name })
+          set((state) => ({
+            monster: { ...state.monster, ...data },
+            monsters: state.monsters.map((m) => (m.id === data.id ? { ...m, ...data } : m)),
+          }))
+          return data
+        } catch {
+          return null
         }
-      }),
-      
+      },
+
       updatePreferredGroupSize: (size) => set((state) => {
         const updatedMonster = {
           ...state.monster,
@@ -106,6 +139,8 @@ export const useMonsterStore = create(
           monsters: state.monsters.map((m) => (m.id === updatedMonster.id ? updatedMonster : m)),
         }
       }),
+
+      // ── Local-only features (skins, marketplace, eggs, photos) ──
 
       unlockSkin: (skinId) => set((state) => {
         if (state.monster.unlockedSkins.includes(skinId)) return state
@@ -166,11 +201,11 @@ export const useMonsterStore = create(
       }),
 
       buyItem: (item) => set((state) => {
-        if (state.monster.coins < item.cost) return state
+        if ((state.monster.coins || 0) < item.cost) return state
         if (state.inventory.includes(item.id)) return state
         const updatedMonster = {
           ...state.monster,
-          coins: state.monster.coins - item.cost,
+          coins: (state.monster.coins || 0) - item.cost,
         }
         return {
           monster: updatedMonster,
@@ -180,10 +215,10 @@ export const useMonsterStore = create(
       }),
 
       buyEgg: (egg) => set((state) => {
-        if (state.monster.coins < egg.cost) return state
+        if ((state.monster.coins || 0) < egg.cost) return state
         const updatedMonster = {
           ...state.monster,
-          coins: state.monster.coins - egg.cost,
+          coins: (state.monster.coins || 0) - egg.cost,
         }
         return {
           monster: updatedMonster,

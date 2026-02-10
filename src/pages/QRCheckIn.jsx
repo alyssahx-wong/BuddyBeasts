@@ -1,22 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { useNavigate, useParams, useLocation } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
+import { QRCodeSVG } from 'qrcode.react'
 import { useAuthStore } from '../stores/authStore'
 import { useMonsterStore } from '../stores/monsterStore'
-import { useDataStore } from '../stores/dataStore'
+import api from '../api'
 
 export default function QRCheckIn() {
   const navigate = useNavigate()
   const { questId } = useParams()
-  const location = useLocation()
-  const quest = location.state?.quest
-  const participants = location.state?.participants || []
-
   const { user } = useAuthStore()
-  const { addCrystals, addCoins, completeQuest, monster, saveGroupPhoto } = useMonsterStore()
-  const { trackQuestComplete } = useDataStore()
+  const { saveGroupPhoto } = useMonsterStore()
 
+  const [checkInCode, setCheckInCode] = useState('')
   const [checkedIn, setCheckedIn] = useState(false)
-  const [questStartTime] = useState(Date.now())
+  const [result, setResult] = useState(null)
+  const [lobby, setLobby] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   const [step, setStep] = useState('emote')
   const [emoteChoice, setEmoteChoice] = useState(null)
@@ -31,23 +30,36 @@ export default function QRCheckIn() {
   const [cameraStream, setCameraStream] = useState(null)
 
   useEffect(() => {
-    if (!quest) {
-      navigate('/quests')
-      return
-    }
-  }, [quest, navigate])
+    const init = async () => {
+      try {
+        // Fetch lobby state for quest info + participants
+        const lobbyRes = await api.get(`/api/lobbies/${questId}`)
+        setLobby(lobbyRes.data)
 
-  const performCheckIn = () => {
+        // Generate check-in code from backend
+        const codeRes = await api.get(`/api/checkin/${questId}/code`)
+        setCheckInCode(codeRes.data.code)
+      } catch (err) {
+        console.error('Failed to init check-in:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    init()
+  }, [questId])
+
+  const handleCheckIn = async () => {
     if (checkedIn) return
-    setCheckedIn(true)
-    const isGroup = participants.length > 1
-    const crystalBonus = isGroup ? Math.floor(quest.crystals * 1.5) : quest.crystals
-    const coinBonus = Math.max(10, Math.floor(crystalBonus / 2))
-    addCrystals(crystalBonus)
-    addCoins(coinBonus)
-    completeQuest(quest.type, isGroup)
-    const duration = Math.floor((Date.now() - questStartTime) / 1000 / 60)
-    trackQuestComplete(questId, participants.length, duration)
+    try {
+      const participantCount = lobby?.participants?.length || 1
+      const { data } = await api.post(`/api/checkin/${questId}/confirm`, {
+        participantCount,
+      })
+      setResult(data)
+      setCheckedIn(true)
+    } catch (err) {
+      console.error('Check-in failed:', err)
+    }
   }
 
   const handleCancel = () => {
@@ -73,7 +85,7 @@ export default function QRCheckIn() {
 
   const finishIfQualified = () => {
     if (signalCount >= 2 && !checkedIn) {
-      performCheckIn()
+      handleCheckIn()
     }
     setStep('snapshot')
   }
@@ -99,6 +111,9 @@ export default function QRCheckIn() {
     setGroupMemory(`${word} + ${otherWord}`)
     finishIfQualified()
   }
+
+  const quest = lobby?.quest || {}
+  const participants = lobby?.participants || []
 
   const handleSaveSnapshot = () => {
     const svg = `<?xml version="1.0" encoding="UTF-8"?>
@@ -190,7 +205,13 @@ export default function QRCheckIn() {
     }
   }, [cameraStream])
 
-  if (!quest) return null
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-pixel-dark via-pixel-purple to-pixel-dark flex items-center justify-center">
+        <p className="font-game text-pixel-light animate-pulse">Loading check-in...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pixel-dark via-pixel-purple to-pixel-dark pb-20">
@@ -321,7 +342,16 @@ export default function QRCheckIn() {
                     Save Snapshot
                   </button>
                   <button
-                    onClick={() => setStep('complete')}
+                    onClick={() => {
+                      if (!checkedIn) handleCheckIn()
+                      navigate('/hub', {
+                        state: {
+                          questCompleted: true,
+                          crystalsEarned: result?.crystalsEarned,
+                          questName: result?.questName,
+                        }
+                      })
+                    }}
                     className="pixel-button bg-pixel-green text-white w-full py-3"
                   >
                     Finish
@@ -423,26 +453,26 @@ export default function QRCheckIn() {
                 Nice! You completed this together.
               </h2>
               <p className="font-game text-lg text-pixel-light mb-6">
-                You earned <span className="text-pixel-yellow">{Math.floor(quest.crystals * 1.5)}</span> crystals!
+                You earned <span className="text-pixel-yellow">{result?.crystalsEarned || 0}</span> crystals!
               </p>
-              
+
               <div className="grid grid-cols-3 gap-4 text-center mb-6">
                 <div>
                   <p className="text-3xl mb-2">💎</p>
                   <p className="text-xs font-game text-pixel-light">
-                    +{Math.floor(quest.crystals * 1.5)}
+                    +{result?.crystalsEarned || 0}
                   </p>
                 </div>
                 <div>
                   <p className="text-3xl mb-2">⭐</p>
                   <p className="text-xs font-game text-pixel-light">
-                    +10 XP
+                    +{result?.xp || 10} XP
                   </p>
                 </div>
                 <div>
                   <p className="text-3xl mb-2">🤝</p>
                   <p className="text-xs font-game text-pixel-light">
-                    +{participants.length - 1} connection{participants.length > 2 ? 's' : ''}
+                    +{result?.connections || 0} connection{(result?.connections || 0) !== 1 ? 's' : ''}
                   </p>
                 </div>
               </div>
@@ -454,16 +484,6 @@ export default function QRCheckIn() {
                 Return to Hub
               </button>
             </div>
-
-            {/* Monster Evolution Check */}
-            {monster.crystals + Math.floor(quest.crystals * 1.5) >= (monster.level * 100) && (
-              <div className="pixel-card p-6 bg-pixel-pink bg-opacity-20 animate-pulse">
-                <p className="text-4xl mb-2">🌟</p>
-                <p className="font-pixel text-sm text-pixel-yellow">
-                  Your monster is ready to evolve!
-                </p>
-              </div>
-            )}
           </div>
         )}
       </div>

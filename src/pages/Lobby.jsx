@@ -1,92 +1,48 @@
-import React, { useState, useEffect } from 'react'
-import { useNavigate, useParams, useLocation } from 'react-router-dom'
+import React, { useState, useEffect, useCallback } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
-import { useMonsterStore } from '../stores/monsterStore'
-import { useDataStore } from '../stores/dataStore'
-import { useChatStore } from '../stores/chatStore'
 import PixelMonster from '../components/PixelMonster'
+import api from '../api'
 
 export default function Lobby() {
   const navigate = useNavigate()
   const { questId } = useParams()
-  const location = useLocation()
-  const quest = location.state?.quest
-  
   const { user } = useAuthStore()
-  const { monster } = useMonsterStore()
-  const { trackQuestStart } = useDataStore()
-  const { addQuestParticipants } = useChatStore()
-  
-  const [participants, setParticipants] = useState([])
-  const [isReady, setIsReady] = useState(false)
-  const [allReady, setAllReady] = useState(false)
+
+  const [lobby, setLobby] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [countdown, setCountdown] = useState(null)
   const [floatingEmote, setFloatingEmote] = useState(null)
 
-  useEffect(() => {
-    if (!quest) {
-      navigate('/quests')
-      return
-    }
-
-    // Track quest start
-    trackQuestStart(questId, quest.type)
-
-    // Add current user to participants
-    const currentUser = {
-      id: user.id,
-      name: user.name,
-      monster: monster,
-      isReady: false,
-      isHost: true,
-    }
-    setParticipants([currentUser])
-
-    // Simulate other participants joining
-    const joinInterval = setInterval(() => {
-      setParticipants(prev => {
-        if (prev.length < quest.maxParticipants && Math.random() > 0.3) {
-          const newParticipant = {
-            id: `user_${Date.now()}_${Math.random()}`,
-            name: `Player${Math.floor(Math.random() * 100)}`,
-            monster: {
-              evolution: ['baby', 'teen', 'adult'][Math.floor(Math.random() * 3)],
-              level: Math.floor(Math.random() * 10) + 1,
-              activeSkin: 'default',
-            },
-            isReady: Math.random() > 0.5,
-            isHost: false,
-          }
-          return [...prev, newParticipant]
-        }
-        return prev
-      })
-    }, 3000)
-
-    return () => clearInterval(joinInterval)
-  }, [quest, questId, user, monster, trackQuestStart, navigate])
-
-  useEffect(() => {
-    // Check if all participants are ready
-    const ready = participants.length >= quest.minParticipants && 
-                  participants.every(p => p.isReady || p.id === user.id && isReady)
-    setAllReady(ready)
-
-    if (ready && !countdown) {
-      // Create quest chat conversation when starting
-      if (participants.length > 0) {
-        addQuestParticipants(
-          questId,
-          quest.title,
-          participants.map((p) => ({
-            id: p.id,
-            name: p.name,
-            avatar: p.id === user.id ? user.picture : null,
-          }))
-        )
+  const fetchLobby = useCallback(async () => {
+    try {
+      const { data } = await api.get(`/api/lobbies/${questId}`)
+      setLobby(data)
+      return data
+    } catch (err) {
+      console.error('Failed to fetch lobby:', err)
+      if (err.response?.status === 404) {
+        navigate('/quests')
       }
+      return null
+    } finally {
+      setLoading(false)
+    }
+  }, [questId, navigate])
 
-      // Start countdown when all ready
+  useEffect(() => {
+    // Join the lobby on mount
+    api.post(`/api/lobbies/${questId}/join`)
+      .then(() => fetchLobby())
+      .catch(() => fetchLobby())
+
+    // Poll lobby state every 3 seconds
+    const interval = setInterval(fetchLobby, 3000)
+    return () => clearInterval(interval)
+  }, [questId, fetchLobby])
+
+  useEffect(() => {
+    if (lobby?.allReady && countdown === null) {
       let count = 5
       setCountdown(count)
       const interval = setInterval(() => {
@@ -94,29 +50,55 @@ export default function Lobby() {
         setCountdown(count)
         if (count === 0) {
           clearInterval(interval)
-          navigate(`/checkin/${questId}`, { state: { quest, participants } })
+          navigate(`/checkin/${questId}`)
         }
       }, 1000)
+      return () => clearInterval(interval)
     }
-  }, [participants, isReady, quest, questId, user.id, user.picture, countdown, navigate, addQuestParticipants])
+  }, [lobby?.allReady, countdown, questId, navigate])
 
-  const handleReady = () => {
-    setIsReady(!isReady)
-    setParticipants(prev => prev.map(p => 
-      p.id === user.id ? { ...p, isReady: !isReady } : p
-    ))
+  const handleReady = async () => {
+    try {
+      const { data } = await api.put(`/api/lobbies/${questId}/ready`)
+      setLobby(data)
+    } catch (err) {
+      console.error('Failed to toggle ready:', err)
+    }
   }
 
-  const handleLeave = () => {
+  const handleLeave = async () => {
+    try {
+      await api.delete(`/api/lobbies/${questId}/leave`)
+    } catch {
+      // ignore
+    }
     navigate('/quests')
   }
 
-  const handleEmote = (emote) => {
+  const handleEmote = async (emote) => {
     setFloatingEmote(emote)
     setTimeout(() => setFloatingEmote(null), 2000)
+    try {
+      await api.post(`/api/lobbies/${questId}/emote`, { emote })
+    } catch {
+      // ephemeral, ignore errors
+    }
   }
 
-  if (!quest) return null
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-pixel-dark via-pixel-purple to-pixel-dark flex items-center justify-center">
+        <p className="font-game text-pixel-light animate-pulse">Loading lobby...</p>
+      </div>
+    )
+  }
+
+  if (!lobby) return null
+
+  const quest = lobby.quest
+  const participants = lobby.participants
+  const myParticipant = participants.find(p => p.id === user.id)
+  const isReady = myParticipant?.isReady || false
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pixel-dark via-pixel-purple to-pixel-dark pb-20">
@@ -194,7 +176,7 @@ export default function Lobby() {
                     </div>
                   )}
                   <PixelMonster
-                    evolution={participant.monster.evolution}
+                    evolution={participant.monster?.evolution || 'baby'}
                     size="medium"
                     animated={true}
                     isPlayer={participant.id === user.id}
@@ -257,7 +239,7 @@ export default function Lobby() {
             {isReady ? '✓ Ready!' : '🎯 I\'m Ready'}
           </button>
 
-          {allReady && !countdown && (
+          {lobby.allReady && !countdown && (
             <div className="pixel-card p-4 bg-pixel-green bg-opacity-20 text-center animate-pulse">
               <p className="font-game text-pixel-green">
                 ✓ All players ready! Quest starting soon...

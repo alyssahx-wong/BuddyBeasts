@@ -1,50 +1,46 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { GoogleLogin } from '@react-oauth/google'
-import { jwtDecode } from 'jwt-decode'
 import { useAuthStore } from '../stores/authStore'
-import { useMonsterStore } from '../stores/monsterStore'
 import LoginBackground from '../components/LoginBackground'
 
 export default function Login() {
   const navigate = useNavigate()
-  const setUser = useAuthStore((state) => state.setUser)
-  const initializeMonster = useMonsterStore((state) => state.initializeMonster)
+  const loginDemo = useAuthStore((state) => state.loginDemo)
+  const loginGoogle = useAuthStore((state) => state.loginGoogle)
+  const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(false)
 
-  const handleSuccess = (credentialResponse) => {
+  const handleSuccess = async (credentialResponse) => {
     try {
-      const decoded = jwtDecode(credentialResponse.credential)
-      const user = {
-        id: decoded.sub,
-        name: decoded.name,
-        email: decoded.email,
-        picture: decoded.picture,
-      }
-      
-      setUser(user)
-      
-      // Navigate to personality quiz first
-      navigate('/quiz')
-    } catch (error) {
-      console.error('Login error:', error)
+      setLoading(true)
+      setError(null)
+      await loginGoogle(credentialResponse.credential)
+      navigate('/hub-selection')
+    } catch (err) {
+      console.error('Login error:', err)
+      setError('Google login failed. Please try again.')
+    } finally {
+      setLoading(false)
     }
   }
 
   const handleError = () => {
-    console.error('Login failed')
+    setError('Google login failed. Please try again.')
   }
 
-  const handleDemoLogin = () => {
-    // Demo login for testing without Google OAuth
-    const demoUser = {
-      id: 'demo_' + Date.now(),
-      name: 'Demo Player',
-      email: 'demo@buddybeasts.com',
-      picture: null,
+  const handleDemoLogin = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      await loginDemo('Demo Player')
+      navigate('/hub-selection')
+    } catch (err) {
+      console.error('Demo login error:', err)
+      setError('Could not connect to server. Is the backend running?')
+    } finally {
+      setLoading(false)
     }
-    
-    setUser(demoUser)
-    navigate('/quiz')
   }
 
   return (
@@ -65,6 +61,12 @@ export default function Login() {
             <div className="pixel-border text-6xl">👾</div>
           </div>
         </div>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-900/50 border border-red-500 rounded text-red-200 text-sm font-game">
+            {error}
+          </div>
+        )}
 
         <div className="space-y-4">
           <div className="flex justify-center">
@@ -89,9 +91,10 @@ export default function Login() {
 
           <button
             onClick={handleDemoLogin}
-            className="pixel-button bg-pixel-blue hover:bg-pixel-green text-white w-full"
+            disabled={loading}
+            className="pixel-button bg-pixel-blue hover:bg-pixel-green text-white w-full disabled:opacity-50"
           >
-            Try Demo
+            {loading ? 'Connecting...' : 'Try Demo'}
           </button>
         </div>
 
