@@ -1,7 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
-import { QRCodeSVG } from 'qrcode.react'
-import { Html5Qrcode } from 'html5-qrcode'
 import { useAuthStore } from '../stores/authStore'
 import { useMonsterStore } from '../stores/monsterStore'
 import { useDataStore } from '../stores/dataStore'
@@ -12,62 +10,28 @@ export default function QRCheckIn() {
   const location = useLocation()
   const quest = location.state?.quest
   const participants = location.state?.participants || []
-  const scannerRef = useRef(null)
 
   const { user } = useAuthStore()
   const { addCrystals, addCoins, completeQuest, monster } = useMonsterStore()
   const { trackQuestComplete } = useDataStore()
 
-  const [checkInCode, setCheckInCode] = useState('')
   const [checkedIn, setCheckedIn] = useState(false)
-  const [showScanner, setShowScanner] = useState(false)
   const [questStartTime] = useState(Date.now())
-  const [scanError, setScanError] = useState(null)
-  const [scannedCode, setScannedCode] = useState(null)
+
+  const [step, setStep] = useState('emote')
+  const [emoteChoice, setEmoteChoice] = useState(null)
+  const [allEmotesIn, setAllEmotesIn] = useState(false)
+  const [reactionConfirmed, setReactionConfirmed] = useState(false)
+  const [memoryWord, setMemoryWord] = useState(null)
+  const [groupMemory, setGroupMemory] = useState(null)
+  const [signals, setSignals] = useState({ emote: false, reaction: false, memory: false })
 
   useEffect(() => {
     if (!quest) {
       navigate('/quests')
       return
     }
-    const code = `BUDDY_${questId}_${Date.now()}`
-    setCheckInCode(code)
-  }, [quest, questId, navigate])
-
-  useEffect(() => {
-    if (!showScanner || !checkInCode || checkedIn) return
-    const scanner = new Html5Qrcode('qr-reader')
-    scannerRef.current = scanner
-    scanner.start(
-      { facingMode: 'environment' },
-      { fps: 8, qrbox: { width: 200, height: 200 } },
-      (decodedText) => {
-        if (decodedText.trim() === checkInCode.trim()) {
-          scanner.stop().catch(() => {})
-          scannerRef.current = null
-          setShowScanner(false)
-          setScannedCode(decodedText.trim())
-        }
-      },
-      () => {}
-    ).catch((err) => {
-      setScanError('Camera not available. Use Confirm Check-In for demo.')
-      console.warn('QR scanner start failed:', err)
-    })
-    return () => {
-      if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {})
-        scannerRef.current = null
-      }
-    }
-  }, [showScanner, checkInCode, checkedIn])
-
-  useEffect(() => {
-    if (scannedCode && checkInCode && scannedCode === checkInCode && !checkedIn) {
-      setScannedCode(null)
-      performCheckIn()
-    }
-  }, [scannedCode, checkInCode, checkedIn])
+  }, [quest, navigate])
 
   const performCheckIn = () => {
     if (checkedIn) return
@@ -80,19 +44,78 @@ export default function QRCheckIn() {
     completeQuest(quest.type, isGroup)
     const duration = Math.floor((Date.now() - questStartTime) / 1000 / 60)
     trackQuestComplete(questId, participants.length, duration)
-    setTimeout(() => {
-      navigate('/hub', {
-        state: { questCompleted: true, crystalsEarned: crystalBonus, coinsEarned: coinBonus, questName: quest.title },
-      })
-    }, 3000)
-  }
-
-  const handleCheckIn = () => {
-    if (!checkedIn) performCheckIn()
   }
 
   const handleCancel = () => {
     navigate('/quests')
+  }
+
+  const EMOTES = ['🎉 Fun', '😊 Chill', '💪 Productive', '🌿 Calm', '⚡ Energizing']
+  const WORDS = ['Fun', 'Calm', 'Focused', 'Energizing', 'Meaningful']
+
+  const groupReaction = useMemo(() => {
+    if (!emoteChoice) return 'happy bounce'
+    if (emoteChoice.includes('Calm')) return 'calm sit'
+    if (emoteChoice.includes('Productive')) return 'group pose'
+    if (emoteChoice.includes('Energizing')) return 'excited spin'
+    return 'happy bounce'
+  }, [emoteChoice])
+
+  const markSignal = (key) => {
+    setSignals((prev) => ({ ...prev, [key]: true }))
+  }
+
+  const signalCount = Object.values(signals).filter(Boolean).length
+
+  const finishIfQualified = () => {
+    if (signalCount >= 2 && !checkedIn) {
+      performCheckIn()
+    }
+    setStep('snapshot')
+  }
+
+  const handleEmoteSelect = (emote) => {
+    setEmoteChoice(emote)
+    markSignal('emote')
+    setStep('reaction')
+    setAllEmotesIn(false)
+    setTimeout(() => setAllEmotesIn(true), 1200)
+  }
+
+  const handleReactionConfirm = () => {
+    setReactionConfirmed(true)
+    markSignal('reaction')
+    setStep('memory')
+  }
+
+  const handleMemorySelect = (word) => {
+    setMemoryWord(word)
+    markSignal('memory')
+    const otherWord = WORDS.filter((w) => w !== word)[Math.floor(Math.random() * (WORDS.length - 1))]
+    setGroupMemory(`${word} + ${otherWord}`)
+    finishIfQualified()
+  }
+
+  const handleSaveSnapshot = () => {
+    const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+  <rect width="640" height="360" fill="#2A2A3E" />
+  <rect y="220" width="640" height="140" fill="#4A7A55" />
+  <text x="24" y="40" font-size="20" fill="#F7E76B" font-family="monospace">${quest?.title || 'Shared Moment'}</text>
+  <text x="24" y="68" font-size="14" fill="#B9C2FF" font-family="monospace">Group felt: ${groupMemory || 'Together'}</text>
+  <text x="24" y="320" font-size="12" fill="#FFFFFF" font-family="monospace">${new Date().toLocaleString()}</text>
+  <text x="180" y="210" font-size="40">${participants.slice(0, 5).map(() => '🐥').join(' ')}</text>
+</svg>`
+
+    const blob = new Blob([svg], { type: 'image/svg+xml' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `shared-moment-${questId}.svg`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   if (!quest) return null
@@ -104,7 +127,7 @@ export default function QRCheckIn() {
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between">
             <h1 className="font-pixel text-sm md:text-base text-pixel-yellow">
-              Quest Check-In
+              Shared Moment Proof
             </h1>
             <button
               onClick={handleCancel}
@@ -133,107 +156,107 @@ export default function QRCheckIn() {
                 </div>
               </div>
               <p className="text-xs text-pixel-light font-game mb-2">
-                Meet your group in person at the location. Scan the host’s QR code to verify you earned this quest.
+                Celebrate the moment together. No check-ins, just shared vibes.
               </p>
               <p className="text-xs text-pixel-yellow font-game">
-                ✓ Personal connection in person = rewards unlocked
+                ✓ Optional, low-pressure, and collective
               </p>
             </div>
 
-            {/* Participants */}
-            <div className="pixel-card p-5 mb-6">
-              <h3 className="font-pixel text-xs text-pixel-yellow mb-3">
-                Quest Party ({participants.length})
-              </h3>
-              <div className="space-y-2">
-                {participants.map((participant) => (
-                  <div 
-                    key={participant.id}
-                    className="flex items-center gap-3 p-2 bg-pixel-purple bg-opacity-20 rounded"
-                  >
-                    <div className="text-2xl">
-                      {participant.id === user.id ? '🌟' : '👤'}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-game text-pixel-light">
-                        {participant.name}
-                        {participant.id === user.id && ' (You)'}
-                      </p>
-                      <p className="text-xs text-pixel-blue">
-                        Level {participant.monster.level} {participant.monster.evolution}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* QR Code Display */}
-            <div className="pixel-card p-8 mb-6 text-center bg-white">
-              <h3 className="font-pixel text-xs text-pixel-dark mb-4">
-                Check-In Code
-              </h3>
-              <div className="flex justify-center mb-4">
-                <QRCodeSVG 
-                  value={checkInCode}
-                  size={200}
-                  level="H"
-                  includeMargin={true}
-                />
-              </div>
-              <p className="text-xs font-game text-pixel-dark opacity-75">
-                Show this to your group or scan someone else's code
-              </p>
-            </div>
-
-            {/* Check-In Actions */}
-            <div className="space-y-4">
-              <button
-                onClick={handleCheckIn}
-                className="pixel-button bg-pixel-green hover:bg-pixel-yellow text-white w-full py-6 text-base"
-              >
-                ✓ Confirm Check-In
-              </button>
-              
-              <button
-                onClick={() => setShowScanner(!showScanner)}
-                className="pixel-button bg-pixel-blue hover:bg-pixel-pink text-white w-full py-4"
-              >
-                📸 Scan QR Code
-              </button>
-            </div>
-
-            {/* QR Scanner – verify in person by scanning host's code */}
-            {showScanner && (
-              <div className="mt-4 pixel-card p-4 bg-pixel-dark">
-                <p className="font-game text-pixel-yellow text-sm mb-2 text-center">
-                  Point camera at host’s QR code to verify
+            {step === 'emote' && (
+              <div className="pixel-card p-6 mb-6">
+                <h3 className="font-pixel text-xs text-pixel-yellow mb-3">
+                  1️⃣ Group Emote Sync
+                </h3>
+                <p className="text-xs text-pixel-light font-game mb-4">
+                  Everyone picks the same vibe. Tap one.
                 </p>
-                <div id="qr-reader" className="rounded overflow-hidden mb-3" />
-                {scanError && (
-                  <p className="text-xs text-pixel-pink font-game text-center mb-2">{scanError}</p>
-                )}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {EMOTES.map((emote) => (
+                    <button
+                      key={emote}
+                      onClick={() => handleEmoteSelect(emote)}
+                      className="pixel-card p-4 text-center hover:border-pixel-yellow"
+                    >
+                      <span className="text-lg font-game text-pixel-light">{emote}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {step === 'reaction' && (
+              <div className="pixel-card p-6 mb-6 text-center">
+                <h3 className="font-pixel text-xs text-pixel-yellow mb-3">
+                  2️⃣ Monster Group Reaction
+                </h3>
+                <p className="text-xs text-pixel-light font-game mb-4">
+                  Monsters gather and react together.
+                </p>
+                <div className="text-4xl mb-3 animate-float">🐥 🐥 🐥</div>
+                <p className="text-xs text-pixel-blue font-game mb-4">
+                  Reaction: {groupReaction}
+                </p>
                 <button
-                  type="button"
-                  onClick={() => { setShowScanner(false); setScanError(null) }}
-                  className="pixel-button bg-pixel-purple text-white w-full py-2 text-xs"
+                  onClick={handleReactionConfirm}
+                  disabled={!allEmotesIn}
+                  className="pixel-button bg-pixel-green text-white w-full py-4 disabled:opacity-60"
                 >
-                  Close Scanner
+                  {allEmotesIn ? 'That feels right 👍' : 'Waiting for others...'}
                 </button>
               </div>
             )}
 
-            {/* Safety Info */}
-            <div className="mt-6 pixel-card p-4 bg-pixel-purple bg-opacity-20">
-              <h4 className="font-pixel text-xs text-pixel-yellow mb-2">
-                🛡️ Safety Reminders
-              </h4>
-              <ul className="text-xs text-pixel-light font-game space-y-1">
-                <li>• Meet in public, well-lit locations</li>
-                <li>• Keep your location sharing on</li>
-                <li>• Report any concerns immediately</li>
-              </ul>
-            </div>
+            {step === 'memory' && (
+              <div className="pixel-card p-6 mb-6">
+                <h3 className="font-pixel text-xs text-pixel-yellow mb-3">
+                  3️⃣ One-Word Group Memory
+                </h3>
+                <p className="text-xs text-pixel-light font-game mb-4">
+                  In one word, how did this feel?
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {WORDS.map((word) => (
+                    <button
+                      key={word}
+                      onClick={() => handleMemorySelect(word)}
+                      className="pixel-card p-4 text-center hover:border-pixel-yellow"
+                    >
+                      <span className="text-sm font-game text-pixel-light">{word}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {step === 'snapshot' && (
+              <div className="pixel-card p-6 mb-6 text-center">
+                <h3 className="font-pixel text-xs text-pixel-yellow mb-3">
+                  4️⃣ Optional Pixel Snapshot
+                </h3>
+                <p className="text-xs text-pixel-light font-game mb-4">
+                  A playful memory token. Save it or discard it.
+                </p>
+                <div className="pixel-card p-4 mb-4 bg-pixel-dark">
+                  <div className="text-3xl mb-2">🐥 🐥 🐥</div>
+                  <p className="text-xs text-pixel-blue font-game">This group felt: {groupMemory}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={handleSaveSnapshot}
+                    className="pixel-button bg-pixel-blue text-white w-full py-3"
+                  >
+                    Save Snapshot
+                  </button>
+                  <button
+                    onClick={() => setStep('complete')}
+                    className="pixel-button bg-pixel-green text-white w-full py-3"
+                  >
+                    Finish
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         ) : (
           /* Success Screen */
@@ -241,7 +264,7 @@ export default function QRCheckIn() {
             <div className="pixel-card p-8 mb-6 bg-pixel-green bg-opacity-20">
               <div className="text-6xl mb-4 animate-float">🎉</div>
               <h2 className="font-pixel text-xl text-pixel-yellow mb-4">
-                Quest Complete!
+                Nice! You completed this together.
               </h2>
               <p className="font-game text-lg text-pixel-light mb-6">
                 You earned <span className="text-pixel-yellow">{Math.floor(quest.crystals * 1.5)}</span> crystals!
@@ -268,11 +291,12 @@ export default function QRCheckIn() {
                 </div>
               </div>
 
-              <div className="animate-pulse-slow">
-                <p className="font-game text-pixel-blue">
-                  Returning to hub...
-                </p>
-              </div>
+              <button
+                onClick={() => navigate('/hub')}
+                className="pixel-button bg-pixel-blue text-white w-full py-4"
+              >
+                Return to Hub
+              </button>
             </div>
 
             {/* Monster Evolution Check */}
