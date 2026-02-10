@@ -8,12 +8,14 @@ export default function NavigationBar() {
   const navItems = [
     { path: '/hub', icon: '🏠', label: 'Hub' },
     { path: '/quests', icon: '📋', label: 'Quests' },
+    { path: '/chat', icon: '💬', label: 'Chat' },
+    { path: '/gallery', icon: '📸', label: 'Gallery' },
     { path: '/profile', icon: '👾', label: 'Profile' },
   ]
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-pixel-dark border-t-4 border-pixel-purple z-50">
-      <div className="max-w-4xl mx-auto flex justify-around items-center py-3 px-4">
+    <nav className="fixed bottom-0 left-0 right-0 bg-pixel-dark border-t-4 border-pixel-purple z-50 pb-safe pt-safe">
+      <div className="max-w-4xl mx-auto flex justify-around items-center py-3 px-2">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path
           return (
@@ -21,14 +23,15 @@ export default function NavigationBar() {
               key={item.path}
               onClick={() => navigate(item.path)}
               className={`
-                flex flex-col items-center gap-1 px-4 py-2 rounded transition-all
-                ${isActive 
-                  ? 'bg-pixel-purple text-pixel-yellow' 
+                touch-target flex flex-col items-center justify-center gap-1 px-5 py-3 rounded transition-all min-w-[72px]
+                ${isActive
+                  ? 'bg-pixel-purple text-pixel-yellow'
                   : 'text-pixel-light hover:text-pixel-pink'
                 }
               `}
+              aria-label={item.label}
             >
-              <span className="text-2xl">{item.icon}</span>
+              <span className="text-2xl" aria-hidden>{item.icon}</span>
               <span className="text-xs font-game">{item.label}</span>
             </button>
           )

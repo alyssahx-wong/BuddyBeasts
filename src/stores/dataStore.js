@@ -63,7 +63,7 @@ export const useDataStore = create(
       },
     }),
     {
-      name: 'karmaloop-data',
+      name: 'buddybeasts-data',
     }
   )
 )

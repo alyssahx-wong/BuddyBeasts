@@ -6,10 +6,38 @@ import PixelMonster from '../components/PixelMonster'
 import NavigationBar from '../components/NavigationBar'
 import api from '../api'
 
+const ITEM_SHOP = [
+  { id: 'hat_cap', name: 'Cool Cap', slot: 'hat', cost: 80, emoji: '🧢' },
+  { id: 'hat_wizard', name: 'Wizard Hat', slot: 'hat', cost: 150, emoji: '🧙‍♂️' },
+  { id: 'hat_crown', name: 'Crown', slot: 'hat', cost: 220, emoji: '👑' },
+  { id: 'outfit_hoodie', name: 'Hoodie', slot: 'outfit', cost: 120, emoji: '🧥' },
+  { id: 'outfit_armor', name: 'Armor', slot: 'outfit', cost: 260, emoji: '🛡️' },
+  { id: 'outfit_dress', name: 'Dress', slot: 'outfit', cost: 180, emoji: '👗' },
+]
+
+const EGG_SHOP = [
+  { id: 'egg_common', name: 'Common Egg', rarity: 'common', cost: 120, emoji: '🥚' },
+  { id: 'egg_rare', name: 'Rare Egg', rarity: 'rare', cost: 240, emoji: '🥚✨' },
+  { id: 'egg_legend', name: 'Legend Egg', rarity: 'legendary', cost: 400, emoji: '🥚🌟' },
+]
+
 export default function Profile() {
   const navigate = useNavigate()
   const { user, currentHub, logout } = useAuthStore()
-  const { monster, fetchMonster, evolveMonster } = useMonsterStore()
+  const {
+    monster,
+    monsters,
+    inventory,
+    eggs,
+    fetchMonster,
+    evolveMonster,
+    buyItem,
+    buyEgg,
+    equipItem,
+    unequipItem,
+    hatchEgg,
+    setActiveMonster,
+  } = useMonsterStore()
   const [profile, setProfile] = useState(null)
   const [questHistory, setQuestHistory] = useState([])
   const [belongingScores, setBelongingScores] = useState([])
@@ -170,6 +198,10 @@ export default function Profile() {
               size="large"
               animated={true}
               isPlayer={true}
+              skin={monster.activeSkin || 'default'}
+              equippedItems={monster.equippedItems}
+              monsterId={monster.monsterId}
+              usePixelArt={true}
             />
           </div>
           <p className="font-game text-pixel-light text-lg mb-4">{monster.name}</p>
@@ -185,6 +217,10 @@ export default function Profile() {
             <div>
               <p className="text-pixel-blue">Crystals</p>
               <p className="text-pixel-yellow">💎 {monster.crystals}</p>
+            </div>
+            <div>
+              <p className="text-pixel-blue">Coins</p>
+              <p className="text-pixel-yellow">🪙 {monster.coins || 0}</p>
             </div>
             <div>
               <p className="text-pixel-blue">Social Score</p>
@@ -236,6 +272,156 @@ export default function Profile() {
           >
             {monster.crystals >= monster.level * 100 ? '✨ Check Evolution' : '🔒 Need More Crystals'}
           </button>
+        </div>
+
+        {/* Marketplace */}
+        <div className="pixel-card p-6 mb-6">
+          <h3 className="font-pixel text-sm text-pixel-yellow mb-3">Marketplace</h3>
+          <p className="text-xs text-pixel-light font-game mb-4">
+            Use coins to buy hats, outfits, or eggs.
+          </p>
+
+          <div className="mb-6">
+            <h4 className="font-pixel text-xs text-pixel-blue mb-3">Items</h4>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {ITEM_SHOP.map((item) => {
+                const owned = (inventory || []).includes(item.id)
+                const canBuy = (monster.coins || 0) >= item.cost && !owned
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => canBuy && buyItem(item)}
+                    disabled={!canBuy}
+                    className={`pixel-card p-3 text-left transition-all ${
+                      owned ? 'border-pixel-green bg-pixel-green bg-opacity-10' : 'hover:border-pixel-yellow'
+                    } ${!canBuy && !owned ? 'opacity-70' : ''}`}
+                  >
+                    <div className="text-2xl mb-2">{item.emoji}</div>
+                    <p className="text-xs font-game text-pixel-light">{item.name}</p>
+                    <p className="text-xs font-game text-pixel-yellow mt-1">
+                      {owned ? 'Owned' : `🪙 ${item.cost}`}
+                    </p>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div>
+            <h4 className="font-pixel text-xs text-pixel-blue mb-3">Eggs</h4>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {EGG_SHOP.map((egg) => {
+                const canBuy = (monster.coins || 0) >= egg.cost
+                return (
+                  <button
+                    key={egg.id}
+                    onClick={() => canBuy && buyEgg(egg)}
+                    disabled={!canBuy}
+                    className={`pixel-card p-3 text-left transition-all ${
+                      canBuy ? 'hover:border-pixel-yellow' : 'opacity-70'
+                    }`}
+                  >
+                    <div className="text-2xl mb-2">{egg.emoji}</div>
+                    <p className="text-xs font-game text-pixel-light">{egg.name}</p>
+                    <p className="text-xs font-game text-pixel-yellow mt-1">🪙 {egg.cost}</p>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Inventory & Equip */}
+        <div className="pixel-card p-6 mb-6">
+          <h3 className="font-pixel text-sm text-pixel-yellow mb-3">Inventory</h3>
+          <p className="text-xs text-pixel-light font-game mb-4">
+            Equip hats or outfits on your active monster.
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {(inventory || []).length > 0 ? (
+              (inventory || []).map((itemId) => {
+                const item = ITEM_SHOP.find((i) => i.id === itemId)
+                if (!item) return null
+                const equipped = monster.equippedItems?.[item.slot] === item.id
+                return (
+                  <div key={item.id} className="pixel-card p-3 text-left">
+                    <div className="text-2xl mb-2">{item.emoji}</div>
+                    <p className="text-xs font-game text-pixel-light">{item.name}</p>
+                    <button
+                      onClick={() => (equipped ? unequipItem(item.slot) : equipItem(item.slot, item.id))}
+                      className={`pixel-button mt-2 w-full text-xs ${
+                        equipped ? 'bg-pixel-yellow text-pixel-dark' : 'bg-pixel-blue text-white'
+                      }`}
+                    >
+                      {equipped ? 'Unequip' : 'Equip'}
+                    </button>
+                  </div>
+                )
+              })
+            ) : (
+              <p className="text-xs text-pixel-light font-game">No items yet. Buy some in the marketplace.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Eggs & Hatchery */}
+        <div className="pixel-card p-6 mb-6">
+          <h3 className="font-pixel text-sm text-pixel-yellow mb-3">Eggs & Hatchery</h3>
+          <p className="text-xs text-pixel-light font-game mb-4">
+            Hatch eggs to unlock new monsters.
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {(eggs || []).length > 0 ? (
+              (eggs || []).map((egg) => (
+                <div key={egg.id} className="pixel-card p-3 text-left">
+                  <div className="text-2xl mb-2">🥚</div>
+                  <p className="text-xs font-game text-pixel-light">{egg.name}</p>
+                  <p className="text-xs font-game text-pixel-blue">{egg.rarity}</p>
+                  <button
+                    onClick={() => hatchEgg(egg.id)}
+                    className="pixel-button mt-2 w-full text-xs bg-pixel-green text-white"
+                  >
+                    Hatch
+                  </button>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-pixel-light font-game">No eggs yet. Buy one in the marketplace.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Monster Collection */}
+        <div className="pixel-card p-6 mb-6">
+          <h3 className="font-pixel text-sm text-pixel-yellow mb-3">Monster Collection</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {(monsters || []).length > 0 ? (
+              (monsters || []).map((m) => (
+                <div key={m.id} className="pixel-card p-3 text-center">
+                  <PixelMonster
+                    evolution={m.evolution}
+                    size="medium"
+                    animated={true}
+                    equippedItems={m.equippedItems}
+                    monsterId={m.monsterId}
+                    usePixelArt={true}
+                  />
+                  <p className="text-xs font-game text-pixel-light mt-2">{m.name}</p>
+                  <p className="text-xs font-game text-pixel-blue">Lv {m.level}</p>
+                  <button
+                    onClick={() => setActiveMonster(m.id)}
+                    className={`pixel-button mt-2 w-full text-xs ${
+                      monster.id === m.id ? 'bg-pixel-yellow text-pixel-dark' : 'bg-pixel-blue text-white'
+                    }`}
+                  >
+                    {monster.id === m.id ? 'Active' : 'Set Active'}
+                  </button>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-pixel-light font-game">Hatch eggs to grow your collection.</p>
+            )}
+          </div>
         </div>
 
         {/* Stats Card */}
@@ -370,7 +556,7 @@ export default function Profile() {
         {/* App Info */}
         <div className="pixel-card p-4 bg-pixel-purple bg-opacity-20 text-center">
           <p className="text-xs text-pixel-light font-game mb-2">
-            KarmaLoop v1.0.0 - Built for Building Belonging
+            BuddyBeasts v1.0.0 - Built for Building Belonging
           </p>
           <p className="text-xs text-pixel-blue font-game">
             🎮 Turning local connections into pixel adventures
