@@ -19,6 +19,7 @@ export default function Lobby() {
   const [isReady, setIsReady] = useState(false)
   const [allReady, setAllReady] = useState(false)
   const [countdown, setCountdown] = useState(null)
+  const [floatingEmote, setFloatingEmote] = useState(null)
 
   useEffect(() => {
     if (!quest) {
@@ -95,8 +96,8 @@ export default function Lobby() {
   }
 
   const handleEmote = (emote) => {
-    // Show floating emote animation (simplified version)
-    console.log(`${user.name} sent ${emote}`)
+    setFloatingEmote(emote)
+    setTimeout(() => setFloatingEmote(null), 2000)
   }
 
   if (!quest) return null
@@ -166,16 +167,22 @@ export default function Lobby() {
               {participants.map((participant, index) => (
                 <div
                   key={participant.id}
-                  className="text-center"
+                  className="text-center relative"
                   style={{
                     animation: `float ${2 + index * 0.5}s ease-in-out infinite`
                   }}
                 >
+                  {participant.id === user.id && floatingEmote && (
+                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-3xl animate-emote-pop z-10">
+                      {floatingEmote}
+                    </div>
+                  )}
                   <PixelMonster
                     evolution={participant.monster.evolution}
                     size="medium"
                     animated={true}
                     isPlayer={participant.id === user.id}
+                    skin={participant.monster?.activeSkin || 'default'}
                   />
                   <div className="mt-2 pixel-card p-2 bg-pixel-dark bg-opacity-75 inline-block">
                     <p className="font-game text-xs text-white">

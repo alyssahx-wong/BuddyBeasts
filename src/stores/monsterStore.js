@@ -14,7 +14,9 @@ export const useMonsterStore = create(
         questsCompleted: 0,
         socialScore: 0,
         preferredQuestTypes: {},
-        preferredGroupSize: 'small', // 1-1, small, large
+        preferredGroupSize: 'small',
+        unlockedSkins: ['default'],
+        activeSkin: 'default',
       },
       
       initializeMonster: (userId) => set((state) => ({
@@ -60,6 +62,26 @@ export const useMonsterStore = create(
           preferredGroupSize: size,
         }
       })),
+
+      unlockSkin: (skinId) => set((state) => {
+        if (state.monster.unlockedSkins.includes(skinId)) return state
+        return {
+          monster: {
+            ...state.monster,
+            unlockedSkins: [...state.monster.unlockedSkins, skinId],
+          },
+        }
+      }),
+
+      setActiveSkin: (skinId) => set((state) => {
+        if (!state.monster.unlockedSkins.includes(skinId)) return state
+        return {
+          monster: {
+            ...state.monster,
+            activeSkin: skinId,
+          },
+        }
+      }),
     }),
     {
       name: 'karmaloop-monster',

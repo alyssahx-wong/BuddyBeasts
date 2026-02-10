@@ -89,11 +89,12 @@ export default function LivingHub() {
           {/* Player's Monster */}
           <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2 z-10">
             <div className="text-center">
-              <PixelMonster 
-                evolution={monster.evolution} 
+              <PixelMonster
+                evolution={monster.evolution}
                 size="large"
                 animated={true}
                 isPlayer={true}
+                skin={monster.activeSkin || 'default'}
               />
               <div className="mt-2 pixel-card p-2 bg-pixel-yellow inline-block">
                 <p className="font-pixel text-xs text-pixel-dark">
@@ -130,10 +131,11 @@ export default function LivingHub() {
                   }}
                   className="text-center hover:scale-110 transition-transform"
                 >
-                  <PixelMonster 
-                    evolution={onlineUser.monster?.evolution || 'baby'} 
+                  <PixelMonster
+                    evolution={onlineUser.monster?.evolution || 'baby'}
                     size="medium"
                     animated={true}
+                    skin={onlineUser.monster?.activeSkin || 'default'}
                   />
                   <div className="mt-1 bg-pixel-dark bg-opacity-75 px-2 py-1 rounded text-xs font-game text-white">
                     {onlineUser.name}
