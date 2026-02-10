@@ -22,10 +22,9 @@ export default function Login() {
       }
       
       setUser(user)
-      initializeMonster(user.id)
       
-      // Navigate to hub selection for location/hub assignment
-      navigate('/hub-selection')
+      // Navigate to personality quiz first
+      navigate('/quiz')
     } catch (error) {
       console.error('Login error:', error)
     }
@@ -45,8 +44,7 @@ export default function Login() {
     }
     
     setUser(demoUser)
-    initializeMonster(demoUser.id)
-    navigate('/hub-selection')
+    navigate('/quiz')
   }
 
   return (

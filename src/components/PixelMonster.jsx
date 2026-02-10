@@ -32,16 +32,21 @@ export default function PixelMonster({
   skin = 'default',
   className = '',
   equippedItems = {},
+  monsterId = null,
+  usePixelArt = true,
 }) {
   const sprite = MONSTER_SPRITES[evolution]?.[size] || MONSTER_SPRITES.baby[size]
 
   const sizeClasses = {
-    small: 'text-2xl',
-    medium: 'text-4xl',
-    large: 'text-6xl',
+    small: 'text-2xl h-8',
+    medium: 'text-4xl h-16',
+    large: 'text-6xl h-24',
   }
 
   const skinClass = SKIN_STYLES[skin] || SKIN_STYLES.default
+
+  // Use pixel art image if monsterId is provided and usePixelArt is true
+  const shouldUsePixelArt = usePixelArt && monsterId
 
   return (
     <div
@@ -49,7 +54,7 @@ export default function PixelMonster({
         pixelated inline-block relative
         ${animated ? 'animate-float' : ''}
         ${isPlayer ? 'drop-shadow-lg' : ''}
-        ${sizeClasses[size]}
+        ${shouldUsePixelArt ? '' : sizeClasses[size]}
         ${skinClass}
         ${className}
       `}
@@ -58,7 +63,18 @@ export default function PixelMonster({
         imageRendering: 'pixelated',
       }}
     >
-      {sprite}
+      {shouldUsePixelArt ? (
+        <img
+          src={`/src/monster_imgs/${monsterId}.png`}
+          alt={`Monster ${monsterId}`}
+          className={`object-contain ${
+            size === 'small' ? 'h-8' : size === 'medium' ? 'h-16' : 'h-24'
+          }`}
+          style={{ imageRendering: 'pixelated' }}
+        />
+      ) : (
+        sprite
+      )}
       {equippedItems?.hat && (
         <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-2xl">
           {ITEM_EMOJIS[equippedItems.hat] || '🎩'}

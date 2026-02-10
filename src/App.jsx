@@ -5,6 +5,7 @@ import { useAuthStore } from './stores/authStore'
 
 // Pages
 import Login from './pages/Login'
+import PersonalityQuiz from './pages/PersonalityQuiz'
 import HubSelection from './pages/HubSelection'
 import LivingHub from './pages/LivingHub'
 import QuestBoard from './pages/QuestBoard'
@@ -28,6 +29,11 @@ function App() {
         <div className="app min-h-screen bg-pixel-dark">
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/quiz" element={
+              <ProtectedRoute>
+                <PersonalityQuiz />
+              </ProtectedRoute>
+            } />
             <Route path="/hub-selection" element={
               <ProtectedRoute>
                 <HubSelection />

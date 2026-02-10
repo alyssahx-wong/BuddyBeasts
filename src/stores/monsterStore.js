@@ -7,6 +7,7 @@ export const useMonsterStore = create(
       monster: {
         id: null,
         name: 'Buddy',
+        monsterId: 1,
         level: 1,
         crystals: 0,
         coins: 0,
@@ -28,10 +29,12 @@ export const useMonsterStore = create(
       eggs: [],
       groupPhotos: [],
       
-      initializeMonster: (userId) => set((state) => {
+      initializeMonster: (userId, quizData = {}) => set((state) => {
         const initialized = {
           ...state.monster,
           id: userId,
+          name: quizData.name || 'Buddy',
+          monsterId: quizData.monsterId || 1,
         }
         const hasMonster = state.monsters.some((m) => m.id === userId)
         return {

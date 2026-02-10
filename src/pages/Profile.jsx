@@ -152,6 +152,8 @@ export default function Profile() {
               isPlayer={true}
               skin={monster.activeSkin || 'default'}
               equippedItems={monster.equippedItems}
+              monsterId={monster.monsterId}
+              usePixelArt={true}
             />
           </div>
           <div className="grid grid-cols-2 gap-4 text-sm font-game mb-4">
@@ -346,6 +348,8 @@ export default function Profile() {
                     size="medium"
                     animated={true}
                     equippedItems={m.equippedItems}
+                    monsterId={m.monsterId}
+                    usePixelArt={true}
                   />
                   <p className="text-xs font-game text-pixel-light mt-2">{m.name}</p>
                   <p className="text-xs font-game text-pixel-blue">Lv {m.level}</p>

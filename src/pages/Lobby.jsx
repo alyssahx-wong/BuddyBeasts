@@ -199,6 +199,8 @@ export default function Lobby() {
                     animated={true}
                     isPlayer={participant.id === user.id}
                     skin={participant.monster?.activeSkin || 'default'}
+                    monsterId={participant.monster?.monsterId}
+                    usePixelArt={true}
                   />
                   <div className="mt-2 pixel-card p-2 bg-pixel-dark bg-opacity-75 inline-block">
                     <p className="font-game text-xs text-white">

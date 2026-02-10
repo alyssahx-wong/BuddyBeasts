@@ -156,6 +156,8 @@ export default function LivingHub() {
                   animated={true}
                   isPlayer={true}
                   equippedItems={monster.equippedItems}
+                  monsterId={monster.monsterId}
+                  usePixelArt={true}
                 />
               </div>
               <div className="mt-2 pixel-card p-2 bg-pixel-yellow inline-block shadow-lg">
@@ -196,6 +198,8 @@ export default function LivingHub() {
                       evolution={onlineUser.monster?.evolution || 'baby'} 
                       size="medium"
                       animated={true}
+                      monsterId={onlineUser.monster?.monsterId}
+                      usePixelArt={true}
                     />
                   </div>
                   <div className="mt-1 bg-pixel-dark bg-opacity-90 px-2 py-1 rounded text-xs font-game text-white whitespace-nowrap shadow-md">
