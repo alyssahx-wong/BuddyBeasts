@@ -17,7 +17,8 @@ export default {
       },
       fontFamily: {
         'pixel': ['"Press Start 2P"', 'cursive'],
-        'game': ['"VT323"', 'monospace']
+        'game': ['"VT323"', 'monospace'],
+        'cute': ['"Silkscreen"', 'cursive']
       }
     },
   },

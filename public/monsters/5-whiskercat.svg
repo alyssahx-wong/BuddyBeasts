@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges">
+  <!-- Orange body -->
+  <rect x="14" y="24" width="36" height="30" rx="14" fill="#e8963c"/>
+  <rect x="10" y="30" width="44" height="24" rx="12" fill="#e8963c"/>
+  <!-- Lighter belly/face -->
+  <rect x="20" y="28" width="24" height="12" rx="6" fill="#f0b870"/>
+  <rect x="22" y="40" width="20" height="10" rx="5" fill="#f0b870"/>
+  <!-- Cat ears -->
+  <polygon points="18,26 12,10 26,22" fill="#e8963c"/>
+  <polygon points="46,26 52,10 38,22" fill="#e8963c"/>
+  <polygon points="19,24 14,12 25,21" fill="#f0b870"/>
+  <polygon points="45,24 50,12 39,21" fill="#f0b870"/>
+  <!-- Eyes -->
+  <circle cx="24" cy="34" r="5" fill="#1a1a2e"/>
+  <circle cx="40" cy="34" r="5" fill="#1a1a2e"/>
+  <circle cx="25" cy="33" r="2" fill="white"/>
+  <circle cx="41" cy="33" r="2" fill="white"/>
+  <!-- Nose -->
+  <polygon points="32,38 30,40 34,40" fill="#d07030"/>
+  <!-- Mouth -->
+  <path d="M28 42 L32 40 L36 42" stroke="#a06020" fill="none" stroke-width="1.5"/>
+  <!-- Whiskers -->
+  <line x1="6" y1="36" x2="20" y2="38" stroke="#c08040" stroke-width="1"/>
+  <line x1="6" y1="40" x2="20" y2="40" stroke="#c08040" stroke-width="1"/>
+  <line x1="44" y1="38" x2="58" y2="36" stroke="#c08040" stroke-width="1"/>
+  <line x1="44" y1="40" x2="58" y2="40" stroke="#c08040" stroke-width="1"/>
+  <!-- Blue scarf -->
+  <rect x="18" y="46" width="28" height="6" rx="2" fill="#5090cc"/>
+  <rect x="34" y="50" width="8" height="8" rx="2" fill="#5090cc"/>
+  <rect x="20" y="46" width="24" height="2" fill="#60a0dd"/>
+  <!-- Stripes -->
+  <rect x="20" y="30" width="3" height="8" rx="1" fill="#d08030" opacity="0.4"/>
+  <rect x="41" y="30" width="3" height="8" rx="1" fill="#d08030" opacity="0.4"/>
+  <!-- Feet -->
+  <rect x="18" y="52" width="8" height="4" rx="2" fill="#d08030"/>
+  <rect x="38" y="52" width="8" height="4" rx="2" fill="#d08030"/>
+</svg>

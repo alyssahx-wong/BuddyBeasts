@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges">
+  <!-- Cream/white body -->
+  <rect x="14" y="30" width="36" height="26" rx="14" fill="#f0e0d0"/>
+  <rect x="10" y="36" width="44" height="20" rx="10" fill="#f0e0d0"/>
+  <!-- Lighter belly -->
+  <rect x="22" y="40" width="20" height="12" rx="6" fill="#fff0e8"/>
+  <!-- Blue wizard hat -->
+  <polygon points="32,0 18,24 46,24" fill="#3050a0"/>
+  <rect x="16" y="22" width="32" height="5" rx="2" fill="#3858b0"/>
+  <!-- Hat band -->
+  <rect x="18" y="23" width="28" height="3" fill="#4868c0"/>
+  <!-- Star on hat -->
+  <polygon points="36,8 37,12 41,12 38,14 39,18 36,16 33,18 34,14 31,12 35,12" fill="#ffd040"/>
+  <!-- Small ears poking from hat -->
+  <polygon points="20,24 16,18 24,22" fill="#f0e0d0"/>
+  <polygon points="44,24 48,18 40,22" fill="#f0e0d0"/>
+  <!-- Eyes -->
+  <circle cx="24" cy="38" r="5" fill="#1a1a2e"/>
+  <circle cx="40" cy="38" r="5" fill="#1a1a2e"/>
+  <circle cx="25" cy="37" r="2" fill="white"/>
+  <circle cx="41" cy="37" r="2" fill="white"/>
+  <!-- Nose -->
+  <circle cx="32" cy="42" r="1.5" fill="#d0a890"/>
+  <!-- Mouth -->
+  <path d="M29 45 Q32 48 35 45" stroke="#b08878" fill="none" stroke-width="1.5"/>
+  <!-- Blush -->
+  <rect x="15" y="42" width="5" height="3" rx="1" fill="#e8a0b0" opacity="0.5"/>
+  <rect x="44" y="42" width="5" height="3" rx="1" fill="#e8a0b0" opacity="0.5"/>
+  <!-- Blue robe/cape -->
+  <rect x="8" y="44" width="12" height="14" rx="4" fill="#3858b0"/>
+  <rect x="44" y="44" width="12" height="14" rx="4" fill="#3858b0"/>
+  <rect x="18" y="52" width="28" height="6" rx="3" fill="#3858b0"/>
+  <!-- Robe highlight -->
+  <rect x="10" y="46" width="8" height="2" fill="#4868c0" opacity="0.5"/>
+  <rect x="46" y="46" width="8" height="2" fill="#4868c0" opacity="0.5"/>
+  <!-- Wand -->
+  <rect x="48" y="32" width="2" height="16" fill="#805030" transform="rotate(15 49 40)"/>
+  <circle cx="50" cy="30" r="3" fill="#ffd040"/>
+  <circle cx="50" cy="30" r="1.5" fill="#fff8a0"/>
+  <!-- Stars sparkle -->
+  <rect x="54" y="24" width="2" height="2" fill="#ffd040" opacity="0.6"/>
+  <rect x="56" y="28" width="2" height="2" fill="#ffd040" opacity="0.5"/>
+  <!-- Feet -->
+  <rect x="20" y="54" width="8" height="4" rx="2" fill="#e0d0c0"/>
+  <rect x="36" y="54" width="8" height="4" rx="2" fill="#e0d0c0"/>
+</svg>

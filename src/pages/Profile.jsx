@@ -117,8 +117,9 @@ export default function Profile() {
         <div className="pixel-card p-6 mb-6 text-center">
           <h3 className="font-pixel text-sm text-pixel-yellow mb-4">Your Monster</h3>
           <div className="mb-4">
-            <PixelMonster 
+            <PixelMonster
               evolution={monster.evolution}
+              monsterType={monster.monsterType}
               size="large"
               animated={true}
               isPlayer={true}

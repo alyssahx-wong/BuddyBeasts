@@ -33,6 +33,7 @@ export const useHubStore = create((set, get) => ({
           name: `Player${Math.floor(Math.random() * 100)}`,
           monster: {
             evolution: ['baby', 'teen', 'adult'][Math.floor(Math.random() * 3)],
+            monsterType: Math.floor(Math.random() * 9) + 1,
             position: {
               x: Math.random() * 80 + 10,
               y: Math.random() * 60 + 20,

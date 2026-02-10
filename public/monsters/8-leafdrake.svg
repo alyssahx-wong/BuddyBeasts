@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges">
+  <!-- Green body -->
+  <rect x="14" y="26" width="36" height="28" rx="14" fill="#78c858"/>
+  <rect x="10" y="32" width="44" height="22" rx="10" fill="#78c858"/>
+  <!-- Lighter belly -->
+  <rect x="22" y="36" width="20" height="14" rx="6" fill="#a8e888"/>
+  <!-- Cat-dragon ears -->
+  <polygon points="18,28 12,14 26,24" fill="#78c858"/>
+  <polygon points="46,28 52,14 38,24" fill="#78c858"/>
+  <polygon points="19,26 14,16 25,23" fill="#a8e888"/>
+  <polygon points="45,26 50,16 39,23" fill="#a8e888"/>
+  <!-- Flower on head -->
+  <circle cx="38" cy="18" r="3" fill="#ff8899"/>
+  <circle cx="34" cy="16" r="3" fill="#ff8899"/>
+  <circle cx="38" cy="14" r="3" fill="#ff99aa"/>
+  <circle cx="42" cy="16" r="3" fill="#ff8899"/>
+  <circle cx="38" cy="16" r="2" fill="#ffcc60"/>
+  <!-- Leaf details on body -->
+  <ellipse cx="48" cy="36" rx="6" ry="3" fill="#60b040" transform="rotate(20 48 36)"/>
+  <ellipse cx="50" cy="40" rx="5" ry="2.5" fill="#60b040" transform="rotate(-10 50 40)"/>
+  <!-- Eyes -->
+  <circle cx="24" cy="36" r="5" fill="#1a1a2e"/>
+  <circle cx="40" cy="36" r="5" fill="#1a1a2e"/>
+  <circle cx="25" cy="35" r="2" fill="white"/>
+  <circle cx="41" cy="35" r="2" fill="white"/>
+  <!-- Nose -->
+  <circle cx="32" cy="40" r="1.5" fill="#508838"/>
+  <!-- Mouth -->
+  <path d="M28 43 Q32 47 36 43" stroke="#508838" fill="none" stroke-width="1.5"/>
+  <!-- Tail -->
+  <ellipse cx="54" cy="44" rx="6" ry="4" fill="#68b848"/>
+  <ellipse cx="58" cy="42" rx="4" ry="3" fill="#60b040"/>
+  <!-- Feet -->
+  <rect x="18" y="52" width="8" height="4" rx="2" fill="#68b848"/>
+  <rect x="38" y="52" width="8" height="4" rx="2" fill="#68b848"/>
+</svg>

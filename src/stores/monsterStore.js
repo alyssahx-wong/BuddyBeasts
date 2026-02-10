@@ -7,6 +7,7 @@ export const useMonsterStore = create(
       monster: {
         id: null,
         name: 'Buddy',
+        monsterType: Math.floor(Math.random() * 9) + 1,
         level: 1,
         crystals: 0,
         evolution: 'baby',
@@ -24,11 +25,34 @@ export const useMonsterStore = create(
         }
       })),
       
-      addCrystals: (amount) => set((state) => ({
+      addCrystals: (amount) => set((state) => {
+        const newCrystals = state.monster.crystals + amount
+        const newLevel = Math.floor(newCrystals / 100) + 1
+        const oldLevel = state.monster.level
+
+        // Auto-evolve from baby to teen at level 5
+        let newEvolution = state.monster.evolution
+        let justEvolved = false
+        if (oldLevel < 5 && newLevel >= 5 && state.monster.evolution === 'baby') {
+          newEvolution = 'teen'
+          justEvolved = true
+        }
+
+        return {
+          monster: {
+            ...state.monster,
+            crystals: newCrystals,
+            level: newLevel,
+            evolution: newEvolution,
+            justEvolved,
+          }
+        }
+      }),
+
+      clearJustEvolved: () => set((state) => ({
         monster: {
           ...state.monster,
-          crystals: state.monster.crystals + amount,
-          level: Math.floor((state.monster.crystals + amount) / 100) + 1,
+          justEvolved: false,
         }
       })),
       

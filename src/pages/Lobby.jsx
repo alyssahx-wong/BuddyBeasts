@@ -4,6 +4,16 @@ import { useAuthStore } from '../stores/authStore'
 import { useMonsterStore } from '../stores/monsterStore'
 import { useDataStore } from '../stores/dataStore'
 import PixelMonster from '../components/PixelMonster'
+import coffeeBg from '../icons/coffee.png'
+import studyBg from '../icons/study.png'
+import outdoorBg from '../icons/outdoor.png'
+
+const CATEGORY_BG = {
+  coffee: coffeeBg,
+  study: studyBg,
+  walk: outdoorBg,
+  help: coffeeBg,
+}
 
 export default function Lobby() {
   const navigate = useNavigate()
@@ -19,6 +29,7 @@ export default function Lobby() {
   const [isReady, setIsReady] = useState(false)
   const [allReady, setAllReady] = useState(false)
   const [countdown, setCountdown] = useState(null)
+  const [floatingEmotes, setFloatingEmotes] = useState([])
 
   useEffect(() => {
     if (!quest) {
@@ -48,6 +59,7 @@ export default function Lobby() {
             name: `Player${Math.floor(Math.random() * 100)}`,
             monster: {
               evolution: ['baby', 'teen', 'adult'][Math.floor(Math.random() * 3)],
+              monsterType: Math.floor(Math.random() * 9) + 1,
               level: Math.floor(Math.random() * 10) + 1,
             },
             isReady: Math.random() > 0.5,
@@ -95,8 +107,12 @@ export default function Lobby() {
   }
 
   const handleEmote = (emote) => {
-    // Show floating emote animation (simplified version)
-    console.log(`${user.name} sent ${emote}`)
+    const id = Date.now() + Math.random()
+    const left = Math.random() * 60 + 20 // 20-80% from left
+    setFloatingEmotes(prev => [...prev, { id, emote, left }])
+    setTimeout(() => {
+      setFloatingEmotes(prev => prev.filter(e => e.id !== id))
+    }, 1500)
   }
 
   if (!quest) return null
@@ -154,11 +170,13 @@ export default function Lobby() {
         </div>
 
         {/* Campfire Scene */}
-        <div className="pixel-card min-h-[300px] bg-gradient-to-b from-pixel-purple to-pixel-dark bg-opacity-30 p-6 mb-6 relative overflow-hidden">
-          {/* Campfire */}
-          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-4xl animate-pulse-slow">
-            🔥
-          </div>
+        <div
+          className="pixel-card min-h-[300px] p-6 mb-6 relative overflow-hidden"
+          style={{
+            background: `linear-gradient(to bottom, rgba(26,26,46,0.6), rgba(26,26,46,0.85)), url(${CATEGORY_BG[quest.category] || coffeeBg}) center/cover no-repeat`,
+            imageRendering: 'pixelated',
+          }}
+        >
 
           {/* Participants around campfire */}
           <div className="relative h-full flex items-center justify-center">
@@ -173,6 +191,7 @@ export default function Lobby() {
                 >
                   <PixelMonster
                     evolution={participant.monster.evolution}
+                    monsterType={participant.monster.monsterType}
                     size="medium"
                     animated={true}
                     isPlayer={participant.id === user.id}
@@ -197,17 +216,41 @@ export default function Lobby() {
         </div>
 
         {/* Emote Actions */}
-        <div className="grid grid-cols-4 gap-3 mb-6">
-          {['👋', '😊', '👍', '🎉'].map((emote) => (
-            <button
-              key={emote}
-              onClick={() => handleEmote(emote)}
-              className="pixel-button bg-pixel-purple hover:bg-pixel-pink text-white py-4 text-2xl"
+        <div className="relative">
+          {/* Floating emotes */}
+          {floatingEmotes.map(({ id, emote, left }) => (
+            <span
+              key={id}
+              className="absolute text-3xl pointer-events-none"
+              style={{
+                left: `${left}%`,
+                bottom: '100%',
+                animation: 'emote-float 1.5s ease-out forwards',
+              }}
             >
               {emote}
-            </button>
+            </span>
           ))}
+          <div className="grid grid-cols-4 gap-3 mb-6">
+            {['👋', '😊', '👍', '🎉'].map((emote) => (
+              <button
+                key={emote}
+                onClick={() => handleEmote(emote)}
+                className="pixel-button bg-pixel-purple hover:bg-pixel-pink text-white py-4 text-2xl active:scale-90 transition-transform"
+              >
+                {emote}
+              </button>
+            ))}
+          </div>
         </div>
+
+        <style>{`
+          @keyframes emote-float {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            50% { opacity: 0.8; transform: translateY(-60px) scale(1.2); }
+            100% { opacity: 0; transform: translateY(-120px) scale(0.8); }
+          }
+        `}</style>
 
         {/* Ready Check */}
         <div className="space-y-4">

@@ -2,6 +2,9 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import { useAuthStore } from './stores/authStore'
+import { useMonsterStore } from './stores/monsterStore'
+import { getEvolveAnim } from './components/PixelMonster'
+import EvolutionOverlay from './components/EvolutionOverlay'
 
 // Pages
 import Login from './pages/Login'
@@ -17,6 +20,21 @@ function ProtectedRoute({ children }) {
   return user ? children : <Navigate to="/login" />
 }
 
+function EvolutionLayer() {
+  const { monster, clearJustEvolved } = useMonsterStore()
+  const animSrc = getEvolveAnim(monster.monsterType)
+
+  if (!monster.justEvolved || !animSrc) return null
+
+  return (
+    <EvolutionOverlay
+      animSrc={animSrc}
+      monsterName={monster.name}
+      onComplete={() => clearJustEvolved()}
+    />
+  )
+}
+
 function App() {
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'demo-client-id'
 
@@ -24,6 +42,7 @@ function App() {
     <GoogleOAuthProvider clientId={googleClientId}>
       <Router>
         <div className="app min-h-screen bg-pixel-dark">
+          <EvolutionLayer />
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/hub-selection" element={

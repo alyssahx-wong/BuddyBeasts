@@ -47,16 +47,20 @@ export default function QRCheckIn() {
       const duration = Math.floor((Date.now() - questStartTime) / 1000 / 60)
       trackQuestComplete(questId, participants.length, duration)
 
-      // Navigate to completion screen after short delay
+      // Navigate to hub after delay — longer if evolution animation is playing
+      const newLevel = Math.floor((monster.crystals + crystalBonus) / 100) + 1
+      const willEvolve = monster.level < 5 && newLevel >= 5 && monster.evolution === 'baby'
+      const delay = willEvolve ? 8000 : 3000
+
       setTimeout(() => {
-        navigate('/hub', { 
-          state: { 
+        navigate('/hub', {
+          state: {
             questCompleted: true,
             crystalsEarned: crystalBonus,
-            questName: quest.title 
-          } 
+            questName: quest.title
+          }
         })
-      }, 3000)
+      }, delay)
     }
   }
 
