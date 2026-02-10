@@ -14,7 +14,7 @@ export const useAuthStore = create(
       setCurrentHub: (hub) => set({ currentHub: hub }),
     }),
     {
-      name: 'karmaloop-auth',
+      name: 'buddybeasts-auth',
     }
   )
 )

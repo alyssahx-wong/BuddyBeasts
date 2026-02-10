@@ -9,7 +9,7 @@ import NavigationBar from '../components/NavigationBar'
 export default function Profile() {
   const navigate = useNavigate()
   const { user, currentHub, logout } = useAuthStore()
-  const { monster, evolveMonster } = useMonsterStore()
+  const { monster, evolveMonster, unlockSkin, setActiveSkin, addCrystals } = useMonsterStore()
   const { questHistory, belongingScores, trackBelongingScore } = useDataStore()
   const [showBelongingPrompt, setShowBelongingPrompt] = useState(false)
   const [belongingScore, setBelongingScore] = useState(5)
@@ -117,11 +117,12 @@ export default function Profile() {
         <div className="pixel-card p-6 mb-6 text-center">
           <h3 className="font-pixel text-sm text-pixel-yellow mb-4">Your Monster</h3>
           <div className="mb-4">
-            <PixelMonster 
+            <PixelMonster
               evolution={monster.evolution}
               size="large"
               animated={true}
               isPlayer={true}
+              skin={monster.activeSkin || 'default'}
             />
           </div>
           <div className="grid grid-cols-2 gap-4 text-sm font-game mb-4">
@@ -181,6 +182,52 @@ export default function Profile() {
           >
             {monster.crystals >= monster.level * 100 ? '✨ Check Evolution' : '🔒 Need More Crystals'}
           </button>
+        </div>
+
+        {/* Customise Monster – unlock with crystals (study-app style) */}
+        <div className="pixel-card p-6 mb-6">
+          <h3 className="font-pixel text-sm text-pixel-yellow mb-3">Customise Monster</h3>
+          <p className="text-xs text-pixel-light font-game mb-4">
+            Unlock looks with crystals. Tap to equip.
+          </p>
+          <div className="grid grid-cols-4 gap-3">
+            {[
+              { id: 'default', label: 'Default', cost: 0, emoji: '👾' },
+              { id: 'star', label: 'Stargazer', cost: 200, emoji: '⭐' },
+              { id: 'leaf', label: 'Forest', cost: 350, emoji: '🍃' },
+              { id: 'crystal', label: 'Crystal', cost: 500, emoji: '💎' },
+            ].map((s) => {
+              const unlocked = (monster.unlockedSkins || ['default']).includes(s.id)
+              const active = (monster.activeSkin || 'default') === s.id
+              const canUnlock = s.cost > 0 && monster.crystals >= s.cost && !unlocked
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => {
+                    if (canUnlock) {
+                      addCrystals(-s.cost)
+                      unlockSkin(s.id)
+                    }
+                    if (unlocked) setActiveSkin(s.id)
+                  }}
+                  disabled={!unlocked && !canUnlock}
+                  className={`
+                    pixel-card p-4 text-center transition-all touch-target flex flex-col items-center justify-center gap-1
+                    ${active ? 'border-pixel-yellow bg-pixel-yellow bg-opacity-20' : ''}
+                    ${unlocked ? 'hover:border-pixel-green' : 'opacity-70'}
+                  `}
+                >
+                  <span className="text-3xl">{s.emoji}</span>
+                  <span className="font-game text-xs text-pixel-light">{s.label}</span>
+                  {s.cost > 0 && (
+                    <span className={`text-xs font-game ${unlocked ? 'text-pixel-green' : 'text-pixel-yellow'}`}>
+                      {unlocked ? '✓' : `💎 ${s.cost}`}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         {/* Stats Card */}
@@ -285,7 +332,7 @@ export default function Profile() {
         {/* App Info */}
         <div className="pixel-card p-4 bg-pixel-purple bg-opacity-20 text-center">
           <p className="text-xs text-pixel-light font-game mb-2">
-            KarmaLoop v0.1.0 - Built for Building Belonging
+            BuddyBeasts v0.1.0 - Built for Building Belonging
           </p>
           <p className="text-xs text-pixel-blue font-game">
             🎮 Turning local connections into pixel adventures

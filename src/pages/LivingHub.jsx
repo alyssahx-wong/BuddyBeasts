@@ -139,26 +139,17 @@ export default function LivingHub() {
             />
           </div>
 
-          {/* Player's Monster - Movable */}
-          <div
-            className="absolute transition-all duration-700 ease-out z-20"
-            style={{
-              left: `${monsterPosition.x}%`,
-              top: `${monsterPosition.y}%`,
-              transform: 'translate(-50%, -50%)',
-            }}
-          >
-            <div className="text-center pointer-events-none">
-              <div className={`${isMoving ? 'animate-bounce' : ''}`}>
-                <PixelMonster 
-                  evolution={monster.evolution} 
-                  size="large"
-                  animated={true}
-                  isPlayer={true}
-                />
-              </div>
-              <div className="mt-2 pixel-card p-2 bg-pixel-yellow inline-block shadow-lg">
-                <p className="font-pixel text-xs text-pixel-dark whitespace-nowrap">
+          {/* Player's Monster */}
+          <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2 z-10">
+            <div className="text-center">
+              <PixelMonster 
+                evolution={monster.evolution} 
+                size="large"
+                animated={true}
+                isPlayer={true}
+              />
+              <div className="mt-2 pixel-card p-2 bg-pixel-yellow inline-block">
+                <p className="font-pixel text-xs text-pixel-dark">
                   {user.name} (You)
                 </p>
               </div>
@@ -190,14 +181,12 @@ export default function LivingHub() {
                   }}
                   className="text-center hover:scale-110 transition-transform pointer-events-auto"
                 >
-                  <div className="animate-float" style={{ animationDelay: `${index * 0.5}s` }}>
-                    <PixelMonster 
-                      evolution={onlineUser.monster?.evolution || 'baby'} 
-                      size="medium"
-                      animated={true}
-                    />
-                  </div>
-                  <div className="mt-1 bg-pixel-dark bg-opacity-90 px-2 py-1 rounded text-xs font-game text-white whitespace-nowrap shadow-md">
+                  <PixelMonster 
+                    evolution={onlineUser.monster?.evolution || 'baby'} 
+                    size="medium"
+                    animated={true}
+                  />
+                  <div className="mt-1 bg-pixel-dark bg-opacity-75 px-2 py-1 rounded text-xs font-game text-white">
                     {onlineUser.name}
                   </div>
                 </button>

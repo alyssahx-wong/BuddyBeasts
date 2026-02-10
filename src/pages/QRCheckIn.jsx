@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
+import { Html5Qrcode } from 'html5-qrcode'
 import { useAuthStore } from '../stores/authStore'
 import { useMonsterStore } from '../stores/monsterStore'
 import { useDataStore } from '../stores/dataStore'
@@ -11,53 +12,81 @@ export default function QRCheckIn() {
   const location = useLocation()
   const quest = location.state?.quest
   const participants = location.state?.participants || []
-  
+  const scannerRef = useRef(null)
+
   const { user } = useAuthStore()
   const { addCrystals, completeQuest, monster } = useMonsterStore()
   const { trackQuestComplete } = useDataStore()
-  
+
   const [checkInCode, setCheckInCode] = useState('')
   const [checkedIn, setCheckedIn] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
   const [questStartTime] = useState(Date.now())
+  const [scanError, setScanError] = useState(null)
+  const [scannedCode, setScannedCode] = useState(null)
 
   useEffect(() => {
     if (!quest) {
       navigate('/quests')
       return
     }
-
-    // Generate unique check-in code for this quest instance
-    const code = `KARMA_${questId}_${Date.now()}`
+    const code = `BUDDY_${questId}_${Date.now()}`
     setCheckInCode(code)
   }, [quest, questId, navigate])
 
-  const handleCheckIn = () => {
-    if (!checkedIn) {
-      // Simulate QR scan success
-      setCheckedIn(true)
-      
-      // Reward the user
-      const isGroup = participants.length > 1
-      const crystalBonus = isGroup ? Math.floor(quest.crystals * 1.5) : quest.crystals
-      
-      addCrystals(crystalBonus)
-      completeQuest(quest.type, isGroup)
-      
-      const duration = Math.floor((Date.now() - questStartTime) / 1000 / 60)
-      trackQuestComplete(questId, participants.length, duration)
-
-      // Navigate to completion screen after short delay
-      setTimeout(() => {
-        navigate('/hub', { 
-          state: { 
-            questCompleted: true,
-            crystalsEarned: crystalBonus,
-            questName: quest.title 
-          } 
-        })
-      }, 3000)
+  useEffect(() => {
+    if (!showScanner || !checkInCode || checkedIn) return
+    const scanner = new Html5Qrcode('qr-reader')
+    scannerRef.current = scanner
+    scanner.start(
+      { facingMode: 'environment' },
+      { fps: 8, qrbox: { width: 200, height: 200 } },
+      (decodedText) => {
+        if (decodedText.trim() === checkInCode.trim()) {
+          scanner.stop().catch(() => {})
+          scannerRef.current = null
+          setShowScanner(false)
+          setScannedCode(decodedText.trim())
+        }
+      },
+      () => {}
+    ).catch((err) => {
+      setScanError('Camera not available. Use Confirm Check-In for demo.')
+      console.warn('QR scanner start failed:', err)
+    })
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(() => {})
+        scannerRef.current = null
+      }
     }
+  }, [showScanner, checkInCode, checkedIn])
+
+  useEffect(() => {
+    if (scannedCode && checkInCode && scannedCode === checkInCode && !checkedIn) {
+      setScannedCode(null)
+      performCheckIn()
+    }
+  }, [scannedCode, checkInCode, checkedIn])
+
+  const performCheckIn = () => {
+    if (checkedIn) return
+    setCheckedIn(true)
+    const isGroup = participants.length > 1
+    const crystalBonus = isGroup ? Math.floor(quest.crystals * 1.5) : quest.crystals
+    addCrystals(crystalBonus)
+    completeQuest(quest.type, isGroup)
+    const duration = Math.floor((Date.now() - questStartTime) / 1000 / 60)
+    trackQuestComplete(questId, participants.length, duration)
+    setTimeout(() => {
+      navigate('/hub', {
+        state: { questCompleted: true, crystalsEarned: crystalBonus, questName: quest.title },
+      })
+    }, 3000)
+  }
+
+  const handleCheckIn = () => {
+    if (!checkedIn) performCheckIn()
   }
 
   const handleCancel = () => {
@@ -101,8 +130,11 @@ export default function QRCheckIn() {
                   </p>
                 </div>
               </div>
-              <p className="text-xs text-pixel-light font-game">
-                Meet your group at the location and scan the QR code to check in!
+              <p className="text-xs text-pixel-light font-game mb-2">
+                Meet your group in person at the location. Scan the host’s QR code to verify you earned this quest.
+              </p>
+              <p className="text-xs text-pixel-yellow font-game">
+                ✓ Personal connection in person = rewards unlocked
               </p>
             </div>
 
@@ -169,18 +201,20 @@ export default function QRCheckIn() {
               </button>
             </div>
 
-            {/* Scanner Placeholder */}
+            {/* QR Scanner – verify in person by scanning host's code */}
             {showScanner && (
-              <div className="mt-4 pixel-card p-6 bg-pixel-dark text-center">
-                <p className="font-game text-pixel-light mb-4">
-                  Camera scanner would appear here
+              <div className="mt-4 pixel-card p-4 bg-pixel-dark">
+                <p className="font-game text-pixel-yellow text-sm mb-2 text-center">
+                  Point camera at host’s QR code to verify
                 </p>
-                <p className="text-xs text-pixel-blue font-game mb-4">
-                  (Demo mode: click Confirm Check-In above)
-                </p>
+                <div id="qr-reader" className="rounded overflow-hidden mb-3" />
+                {scanError && (
+                  <p className="text-xs text-pixel-pink font-game text-center mb-2">{scanError}</p>
+                )}
                 <button
-                  onClick={() => setShowScanner(false)}
-                  className="text-pixel-pink hover:text-pixel-light text-sm font-game"
+                  type="button"
+                  onClick={() => { setShowScanner(false); setScanError(null) }}
+                  className="pixel-button bg-pixel-purple text-white w-full py-2 text-xs"
                 >
                   Close Scanner
                 </button>

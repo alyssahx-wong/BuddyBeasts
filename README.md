@@ -1,10 +1,10 @@
-# KarmaLoop - Pixel Monster Community Quest Game
+# BuddyBeasts - Pixel Monster Community Quest Game
 
 > **Turn local social connection into a living pixel world** – where real-world group quests grow your monster, and data-driven recommendations help people show up again and again.
 
 Built for **Problem Statement 2: Building Belonging Through Community Participation**
 
-## 🎮 What is KarmaLoop?
+## 🎮 What is BuddyBeasts?
 
 A GPS-based, community-centered mobile-first web game that reduces isolation by turning real-world social participation into a shared, playful experience. Users join nearby hubs, complete in-person group quests, and grow pixelated monsters together.
 
@@ -61,7 +61,7 @@ A GPS-based, community-centered mobile-first web game that reduces isolation by 
 
 ## 🎯 Measurable Impact
 
-KarmaLoop tracks meaningful outcomes:
+BuddyBeasts tracks meaningful outcomes:
 
 ### Primary KPIs
 - Weekly active social participation (≥1 quest/week)
@@ -137,7 +137,7 @@ npm run preview
 
 ## 📱 Mobile-First Design
 
-KarmaLoop is optimized for mobile devices:
+BuddyBeasts is optimized for mobile devices:
 - Touch-friendly interface
 - Responsive layouts (320px - 768px+)
 - PWA-ready structure
@@ -183,7 +183,7 @@ Simply click "Try Demo" on the login page!
 - Hub creator tools
 - Advanced analytics dashboard
 
-## 🏆 Why KarmaLoop Wins
+## 🏆 Why BuddyBeasts Wins
 
 ✅ **Targets the root cause**: Lack of repeated, meaningful social participation  
 ✅ **Gamification lowers barriers**: Makes reaching out fun, not scary  
@@ -232,7 +232,7 @@ MIT License - feel free to use this project for your own community-building init
 
 ## 🌟 One-Line Pitch
 
-**"KarmaLoop turns local social connection into a living pixel world—where real-world group quests grow your monster, and data-driven recommendations help people show up again and again."**
+**"BuddyBeasts turns local social connection into a living pixel world—where real-world group quests grow your monster, and data-driven recommendations help people show up again and again."**
 
 ---
 
