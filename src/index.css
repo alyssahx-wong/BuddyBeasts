@@ -1,0 +1,116 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'VT323', monospace;
+  background-color: #1A1A2E;
+  color: #F7F7F7;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Pixel art styling */
+.pixel-border {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* Custom scrollbar for pixel aesthetic */
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1A1A2E;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4A3B8C;
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #5B4BA3;
+}
+
+/* Animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes walk {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(2px); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-slow {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Pixel button style */
+.pixel-button {
+  position: relative;
+  padding: 12px 24px;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 12px;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.1s;
+  box-shadow: 
+    0 0 0 2px #000,
+    0 4px 0 0 #000;
+}
+
+.pixel-button:active {
+  transform: translateY(2px);
+  box-shadow: 
+    0 0 0 2px #000,
+    0 2px 0 0 #000;
+}
+
+.pixel-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Pixel card style */
+.pixel-card {
+  background: #2A2A3E;
+  border: 3px solid #4A3B8C;
+  box-shadow: 
+    0 0 0 2px #000,
+    0 6px 0 0 #000;
+}
+
+/* Mobile-first responsive helpers */
+@media (max-width: 768px) {
+  .pixel-button {
+    font-size: 10px;
+    padding: 10px 20px;
+  }
+}
