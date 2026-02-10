@@ -2,9 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import PixelMonster from '../components/PixelMonster'
-<<<<<<< HEAD
 import api from '../api'
-=======
 import coffeeBg from '../icons/coffee.png'
 import studyBg from '../icons/study.png'
 import outdoorBg from '../icons/outdoor.png'
@@ -15,33 +13,17 @@ const CATEGORY_BG = {
   walk: outdoorBg,
   help: coffeeBg,
 }
->>>>>>> junhern
 
 export default function Lobby() {
   const navigate = useNavigate()
   const { questId } = useParams()
-<<<<<<< HEAD
   const { user } = useAuthStore()
 
   const [lobby, setLobby] = useState(null)
   const [loading, setLoading] = useState(true)
-=======
-  const location = useLocation()
-  const quest = location.state?.quest
-
-  const { user } = useAuthStore()
-  const { monster } = useMonsterStore()
-  const { trackQuestStart } = useDataStore()
-  const { addQuestParticipants } = useChatStore()
-
-  const [participants, setParticipants] = useState([])
-  const [isReady, setIsReady] = useState(false)
-  const [allReady, setAllReady] = useState(false)
->>>>>>> junhern
   const [countdown, setCountdown] = useState(null)
   const [floatingEmotes, setFloatingEmotes] = useState([])
 
-<<<<<<< HEAD
   const fetchLobby = useCallback(async () => {
     try {
       const { data } = await api.get(`/api/lobbies/${questId}`)
@@ -51,69 +33,6 @@ export default function Lobby() {
       console.error('Failed to fetch lobby:', err)
       if (err.response?.status === 404) {
         navigate('/quests')
-=======
-  useEffect(() => {
-    if (!quest) {
-      navigate('/quests')
-      return
-    }
-
-    // Track quest start
-    trackQuestStart(questId, quest.type)
-
-    // Add current user to participants
-    const currentUser = {
-      id: user.id,
-      name: user.name,
-      monster: monster,
-      isReady: false,
-      isHost: true,
-    }
-    setParticipants([currentUser])
-
-    // Simulate other participants joining
-    const joinInterval = setInterval(() => {
-      setParticipants(prev => {
-        if (prev.length < quest.maxParticipants && Math.random() > 0.3) {
-          const newParticipant = {
-            id: `user_${Date.now()}_${Math.random()}`,
-            name: `Player${Math.floor(Math.random() * 100)}`,
-            monster: {
-              evolution: ['baby', 'teen', 'adult'][Math.floor(Math.random() * 3)],
-              monsterType: Math.floor(Math.random() * 9) + 1,
-              level: Math.floor(Math.random() * 10) + 1,
-            },
-            isReady: Math.random() > 0.5,
-            isHost: false,
-          }
-          return [...prev, newParticipant]
-        }
-        return prev
-      })
-    }, 3000)
-
-    return () => clearInterval(joinInterval)
-  }, [quest, questId, user, monster, trackQuestStart, navigate])
-
-  useEffect(() => {
-    // Check if all participants are ready
-    const ready = participants.length >= quest.minParticipants &&
-                  participants.every(p => p.isReady || p.id === user.id && isReady)
-    setAllReady(ready)
-
-    if (ready && !countdown) {
-      // Create quest chat conversation when starting
-      if (participants.length > 0) {
-        addQuestParticipants(
-          questId,
-          quest.title,
-          participants.map((p) => ({
-            id: p.id,
-            name: p.name,
-            avatar: p.id === user.id ? user.picture : null,
-          }))
-        )
->>>>>>> junhern
       }
       return null
     } finally {
@@ -148,7 +67,6 @@ export default function Lobby() {
     }
   }, [lobby?.allReady, countdown, questId, navigate])
 
-<<<<<<< HEAD
   const handleReady = async () => {
     try {
       const { data } = await api.put(`/api/lobbies/${questId}/ready`)
@@ -156,13 +74,6 @@ export default function Lobby() {
     } catch (err) {
       console.error('Failed to toggle ready:', err)
     }
-=======
-  const handleReady = () => {
-    setIsReady(!isReady)
-    setParticipants(prev => prev.map(p =>
-      p.id === user.id ? { ...p, isReady: !isReady } : p
-    ))
->>>>>>> junhern
   }
 
   const handleLeave = async () => {
@@ -174,24 +85,18 @@ export default function Lobby() {
     navigate('/quests')
   }
 
-<<<<<<< HEAD
   const handleEmote = async (emote) => {
-    setFloatingEmote(emote)
-    setTimeout(() => setFloatingEmote(null), 2000)
-    try {
-      await api.post(`/api/lobbies/${questId}/emote`, { emote })
-    } catch {
-      // ephemeral, ignore errors
-    }
-=======
-  const handleEmote = (emote) => {
     const id = Date.now() + Math.random()
     const left = Math.random() * 60 + 20
     setFloatingEmotes(prev => [...prev, { id, emote, left }])
     setTimeout(() => {
       setFloatingEmotes(prev => prev.filter(e => e.id !== id))
     }, 1500)
->>>>>>> junhern
+    try {
+      await api.post(`/api/lobbies/${questId}/emote`, { emote })
+    } catch {
+      // ephemeral, ignore errors
+    }
   }
 
   if (loading) {
@@ -282,12 +187,8 @@ export default function Lobby() {
                   }}
                 >
                   <PixelMonster
-<<<<<<< HEAD
                     evolution={participant.monster?.evolution || 'baby'}
-=======
-                    evolution={participant.monster.evolution}
-                    monsterType={participant.monster.monsterType}
->>>>>>> junhern
+                    monsterType={participant.monster?.monsterType}
                     size="medium"
                     animated={true}
                     isPlayer={participant.id === user.id}

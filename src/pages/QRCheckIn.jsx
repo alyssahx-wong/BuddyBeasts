@@ -1,4 +1,3 @@
-git add .
 import React, { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
@@ -51,7 +50,6 @@ export default function QRCheckIn() {
 
   const handleCheckIn = async () => {
     if (checkedIn) return
-<<<<<<< HEAD
     try {
       const participantCount = lobby?.participants?.length || 1
       const { data } = await api.post(`/api/checkin/${questId}/confirm`, {
@@ -62,17 +60,6 @@ export default function QRCheckIn() {
     } catch (err) {
       console.error('Check-in failed:', err)
     }
-=======
-    setCheckedIn(true)
-    const isGroup = participants.length > 1
-    const crystalBonus = isGroup ? Math.floor(quest.crystals * 1.5) : quest.crystals
-    const coinBonus = Math.max(10, Math.floor(crystalBonus / 2))
-    addCrystals(crystalBonus)
-    if (addCoins) addCoins(coinBonus)
-    completeQuest(quest.type, isGroup)
-    const duration = Math.floor((Date.now() - questStartTime) / 1000 / 60)
-    trackQuestComplete(questId, participants.length, duration)
->>>>>>> junhern
   }
 
   const handleCancel = () => {

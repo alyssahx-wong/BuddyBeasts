@@ -3,197 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { useDataStore } from '../stores/dataStore'
 import NavigationBar from '../components/NavigationBar'
-<<<<<<< HEAD
 import api from '../api'
-=======
-
-const QUEST_TEMPLATES = [
-  // Coffee quests
-  {
-    id: 'coffee_chat',
-    title: 'Coffee Chat',
-    description: 'Meet someone new over a warm drink at Koufu Level 2',
-    duration: 20,
-    minParticipants: 2,
-    maxParticipants: 3,
-    difficulty: 'easy',
-    crystals: 15,
-    icon: '☕',
-    type: 'coffee_chat',
-    category: 'coffee',
-    location: 'Koufu Level 2',
-    tags: ['casual', 'short', 'indoor']
-  },
-  {
-    id: 'boba_break',
-    title: 'Boba Break',
-    description: 'Grab bubble tea together and chill at The Deck',
-    duration: 25,
-    minParticipants: 2,
-    maxParticipants: 4,
-    difficulty: 'easy',
-    crystals: 20,
-    icon: '🧋',
-    type: 'coffee_chat',
-    category: 'coffee',
-    location: 'The Deck',
-    tags: ['casual', 'fun', 'indoor']
-  },
-  {
-    id: 'morning_brew',
-    title: 'Morning Brew',
-    description: 'Start the day right with coffee and good vibes at Starbucks',
-    duration: 15,
-    minParticipants: 2,
-    maxParticipants: 3,
-    difficulty: 'easy',
-    crystals: 12,
-    icon: '🌅',
-    type: 'coffee_chat',
-    category: 'coffee',
-    location: 'Starbucks Campus',
-    tags: ['morning', 'short', 'indoor']
-  },
-  // Study quests
-  {
-    id: 'study_jam',
-    title: 'Study Jam',
-    description: 'Group study session with focused work time at the Library',
-    duration: 60,
-    minParticipants: 3,
-    maxParticipants: 5,
-    difficulty: 'medium',
-    crystals: 30,
-    icon: '📚',
-    type: 'study_jam',
-    category: 'study',
-    location: 'Library Level 3',
-    tags: ['productive', 'quiet', 'indoor']
-  },
-  {
-    id: 'homework_help',
-    title: 'Homework Help',
-    description: 'Pair up and tackle assignments together at Study Room B',
-    duration: 45,
-    minParticipants: 2,
-    maxParticipants: 3,
-    difficulty: 'medium',
-    crystals: 25,
-    icon: '✏️',
-    type: 'study_jam',
-    category: 'study',
-    location: 'Study Room B',
-    tags: ['productive', 'medium', 'indoor']
-  },
-  {
-    id: 'exam_prep',
-    title: 'Exam Prep',
-    description: 'Intensive group revision session before exams',
-    duration: 90,
-    minParticipants: 3,
-    maxParticipants: 6,
-    difficulty: 'hard',
-    crystals: 45,
-    icon: '🎯',
-    type: 'study_jam',
-    category: 'study',
-    location: 'Tutorial Room 5',
-    tags: ['focused', 'long', 'indoor']
-  },
-  // Walk quests
-  {
-    id: 'sunset_walk',
-    title: 'Sunset Walk',
-    description: 'Evening stroll around the campus garden trail',
-    duration: 30,
-    minParticipants: 2,
-    maxParticipants: 4,
-    difficulty: 'easy',
-    crystals: 20,
-    icon: '🌇',
-    type: 'sunset_walk',
-    category: 'walk',
-    location: 'Campus Garden',
-    tags: ['outdoor', 'relaxing', 'evening']
-  },
-  {
-    id: 'morning_jog',
-    title: 'Morning Jog',
-    description: 'Start fresh with a quick jog around the track',
-    duration: 25,
-    minParticipants: 2,
-    maxParticipants: 5,
-    difficulty: 'medium',
-    crystals: 25,
-    icon: '🏃',
-    type: 'morning_workout',
-    category: 'walk',
-    location: 'Running Track',
-    tags: ['fitness', 'morning', 'outdoor']
-  },
-  {
-    id: 'photo_walk',
-    title: 'Photo Walk',
-    description: 'Explore campus and snap cool photos together',
-    duration: 40,
-    minParticipants: 2,
-    maxParticipants: 4,
-    difficulty: 'easy',
-    crystals: 22,
-    icon: '📸',
-    type: 'sunset_walk',
-    category: 'walk',
-    location: 'Main Campus',
-    tags: ['creative', 'outdoor', 'fun']
-  },
-  // Help quests
-  {
-    id: 'help_neighbor',
-    title: 'Help a Neighbor',
-    description: 'Quick task helping someone in the community',
-    duration: 15,
-    minParticipants: 2,
-    maxParticipants: 2,
-    difficulty: 'easy',
-    crystals: 18,
-    icon: '🤝',
-    type: 'help_neighbor',
-    category: 'help',
-    location: 'Student Hub',
-    tags: ['volunteer', 'short', 'community']
-  },
-  {
-    id: 'campus_cleanup',
-    title: 'Campus Cleanup',
-    description: 'Pick up litter and make campus shine together',
-    duration: 30,
-    minParticipants: 3,
-    maxParticipants: 8,
-    difficulty: 'easy',
-    crystals: 28,
-    icon: '🧹',
-    type: 'help_neighbor',
-    category: 'help',
-    location: 'Campus Grounds',
-    tags: ['volunteer', 'outdoor', 'community']
-  },
-  {
-    id: 'mentor_session',
-    title: 'Mentor Session',
-    description: 'Guide a junior student through their first week',
-    duration: 45,
-    minParticipants: 2,
-    maxParticipants: 3,
-    difficulty: 'medium',
-    crystals: 35,
-    icon: '🌟',
-    type: 'help_neighbor',
-    category: 'help',
-    location: 'Welcome Center',
-    tags: ['mentoring', 'social', 'indoor']
-  },
-]
->>>>>>> junhern
 
 const CATEGORIES = [
   { id: 'all',    label: 'All',    icon: '🌟' },
@@ -208,7 +18,6 @@ export default function QuestBoard() {
   const { currentHub } = useAuthStore()
   const { getRecommendations } = useDataStore()
   const [quests, setQuests] = useState([])
-<<<<<<< HEAD
   const [monster, setMonster] = useState({ crystals: 0, questsCompleted: 0 })
   const [filter, setFilter] = useState('all')
   const [recommendations, setRecommendations] = useState(null)
@@ -228,20 +37,6 @@ export default function QuestBoard() {
           api.get('/api/quests/instances', { params: { hub_id: currentHub.id } }),
           api.get('/api/monsters/me'),
         ])
-=======
-  const [filter, setFilter] = useState('all')
-
-  useEffect(() => {
-    const recs = getRecommendations()
-
-    const activeQuests = QUEST_TEMPLATES.map((template, index) => ({
-      ...template,
-      instanceId: `quest_${template.id}_${Date.now()}_${index}`,
-      currentParticipants: Math.floor(Math.random() * template.maxParticipants),
-      isRecommended: recs.recommendedTypes.includes(template.type),
-      startTime: null,
-    }))
->>>>>>> junhern
 
         setRecommendations(recs)
         if (monsterRes.data && monsterRes.data.id) setMonster(monsterRes.data)
@@ -331,7 +126,6 @@ export default function QuestBoard() {
       </div>
 
       <div className="max-w-4xl mx-auto p-4">
-<<<<<<< HEAD
         {/* Recommendations Banner */}
         {recommendations && filter === 'all' && (
           <div className="pixel-card p-4 mb-6 bg-pixel-blue bg-opacity-20">
@@ -353,22 +147,15 @@ export default function QuestBoard() {
           </div>
         )}
 
-=======
->>>>>>> junhern
         {/* Quest Cards */}
         <div className="space-y-4">
           {filteredQuests.map((quest) => (
             <div
-<<<<<<< HEAD
               key={quest.instanceId || quest.id}
               className={`
                 pixel-card p-5 transition-all hover:border-pixel-blue
                 ${quest.isRecommended ? 'border-pixel-yellow bg-pixel-yellow bg-opacity-5' : ''}
               `}
-=======
-              key={quest.instanceId}
-              className="pixel-card p-5 transition-all hover:border-pixel-blue"
->>>>>>> junhern
             >
               {/* Title row */}
               <div className="flex items-start gap-3 mb-2">
