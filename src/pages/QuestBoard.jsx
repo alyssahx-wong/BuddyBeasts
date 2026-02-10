@@ -1,144 +1,53 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
-import { useMonsterStore } from '../stores/monsterStore'
 import { useDataStore } from '../stores/dataStore'
 import NavigationBar from '../components/NavigationBar'
-
-// Quest templates
-const QUEST_TEMPLATES = [
-  {
-    id: 'coffee_chat',
-    title: 'Coffee Chat',
-    description: 'Meet for a casual 20-min coffee conversation',
-    duration: 20,
-    minParticipants: 2,
-    maxParticipants: 3,
-    difficulty: 'easy',
-    crystals: 50,
-    icon: '☕',
-    type: 'coffee_chat',
-    tags: ['casual', 'short', 'indoor']
-  },
-  {
-    id: 'study_jam',
-    title: 'Study Jam',
-    description: 'Group study session with focused work time',
-    duration: 60,
-    minParticipants: 3,
-    maxParticipants: 5,
-    difficulty: 'medium',
-    crystals: 100,
-    icon: '📚',
-    type: 'study_jam',
-    tags: ['productive', 'medium', 'indoor']
-  },
-  {
-    id: 'sunset_walk',
-    title: 'Sunset Walk',
-    description: 'Evening stroll around the neighborhood',
-    duration: 30,
-    minParticipants: 2,
-    maxParticipants: 4,
-    difficulty: 'easy',
-    crystals: 75,
-    icon: '🌅',
-    type: 'sunset_walk',
-    tags: ['outdoor', 'relaxing', 'evening']
-  },
-  {
-    id: 'help_neighbor',
-    title: 'Help a Neighbor',
-    description: 'Quick task helping someone in the community',
-    duration: 15,
-    minParticipants: 2,
-    maxParticipants: 2,
-    difficulty: 'easy',
-    crystals: 60,
-    icon: '🤝',
-    type: 'help_neighbor',
-    tags: ['volunteer', 'short', 'community']
-  },
-  {
-    id: 'lunch_crew',
-    title: 'Lunch Crew',
-    description: 'Grab lunch together and share stories',
-    duration: 45,
-    minParticipants: 3,
-    maxParticipants: 6,
-    difficulty: 'easy',
-    crystals: 80,
-    icon: '🍱',
-    type: 'lunch_crew',
-    tags: ['food', 'social', 'medium']
-  },
-  {
-    id: 'game_night',
-    title: 'Game Night Setup',
-    description: 'Organize a board game or video game session',
-    duration: 90,
-    minParticipants: 4,
-    maxParticipants: 8,
-    difficulty: 'hard',
-    crystals: 150,
-    icon: '🎮',
-    type: 'game_night',
-    tags: ['fun', 'long', 'indoor']
-  },
-  {
-    id: 'morning_workout',
-    title: 'Morning Workout',
-    description: 'Start the day with group exercise',
-    duration: 40,
-    minParticipants: 2,
-    maxParticipants: 6,
-    difficulty: 'medium',
-    crystals: 90,
-    icon: '💪',
-    type: 'morning_workout',
-    tags: ['fitness', 'morning', 'outdoor']
-  },
-  {
-    id: 'art_cafe',
-    title: 'Art Café',
-    description: 'Creative session with drawing or crafts',
-    duration: 60,
-    minParticipants: 3,
-    maxParticipants: 5,
-    difficulty: 'medium',
-    crystals: 110,
-    icon: '🎨',
-    type: 'art_cafe',
-    tags: ['creative', 'indoor', 'relaxing']
-  },
-]
+import api from '../api'
 
 export default function QuestBoard() {
   const navigate = useNavigate()
   const { currentHub } = useAuthStore()
-  const { monster } = useMonsterStore()
   const { getRecommendations } = useDataStore()
   const [quests, setQuests] = useState([])
-  const [filter, setFilter] = useState('all') // all, recommended, available
+  const [monster, setMonster] = useState({ crystals: 0, questsCompleted: 0 })
+  const [filter, setFilter] = useState('all')
   const [recommendations, setRecommendations] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Get personalized recommendations
-    const recs = getRecommendations()
-    setRecommendations(recs)
+    if (!currentHub) {
+      navigate('/hub-selection')
+      return
+    }
 
-    // Generate active quests with participants
-    const activeQuests = QUEST_TEMPLATES.map((template, index) => ({
-      ...template,
-      instanceId: `quest_${template.id}_${Date.now()}_${index}`,
-      currentParticipants: Math.floor(Math.random() * (template.minParticipants + 1)),
-      isRecommended: recs.recommendedTypes.includes(template.type),
-      startTime: null,
-      location: 'Hub Central Plaza', // Mock location
-    }))
+    const fetchData = async () => {
+      try {
+        // Fetch recommendations, instances, and monster in parallel
+        const [recs, instancesRes, monsterRes] = await Promise.all([
+          getRecommendations(),
+          api.get('/api/quests/instances', { params: { hub_id: currentHub.id } }),
+          api.get('/api/monsters/me'),
+        ])
 
-    setQuests(activeQuests)
-  }, [])
+        setRecommendations(recs)
+        if (monsterRes.data && monsterRes.data.id) setMonster(monsterRes.data)
+
+        // Mark which quests are recommended
+        const instances = instancesRes.data.map(q => ({
+          ...q,
+          isRecommended: recs.recommendedTypes.includes(q.type),
+        }))
+        setQuests(instances)
+      } catch (err) {
+        console.error('Failed to load quest board:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [currentHub])
 
   const filteredQuests = quests.filter(quest => {
     if (filter === 'recommended') return quest.isRecommended
@@ -146,8 +55,25 @@ export default function QuestBoard() {
     return true
   })
 
-  const handleJoinQuest = (quest) => {
-    navigate(`/lobby/${quest.instanceId}`, { state: { quest } })
+  const handleJoinQuest = async (quest) => {
+    try {
+      // Create a new instance from the template, or join existing instance
+      let instanceId = quest.instanceId
+      if (!instanceId) {
+        // This is a template — create a new instance
+        const { data } = await api.post('/api/quests/instances', {
+          templateId: quest.id,
+          hubId: currentHub.id,
+        })
+        instanceId = data.instanceId
+      } else {
+        // Join the existing instance
+        await api.post(`/api/quests/instances/${instanceId}/join`)
+      }
+      navigate(`/lobby/${instanceId}`)
+    } catch (err) {
+      console.error('Failed to join quest:', err)
+    }
   }
 
   const difficultyColors = {
@@ -156,10 +82,7 @@ export default function QuestBoard() {
     hard: 'text-pixel-pink'
   }
 
-  if (!currentHub) {
-    navigate('/hub-selection')
-    return null
-  }
+  if (!currentHub) return null
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pixel-dark via-pixel-purple to-pixel-dark pb-20">
@@ -217,11 +140,17 @@ export default function QuestBoard() {
           </div>
         )}
 
+        {loading && (
+          <div className="pixel-card p-8 text-center">
+            <p className="font-game text-pixel-light animate-pulse">Loading quests...</p>
+          </div>
+        )}
+
         {/* Quest Cards */}
         <div className="space-y-4">
           {filteredQuests.map((quest) => (
             <div
-              key={quest.instanceId}
+              key={quest.instanceId || quest.id}
               className={`
                 pixel-card p-5 transition-all hover:border-pixel-blue
                 ${quest.isRecommended ? 'border-pixel-yellow bg-pixel-yellow bg-opacity-5' : ''}
@@ -296,7 +225,7 @@ export default function QuestBoard() {
           ))}
         </div>
 
-        {filteredQuests.length === 0 && (
+        {!loading && filteredQuests.length === 0 && (
           <div className="pixel-card p-8 text-center">
             <p className="text-4xl mb-4">🔍</p>
             <p className="font-game text-pixel-light">

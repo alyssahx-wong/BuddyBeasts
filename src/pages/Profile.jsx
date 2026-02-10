@@ -1,69 +1,117 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { useMonsterStore } from '../stores/monsterStore'
-import { useDataStore } from '../stores/dataStore'
 import PixelMonster from '../components/PixelMonster'
 import NavigationBar from '../components/NavigationBar'
+import api from '../api'
 
 export default function Profile() {
   const navigate = useNavigate()
   const { user, currentHub, logout } = useAuthStore()
-  const { monster, evolveMonster } = useMonsterStore()
-  const { questHistory, belongingScores, trackBelongingScore } = useDataStore()
+  const { monster, fetchMonster, evolveMonster } = useMonsterStore()
+  const [profile, setProfile] = useState(null)
+  const [questHistory, setQuestHistory] = useState([])
+  const [belongingScores, setBelongingScores] = useState([])
   const [showBelongingPrompt, setShowBelongingPrompt] = useState(false)
   const [belongingScore, setBelongingScore] = useState(5)
+  const [loading, setLoading] = useState(true)
+  const [evolveError, setEvolveError] = useState(null)
 
-  const completedQuests = questHistory.filter(q => q.status === 'completed')
-  const successRate = questHistory.length > 0 
-    ? Math.round((completedQuests.length / questHistory.length) * 100)
-    : 0
-
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
-
-  const handleEvolutionCheck = () => {
-    if (monster.crystals >= monster.level * 100) {
-      // Evolution logic
-      let newEvolution = monster.evolution
-      let newTraits = []
-
-      if (monster.level >= 10 && monster.evolution === 'baby') {
-        newEvolution = 'teen'
-        newTraits = ['Growing']
-      } else if (monster.level >= 20 && monster.evolution === 'teen') {
-        // Check for special evolutions based on quest history
-        const groupQuestRatio = completedQuests.filter(q => q.groupSize > 2).length / completedQuests.length
-        if (groupQuestRatio > 0.7) {
-          newEvolution = 'leader'
-          newTraits = ['Social Leader']
-        } else if (completedQuests.filter(q => q.questType === 'help_neighbor').length > 5) {
-          newEvolution = 'support'
-          newTraits = ['Community Helper']
-        } else {
-          newEvolution = 'adult'
-          newTraits = ['Mature']
-        }
-      }
-
-      if (newEvolution !== monster.evolution) {
-        evolveMonster(newEvolution, newTraits)
-        alert(`🎉 Your monster evolved into a ${newEvolution}!`)
+  useEffect(() => {
+    const fetchAll = async () => {
+      try {
+        const [profileRes, historyRes, belongingRes] = await Promise.all([
+          api.get('/api/profile/me'),
+          api.get('/api/profile/me/history'),
+          api.get('/api/profile/me/belonging'),
+        ])
+        setProfile(profileRes.data)
+        setQuestHistory(historyRes.data)
+        setBelongingScores(belongingRes.data)
+        // Sync monster store with backend
+        await fetchMonster()
+      } catch (err) {
+        console.error('Failed to load profile:', err)
+      } finally {
+        setLoading(false)
       }
     }
-  }
+    fetchAll()
+  }, [])
 
-  const handleBelongingSubmit = () => {
-    trackBelongingScore(belongingScore)
-    setShowBelongingPrompt(false)
-    alert('Thank you for your feedback! 💙')
-  }
+  const completedQuests = questHistory.filter(q => q.status === 'completed')
+  const successRate = questHistory.length > 0
+    ? Math.round((completedQuests.length / questHistory.length) * 100)
+    : 0
 
   const averageBelonging = belongingScores.length > 0
     ? (belongingScores.reduce((sum, s) => sum + s.score, 0) / belongingScores.length).toFixed(1)
     : 'N/A'
+
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login')
+  }
+
+  const handleEvolutionCheck = async () => {
+    setEvolveError(null)
+    let newEvolution = monster.evolution
+    let newTraits = []
+
+    if (monster.level >= 10 && monster.evolution === 'baby') {
+      newEvolution = 'teen'
+      newTraits = ['Growing']
+    } else if (monster.level >= 20 && monster.evolution === 'teen') {
+      const groupQuestRatio = completedQuests.length > 0
+        ? completedQuests.filter(q => q.groupSize > 2).length / completedQuests.length
+        : 0
+      if (groupQuestRatio > 0.7) {
+        newEvolution = 'leader'
+        newTraits = ['Social Leader']
+      } else if (completedQuests.filter(q => q.questType === 'help_neighbor').length > 5) {
+        newEvolution = 'support'
+        newTraits = ['Community Helper']
+      } else {
+        newEvolution = 'adult'
+        newTraits = ['Mature']
+      }
+    }
+
+    if (newEvolution !== monster.evolution) {
+      try {
+        await evolveMonster(newEvolution, newTraits)
+      } catch (err) {
+        const msg = err.response?.data?.detail || 'Evolution not available yet'
+        setEvolveError(msg)
+        return
+      }
+    } else {
+      setEvolveError('No evolution available at current level')
+    }
+  }
+
+  const handleBelongingSubmit = async () => {
+    try {
+      await api.post('/api/belonging', { score: belongingScore })
+      // Refresh belonging data
+      const { data } = await api.get('/api/profile/me/belonging')
+      setBelongingScores(data)
+    } catch (err) {
+      console.error('Failed to submit belonging score:', err)
+    }
+    setShowBelongingPrompt(false)
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-pixel-dark via-pixel-purple to-pixel-dark flex items-center justify-center">
+        <p className="font-game text-pixel-light animate-pulse">Loading profile...</p>
+      </div>
+    )
+  }
+
+  const stats = profile?.stats || {}
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pixel-dark via-pixel-purple to-pixel-dark pb-20">
@@ -87,8 +135,8 @@ export default function Profile() {
         <div className="pixel-card p-6 mb-6 bg-gradient-to-br from-pixel-blue to-pixel-purple bg-opacity-20">
           <div className="flex items-center gap-4 mb-4">
             {user.picture ? (
-              <img 
-                src={user.picture} 
+              <img
+                src={user.picture}
                 alt={user.name}
                 className="w-16 h-16 rounded-full border-4 border-pixel-yellow"
               />
@@ -117,13 +165,14 @@ export default function Profile() {
         <div className="pixel-card p-6 mb-6 text-center">
           <h3 className="font-pixel text-sm text-pixel-yellow mb-4">Your Monster</h3>
           <div className="mb-4">
-            <PixelMonster 
+            <PixelMonster
               evolution={monster.evolution}
               size="large"
               animated={true}
               isPlayer={true}
             />
           </div>
+          <p className="font-game text-pixel-light text-lg mb-4">{monster.name}</p>
           <div className="grid grid-cols-2 gap-4 text-sm font-game mb-4">
             <div>
               <p className="text-pixel-blue">Evolution</p>
@@ -150,7 +199,7 @@ export default function Profile() {
               <span>{monster.crystals % 100} / 100</span>
             </div>
             <div className="w-full h-4 bg-pixel-dark border-2 border-pixel-purple rounded overflow-hidden">
-              <div 
+              <div
                 className="h-full bg-gradient-to-r from-pixel-blue to-pixel-green transition-all duration-500"
                 style={{ width: `${(monster.crystals % 100)}%` }}
               />
@@ -158,12 +207,12 @@ export default function Profile() {
           </div>
 
           {/* Traits */}
-          {monster.traits.length > 0 && (
+          {monster.traits && monster.traits.length > 0 && (
             <div className="mb-4">
               <p className="text-xs text-pixel-blue font-game mb-2">Traits</p>
               <div className="flex flex-wrap gap-2 justify-center">
                 {monster.traits.map((trait, index) => (
-                  <span 
+                  <span
                     key={index}
                     className="px-3 py-1 bg-pixel-yellow text-pixel-dark text-xs rounded font-game"
                   >
@@ -174,10 +223,16 @@ export default function Profile() {
             </div>
           )}
 
+          {evolveError && (
+            <div className="mb-4 p-3 bg-red-900/50 border border-red-500 rounded text-red-200 text-xs font-game">
+              {evolveError}
+            </div>
+          )}
+
           <button
             onClick={handleEvolutionCheck}
             disabled={monster.crystals < monster.level * 100}
-            className="pixel-button bg-pixel-pink hover:bg-pixel-yellow text-white w-full py-3"
+            className="pixel-button bg-pixel-pink hover:bg-pixel-yellow text-white w-full py-3 disabled:opacity-50"
           >
             {monster.crystals >= monster.level * 100 ? '✨ Check Evolution' : '🔒 Need More Crystals'}
           </button>
@@ -189,7 +244,7 @@ export default function Profile() {
           <div className="grid grid-cols-2 gap-4 text-center font-game">
             <div className="p-3 bg-pixel-purple bg-opacity-20 rounded">
               <p className="text-3xl mb-1">🎯</p>
-              <p className="text-2xl text-pixel-light">{monster.questsCompleted}</p>
+              <p className="text-2xl text-pixel-light">{stats.questsCompleted || 0}</p>
               <p className="text-xs text-pixel-blue mt-1">Completed</p>
             </div>
             <div className="p-3 bg-pixel-purple bg-opacity-20 rounded">
@@ -204,14 +259,24 @@ export default function Profile() {
             </div>
             <div className="p-3 bg-pixel-purple bg-opacity-20 rounded">
               <p className="text-3xl mb-1">💙</p>
-              <p className="text-2xl text-pixel-pink">{averageBelonging}</p>
+              <p className="text-2xl text-pixel-pink">{stats.averageBelonging || averageBelonging}</p>
               <p className="text-xs text-pixel-blue mt-1">Belonging</p>
             </div>
           </div>
         </div>
 
+        {/* Connections */}
+        <div className="pixel-card p-6 mb-6">
+          <h3 className="font-pixel text-sm text-pixel-yellow mb-4">Connections</h3>
+          <div className="text-center font-game">
+            <p className="text-3xl mb-2">🤝</p>
+            <p className="text-2xl text-pixel-light">{stats.connectionsCount || 0}</p>
+            <p className="text-xs text-pixel-blue mt-1">People Connected</p>
+          </div>
+        </div>
+
         {/* Preferred Quest Types */}
-        {Object.keys(monster.preferredQuestTypes).length > 0 && (
+        {monster.preferredQuestTypes && Object.keys(monster.preferredQuestTypes).length > 0 && (
           <div className="pixel-card p-6 mb-6">
             <h3 className="font-pixel text-sm text-pixel-yellow mb-4">Favorite Quest Types</h3>
             <div className="space-y-2">
@@ -228,6 +293,26 @@ export default function Profile() {
                     </span>
                   </div>
                 ))}
+            </div>
+          </div>
+        )}
+
+        {/* Quest History */}
+        {completedQuests.length > 0 && (
+          <div className="pixel-card p-6 mb-6">
+            <h3 className="font-pixel text-sm text-pixel-yellow mb-4">Recent Quests</h3>
+            <div className="space-y-2">
+              {completedQuests.slice(-5).reverse().map((q, i) => (
+                <div key={i} className="flex justify-between items-center p-2 bg-pixel-purple bg-opacity-20 rounded">
+                  <span className="text-sm font-game text-pixel-light capitalize">
+                    {q.questType.replace(/_/g, ' ')}
+                  </span>
+                  <div className="flex gap-3 text-xs font-game">
+                    <span className="text-pixel-green">👥 {q.groupSize}</span>
+                    <span className="text-pixel-blue">⏱️ {q.duration}m</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -285,7 +370,7 @@ export default function Profile() {
         {/* App Info */}
         <div className="pixel-card p-4 bg-pixel-purple bg-opacity-20 text-center">
           <p className="text-xs text-pixel-light font-game mb-2">
-            KarmaLoop v0.1.0 - Built for Building Belonging
+            KarmaLoop v1.0.0 - Built for Building Belonging
           </p>
           <p className="text-xs text-pixel-blue font-game">
             🎮 Turning local connections into pixel adventures

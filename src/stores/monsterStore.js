@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import api from '../api'
 
 export const useMonsterStore = create(
   persist(
@@ -14,51 +15,74 @@ export const useMonsterStore = create(
         questsCompleted: 0,
         socialScore: 0,
         preferredQuestTypes: {},
-        preferredGroupSize: 'small', // 1-1, small, large
+        preferredGroupSize: 'small',
       },
-      
-      initializeMonster: (userId) => set((state) => ({
-        monster: {
-          ...state.monster,
-          id: userId,
-        }
-      })),
-      
-      addCrystals: (amount) => set((state) => ({
-        monster: {
-          ...state.monster,
-          crystals: state.monster.crystals + amount,
-          level: Math.floor((state.monster.crystals + amount) / 100) + 1,
-        }
-      })),
-      
-      completeQuest: (questType, isGroup) => set((state) => {
-        const newPreferred = { ...state.monster.preferredQuestTypes }
-        newPreferred[questType] = (newPreferred[questType] || 0) + 1
-        
-        return {
-          monster: {
-            ...state.monster,
-            questsCompleted: state.monster.questsCompleted + 1,
-            socialScore: isGroup ? state.monster.socialScore + 10 : state.monster.socialScore + 3,
-            preferredQuestTypes: newPreferred,
+
+      // Fetch monster from backend and sync to local state
+      fetchMonster: async () => {
+        try {
+          const { data } = await api.get('/api/monsters/me')
+          if (data && data.id) {
+            set({ monster: data })
           }
+          return data
+        } catch {
+          return null
         }
-      }),
-      
-      evolveMonster: (newEvolution, traits) => set((state) => ({
-        monster: {
-          ...state.monster,
-          evolution: newEvolution,
-          traits: [...state.monster.traits, ...traits],
-        }
+      },
+
+      initializeMonster: (userId) => set((state) => ({
+        monster: { ...state.monster, id: userId }
       })),
-      
-      updatePreferredGroupSize: (size) => set((state) => ({
-        monster: {
-          ...state.monster,
-          preferredGroupSize: size,
+
+      addCrystals: async (amount) => {
+        try {
+          const { data } = await api.post('/api/monsters/me/crystals', { amount })
+          set({ monster: data })
+          return data
+        } catch {
+          return null
         }
+      },
+
+      completeQuest: async (questType, isGroup) => {
+        try {
+          const { data } = await api.post('/api/monsters/me/complete-quest', {
+            questType,
+            isGroup,
+          })
+          set({ monster: data })
+          return data
+        } catch {
+          return null
+        }
+      },
+
+      evolveMonster: async (newEvolution, traits) => {
+        try {
+          const { data } = await api.post('/api/monsters/me/evolve', {
+            evolution: newEvolution,
+            traits,
+          })
+          set({ monster: data })
+          return data
+        } catch (err) {
+          throw err
+        }
+      },
+
+      renameMonster: async (name) => {
+        try {
+          const { data } = await api.put('/api/monsters/me/name', { name })
+          set({ monster: data })
+          return data
+        } catch {
+          return null
+        }
+      },
+
+      updatePreferredGroupSize: (size) => set((state) => ({
+        monster: { ...state.monster, preferredGroupSize: size }
       })),
     }),
     {
