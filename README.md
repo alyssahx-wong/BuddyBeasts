@@ -84,7 +84,7 @@ Your monster is assigned through a **Personality Quiz** — 5 trait-scoring ques
 
 - **Crystals** fuel leveling: `level = floor(crystals / 100) + 1`
 - Evolution is **manual** — triggered from the Profile page when requirements are met
-- Only **Penguin** currently has unique evolved sprites; other beasts keep their base form
+- Note:Only Penguin currently has unique evolved sprites; other beasts keep their base form. For future developments, all other creatures will have its own evolved animation.
 
 ---
 
@@ -94,11 +94,13 @@ Real-world activities designed for genuine human connection, not screen time.
 
 | Quest | Duration | Party Size | Crystals | Vibe |
 |-------|----------|------------|----------|------|
+DEVELOPED:
 | Coffee Chat | 20 min | 2–3 | 50 | casual, indoor |
 | Study Jam | 60 min | 3–5 | 100 | productive, indoor |
 | Sunset Walk | 30 min | 2–4 | 75 | outdoor, relaxing |
 | Help a Neighbor | 15 min | 2 | 60 | volunteer, community |
 | Lunch Crew | 45 min | 3–6 | 80 | food, social |
+FUTURE DEVELOPMENT:
 | Game Night | 90 min | 4–8 | 150 | fun, indoor |
 | Morning Workout | 40 min | 2–6 | 90 | fitness, outdoor |
 | Art Cafe | 60 min | 3–5 | 110 | creative, indoor |
@@ -136,9 +138,7 @@ Real-world activities designed for genuine human connection, not screen time.
   | CRYSTALS | <==================== | QUESTS   |
   | (primary)|    group bonus: 1.5x  | (IRL)    |
   +----------+                       +----------+
-       |
-       | percentage
-       v
+
   +----------+
   |  COINS   | -----> Item Shop, Egg Shop, Quest Creation
   | (secondary)
@@ -154,11 +154,9 @@ Real-world activities designed for genuine human connection, not screen time.
          |
   3. MEET IRL            Go do the activity together!
          |
-  4. CHECK-IN            QR code scan verifies co-location
+  4. GROUP PHOTO         One person uploads, all can see it
          |
-  5. GROUP PHOTO         One person uploads, all can see it
-         |
-  6. REACTION MATCH      Everyone picks the same emoji (3 tries!)
+  5. REACTION MATCH      Everyone picks the same emoji to verify attendance(3 tries!)
          |
     [MATCHED?]
      /       \
@@ -181,8 +179,8 @@ Real-world activities designed for genuine human connection, not screen time.
 
 ### Authentication & Onboarding
 - Google OAuth 2.0 login (with Drive scope for photo uploads)
-- Demo mode — no account needed
-- Personality Quiz — 5 questions assign your starter monster
+- Demo mode — no account needed, restricted actions
+- Personality Quiz — 5 questions assign your starter monster. Monster assigned based on traits!
 - GPS-based hub auto-selection
 
 ### Living Hub
@@ -204,17 +202,16 @@ Real-world activities designed for genuine human connection, not screen time.
 - Host management
 
 ### Quest Completion (Multi-Step Verification)
-- QR code generation and scanning for physical co-location
 - Group photo capture (camera or file upload)
 - Real-time photo sync across all participants
-- Group reaction matching (3 attempts, must all pick the same)
+- Group reaction matching for attendance (3 attempts, must all pick the same)
 - Success rewards or quest deletion on failure
 
 ### Monster Progression
 - Crystal + coin dual-currency economy
 - Level-up via crystals (`level = crystals/100 + 1`)
 - 4-stage evolution: Baby -> Teen -> Adult -> Leader/Support
-- 9 animated monster types + 18 collectible static sprites
+- 9 animated monster types + 18 collectible static sprites (Animated=rare)
 - Monster renaming, collection, and switching
 - Egg hatching with random evolution rolls
 
@@ -251,7 +248,13 @@ Real-world activities designed for genuine human connection, not screen time.
 ### Chat
 - Lobby-based real-time messaging
 
----
+
+## Reccomendation Engine by Collection of data
+
+- Reccomends quests to users based on their personality trait.
+- Suggest quest to work on areas of imporvement based on users personality trait.
+- Personalised and tailored to each individual user based on the personality type.
+- Self sustaining and continously works on a feedback loop as quests are completed and personality scores are updated, keeping reccomendation fresh and unique as user completes more quest!
 
 ## TECH STACK
 
