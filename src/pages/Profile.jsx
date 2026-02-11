@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/authStore'
 import { useMonsterStore } from '../stores/monsterStore'
 import PixelMonster from '../components/PixelMonster'
 import NavigationBar from '../components/NavigationBar'
+import InsightsTab from '../components/insights/InsightsTab'
 import api from '../api'
 
 const ITEM_SHOP = [
@@ -45,6 +46,9 @@ export default function Profile() {
   const [belongingScore, setBelongingScore] = useState(5)
   const [loading, setLoading] = useState(true)
   const [evolveError, setEvolveError] = useState(null)
+  const [activeTab, setActiveTab] = useState('profile')
+  const [connections, setConnections] = useState([])
+  const [insightsLoaded, setInsightsLoaded] = useState(false)
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -67,6 +71,24 @@ export default function Profile() {
     }
     fetchAll()
   }, [])
+
+  // Lazy-fetch insights data when switching to the Insights tab
+  useEffect(() => {
+    if (activeTab !== 'insights' || insightsLoaded) return
+    const fetchInsights = async () => {
+      try {
+        const [connectionsRes] = await Promise.all([
+          api.get('/api/connections'),
+        ])
+        setConnections(connectionsRes.data)
+      } catch (err) {
+        console.error('Failed to load insights data:', err)
+      } finally {
+        setInsightsLoaded(true)
+      }
+    }
+    fetchInsights()
+  }, [activeTab, insightsLoaded])
 
   const completedQuests = questHistory.filter(q => q.status === 'completed')
   const successRate = questHistory.length > 0
@@ -144,8 +166,8 @@ export default function Profile() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-pixel-dark via-pixel-purple to-pixel-dark pb-20">
       {/* Header */}
-      <div className="bg-pixel-dark border-b-4 border-pixel-purple p-4 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto flex justify-between items-center">
+      <div className="bg-pixel-dark border-b-4 border-pixel-purple sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto flex justify-between items-center p-4 pb-0">
           <h1 className="font-pixel text-sm md:text-base text-pixel-yellow">
             Profile
           </h1>
@@ -156,9 +178,42 @@ export default function Profile() {
             Logout
           </button>
         </div>
+        {/* Tab Bar */}
+        <div className="max-w-4xl mx-auto flex mt-3">
+          <button
+            onClick={() => setActiveTab('profile')}
+            className={`flex-1 py-2 text-center font-game text-sm transition-colors ${
+              activeTab === 'profile'
+                ? 'text-pixel-yellow border-b-4 border-pixel-yellow'
+                : 'text-pixel-light opacity-60 border-b-4 border-transparent hover:opacity-80'
+            }`}
+          >
+            Profile
+          </button>
+          <button
+            onClick={() => setActiveTab('insights')}
+            className={`flex-1 py-2 text-center font-game text-sm transition-colors ${
+              activeTab === 'insights'
+                ? 'text-pixel-yellow border-b-4 border-pixel-yellow'
+                : 'text-pixel-light opacity-60 border-b-4 border-transparent hover:opacity-80'
+            }`}
+          >
+            Insights
+          </button>
+        </div>
       </div>
 
       <div className="max-w-4xl mx-auto p-4">
+        {activeTab === 'insights' && (
+          <InsightsTab
+            stats={{ ...stats, socialScore: monster.socialScore }}
+            completedQuests={completedQuests}
+            belongingScores={belongingScores}
+            connections={connections}
+          />
+        )}
+
+        {activeTab === 'profile' && <>
         {/* User Card */}
         <div className="pixel-card p-6 mb-6 bg-gradient-to-br from-pixel-blue to-pixel-purple bg-opacity-20">
           <div className="flex items-center gap-4 mb-4">
@@ -578,6 +633,7 @@ export default function Profile() {
             🎮 Turning local connections into pixel adventures
           </p>
         </div>
+        </>}
       </div>
 
       <NavigationBar />
