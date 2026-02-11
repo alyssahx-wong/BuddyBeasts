@@ -460,6 +460,7 @@ def monster_to_dict(m: models.Monster) -> dict:
         "name": m.name,
         "level": m.level,
         "crystals": m.crystals,
+        "coins": m.coins,
         "evolution": m.evolution,
         "monsterType": m.selected_monster,
         "collectedMonsters": m.collected_monsters or [],
@@ -543,8 +544,9 @@ def ensure_user_stores(db: Session, user_id: str) -> None:
             id=user_id,
             user_id=user_id,
             name="Buddy",
-            level=compute_level(1000),
-            crystals=1000,
+            level=1,
+            crystals=0,
+            coins=1000,
             evolution="baby",
             monster_type=starting_type,
             selected_monster=starting_type,
@@ -1158,6 +1160,22 @@ def list_quest_instances(hub_id: Optional[str] = Query(None), db: Session = Depe
 
 @app.post("/api/quests/instances", tags=["Quests"])
 def create_quest_instance(body: CreateInstanceRequest, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Check user monster for level and coins
+    m = db.query(models.Monster).filter(models.Monster.user_id == user["id"]).first()
+    if not m:
+        raise HTTPException(status_code=404, detail="Monster not found")
+
+    # Check level requirement
+    if m.level < 4:
+        raise HTTPException(status_code=403, detail=f"Level 4 required to create quests (current: Level {m.level})")
+
+    # Check coins requirement
+    if m.coins < 100:
+        raise HTTPException(status_code=400, detail=f"100 coins required to create quests (current: {m.coins} coins)")
+
+    # Deduct 100 coins
+    m.coins = m.coins - 100
+
     tpl = db.query(models.QuestTemplate).filter(models.QuestTemplate.id == body.templateId).first()
     if not tpl:
         raise HTTPException(status_code=404, detail="Template not found")
@@ -1735,13 +1753,16 @@ def complete_quest_with_reaction(
     duration = tpl.duration if tpl else 0
 
     if all_same_reaction:
-        # SUCCESS: Give crystals to all participants
-        crystals_earned = 200
+        # SUCCESS: Give coins AND crystals to all participants
+        participant_count = len(participants)
+        coins_earned = 100 * participant_count
+        crystals_earned = 10 * participant_count
         participant_ids = [p.user_id for p in participants]
 
         for participant_id in participant_ids:
             m = db.query(models.Monster).filter(models.Monster.user_id == participant_id).first()
             if m:
+                m.coins = m.coins + coins_earned
                 m.crystals = m.crystals + crystals_earned
                 m.level = compute_level(m.crystals)
                 m.quests_completed = m.quests_completed + 1
@@ -1770,6 +1791,7 @@ def complete_quest_with_reaction(
             "success": True,
             "matched": True,
             "crystalsEarned": crystals_earned,
+            "coinsEarned": coins_earned,
             "questName": quest_name,
             "connections": len(participants) - 1,
             "message": "Quest completed successfully!",

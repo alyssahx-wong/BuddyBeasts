@@ -41,6 +41,7 @@ class Monster(Base):
     name = Column(String, nullable=False, default="Buddy")
     level = Column(Integer, nullable=False, default=1)
     crystals = Column(Integer, nullable=False, default=0)
+    coins = Column(Integer, nullable=False, default=0)
     evolution = Column(String, nullable=False, default="baby")
     monster_type = Column(Integer, nullable=False, default=1)
     collected_monsters = Column(JSON, nullable=False, default=list)  # List of collected monster type IDs

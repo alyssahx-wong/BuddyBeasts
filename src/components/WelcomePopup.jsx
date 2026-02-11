@@ -23,12 +23,12 @@ export default function WelcomePopup({ onClose }) {
         </button>
 
         <div className="text-center mb-6">
-          <div className="text-6xl mb-3 animate-float">💎</div>
+          <div className="text-6xl mb-3 animate-float">🪙</div>
           <h2 className="font-pixel text-lg text-pixel-yellow mb-2">
             Welcome to BuddyBeasts!
           </h2>
           <p className="font-game text-sm text-pixel-light">
-            You've received 1000 crystals to get started!
+            You've received 1000 coins to get started!
           </p>
         </div>
 
@@ -55,7 +55,7 @@ export default function WelcomePopup({ onClose }) {
                   Shop for Items
                 </h3>
                 <p className="text-xs font-game text-pixel-light">
-                  Purchase items, skins, and accessories for your monster
+                  Purchase items, skins, and accessories using coins
                 </p>
               </div>
             </div>
@@ -66,7 +66,7 @@ export default function WelcomePopup({ onClose }) {
               <span className="text-2xl">🎯</span>
               <div>
                 <h3 className="font-pixel text-xs text-pixel-yellow mb-1">
-                  Create Quests (100 Crystals)
+                  Create Quests (100 Coins, Level 4+)
                 </h3>
                 <p className="text-xs font-game text-pixel-light">
                   Start your own quest and invite others to join you
