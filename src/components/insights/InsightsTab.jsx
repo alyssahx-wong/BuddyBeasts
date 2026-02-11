@@ -1,4 +1,5 @@
 import React from 'react'
+import PersonalityRadar from './PersonalityRadar'
 import InsightStatCards from './InsightStatCards'
 import BelongingLineChart from './BelongingLineChart'
 import WeeklyActivityChart from './WeeklyActivityChart'
@@ -10,9 +11,11 @@ export default function InsightsTab({
   completedQuests,
   belongingScores,
   connections,
+  personalityScores,
 }) {
   return (
     <div>
+      <PersonalityRadar personalityScores={personalityScores} />
       <InsightStatCards
         stats={stats}
         completedQuests={completedQuests}
