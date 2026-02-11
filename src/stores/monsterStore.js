@@ -25,37 +25,11 @@ export const useMonsterStore = create(
           outfit: null,
         },
         personalityScores: null,
-        customCharacterUrl: null,
       },
       monsters: [],
       inventory: [],
       eggs: [],
       groupPhotos: [],
-      generatedCharacter: null, // { name, imageUrl, answers }
-
-      // Reset monster to defaults (used on logout or user switch)
-      resetMonster: () => set({
-        monster: {
-          id: null,
-          name: 'Buddy',
-          monsterType: Math.floor(Math.random() * 9) + 1,
-          level: 1,
-          crystals: 0,
-          coins: 0,
-          evolution: 'baby',
-          traits: [],
-          questsCompleted: 0,
-          socialScore: 0,
-          preferredQuestTypes: {},
-          preferredGroupSize: 'small',
-          unlockedSkins: ['default'],
-          activeSkin: 'default',
-          equippedItems: { hat: null, outfit: null },
-          personalityScores: null,
-          customCharacterUrl: null,
-        },
-        generatedCharacter: null,
-      }),
 
       // ── Backend-synced methods ──
 
@@ -322,37 +296,15 @@ export const useMonsterStore = create(
       deleteGroupPhoto: (photoId) => set((state) => {
         return { groupPhotos: state.groupPhotos.filter((p) => p.id !== photoId) }
       }),
-
-      setGeneratedCharacter: (charData) => set((state) => {
-        const updatedMonster = {
-          ...state.monster,
-          name: charData.name || state.monster.name,
-          customCharacterUrl: charData.customCharacterUrl || charData.imageUrl || null,
-          generatedImageUrl: charData.imageUrl || null,
-          characterAnswers: charData.answers || {},
-        }
-        return {
-          monster: updatedMonster,
-          generatedCharacter: charData,
-          monsters: state.monsters.map((m) =>
-            m.id === updatedMonster.id ? updatedMonster : m
-          ),
-        }
-      }),
     }),
     {
       name: 'buddybeasts-monster',
-      version: 2,
+      version: 1,
       migrate: (persisted, version) => {
         if (version === 0 || version === undefined) {
-          // Only seed personality scores for genuinely old users who
-          // completed quests before the nurturing trait was added.
-          // New users (no quests completed) should go through the quiz.
-          if (
-            persisted.monster &&
-            !persisted.monster.personalityScores &&
-            persisted.monster.questsCompleted > 0
-          ) {
+          // Seed personality scores for existing users who took the quiz
+          // before the nurturing trait was added
+          if (persisted.monster && !persisted.monster.personalityScores) {
             persisted.monster.personalityScores = {
               social: 3,
               creative: 4,
@@ -361,10 +313,6 @@ export const useMonsterStore = create(
               nurturing: 4,
             }
           }
-        }
-        // v1→v2: ensure customCharacterUrl field exists
-        if (persisted.monster && persisted.monster.customCharacterUrl === undefined) {
-          persisted.monster.customCharacterUrl = null
         }
         return persisted
       },

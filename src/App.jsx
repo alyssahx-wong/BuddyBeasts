@@ -9,7 +9,6 @@ import EvolutionOverlay from './components/EvolutionOverlay'
 // Pages
 import Login from './pages/Login'
 import PersonalityQuiz from './pages/PersonalityQuiz'
-import CharacterCreation from './pages/CharacterCreation'
 import HubSelection from './pages/HubSelection'
 import LivingHub from './pages/LivingHub'
 import QuestBoard from './pages/QuestBoard'
@@ -53,11 +52,6 @@ function App() {
             <Route path="/quiz" element={
               <ProtectedRoute>
                 <PersonalityQuiz />
-              </ProtectedRoute>
-            } />
-            <Route path="/create-character" element={
-              <ProtectedRoute>
-                <CharacterCreation />
               </ProtectedRoute>
             } />
             <Route path="/hub-selection" element={
