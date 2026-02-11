@@ -87,7 +87,7 @@ export default function Profile() {
     let newEvolution = monster.evolution
     let newTraits = []
 
-    if (monster.level >= 10 && monster.evolution === 'baby') {
+    if (monster.level >= 5 && monster.evolution === 'baby') {
       newEvolution = 'teen'
       newTraits = ['Growing']
     } else if (monster.level >= 20 && monster.evolution === 'teen') {
@@ -266,13 +266,21 @@ export default function Profile() {
             </div>
           )}
 
-          <button
-            onClick={handleEvolutionCheck}
-            disabled={monster.crystals < monster.level * 100}
-            className="pixel-button bg-pixel-pink hover:bg-pixel-yellow text-white w-full py-3 disabled:opacity-50"
-          >
-            {monster.crystals >= monster.level * 100 ? '✨ Check Evolution' : '🔒 Need More Crystals'}
-          </button>
+          {monster.evolution === 'baby' && monster.level >= 5 ? (
+            <button
+              onClick={handleEvolutionCheck}
+              className="pixel-button bg-pixel-pink hover:bg-pixel-yellow text-white w-full py-3 animate-pulse"
+            >
+              ✨ Evolve!
+            </button>
+          ) : (
+            <button
+              disabled
+              className="pixel-button bg-pixel-pink text-white w-full py-3 opacity-50"
+            >
+              🔒 Reach Level 5 to Evolve
+            </button>
+          )}
         </div>
 
         {/* Marketplace */}
