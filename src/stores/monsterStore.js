@@ -116,8 +116,12 @@ export const useMonsterStore = create(
             evolution: newEvolution,
             traits,
           })
+          // Ensure traits is always an array to prevent render crashes
+          if (data.traits && !Array.isArray(data.traits)) {
+            data.traits = typeof data.traits === 'string' ? data.traits.split(',').filter(Boolean) : []
+          }
           set((state) => ({
-            monster: { ...state.monster, ...data },
+            monster: { ...state.monster, ...data, justEvolved: true },
             monsters: state.monsters.map((m) => (m.id === data.id ? { ...m, ...data } : m)),
           }))
           return data
