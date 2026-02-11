@@ -8,6 +8,7 @@ export const useAuthStore = create(
       user: null,
       token: null,
       currentHub: null,
+      hideWelcomePopup: false,
 
       loginDemo: async (name = 'Demo Player') => {
         const { data } = await api.post('/api/auth/demo', { name })
@@ -33,6 +34,8 @@ export const useAuthStore = create(
       },
 
       setCurrentHub: (hub) => set({ currentHub: hub }),
+
+      setHideWelcomePopup: () => set({ hideWelcomePopup: true }),
     }),
     {
       name: 'buddybeasts-auth',

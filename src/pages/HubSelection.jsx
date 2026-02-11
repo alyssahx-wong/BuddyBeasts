@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
+import WelcomePopup from '../components/WelcomePopup'
 import api from '../api'
 
 export default function HubSelection() {
   const navigate = useNavigate()
-  const { user, setCurrentHub } = useAuthStore()
+  const { user, setCurrentHub, hideWelcomePopup } = useAuthStore()
   const [location, setLocation] = useState(null)
   const [locationError, setLocationError] = useState(null)
   const [selectedHub, setSelectedHub] = useState(null)
   const [hubs, setHubs] = useState([])
   const [isLoadingLocation, setIsLoadingLocation] = useState(true)
   const [joining, setJoining] = useState(false)
+  const [showWelcome, setShowWelcome] = useState(false)
 
   // Fetch hubs from backend, optionally with user coordinates
   const fetchHubs = async (coords) => {
@@ -32,6 +34,11 @@ export default function HubSelection() {
   }
 
   useEffect(() => {
+    // Show welcome popup on first visit
+    if (!hideWelcomePopup) {
+      setShowWelcome(true)
+    }
+
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -78,6 +85,7 @@ export default function HubSelection() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pixel-dark to-pixel-purple p-4">
+      {showWelcome && <WelcomePopup onClose={() => setShowWelcome(false)} />}
       <div className="max-w-2xl mx-auto pt-8">
         {/* Header */}
         <div className="text-center mb-8">

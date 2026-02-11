@@ -112,16 +112,24 @@ export default function QuestBoard() {
       {/* Header */}
       <div className="bg-pixel-dark border-b-4 border-pixel-purple p-4 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-3 mb-3">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate('/hub')}
+                className="text-pixel-light hover:text-pixel-yellow"
+              >
+                <span className="text-2xl">←</span>
+              </button>
+              <h1 className="font-pixel text-sm md:text-base text-pixel-yellow">
+                Quest Board
+              </h1>
+            </div>
             <button
-              onClick={() => navigate('/hub')}
-              className="text-pixel-light hover:text-pixel-yellow"
+              onClick={() => navigate('/quests/create')}
+              className="pixel-button bg-pixel-green hover:bg-pixel-yellow text-pixel-dark px-3 py-2 text-xs"
             >
-              <span className="text-2xl">←</span>
+              + Create
             </button>
-            <h1 className="font-pixel text-sm md:text-base text-pixel-yellow">
-              Quest Board
-            </h1>
           </div>
 
           {/* Category Tabs */}
