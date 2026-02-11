@@ -477,6 +477,6 @@ MIT License — use freely for community-building initiatives.
  |                                                       |
  +-------------------------------------------------------+
 
-          Built with <3 for Building Belonging
+          Built with <3 for NTU WIT 
                     Hackathon 2026
 ```
