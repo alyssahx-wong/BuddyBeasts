@@ -504,7 +504,7 @@ def template_to_dict(t: models.QuestTemplate) -> dict:
     }
 
 
-def instance_to_dict(inst: models.QuestInstance, tpl: models.QuestTemplate, participant_ids: list[str]) -> dict:
+def instance_to_dict(inst: models.QuestInstance, tpl: models.QuestTemplate, participant_ids: list[str], creator_name: str = None) -> dict:
     return {
         "instanceId": inst.instance_id,
         "templateId": inst.template_id,
@@ -519,6 +519,8 @@ def instance_to_dict(inst: models.QuestInstance, tpl: models.QuestTemplate, part
         "type": tpl.type,
         "tags": tpl.tags or [],
         "hubId": inst.hub_id,
+        "creatorUserId": inst.creator_user_id,
+        "creatorName": creator_name,
         "currentParticipants": inst.current_participants,
         "participants": participant_ids,
         "isActive": inst.is_active,
@@ -710,6 +712,7 @@ class CreateInstanceRequest(BaseModel):
     templateId: str
     hubId: str
     location: str = ""
+    startTime: Optional[str] = None
 
 class JoinInstanceRequest(BaseModel):
     pass
@@ -757,6 +760,11 @@ class UploadPhotoRequest(BaseModel):
 class WordSelectionRequest(BaseModel):
     questId: str
     word: str
+
+class ReactionSelectionRequest(BaseModel):
+    questId: str
+    reaction: str
+    attempt: int = 1
 
 class MonsterSchema(BaseModel):
     id: Optional[str] = None
@@ -1109,12 +1117,32 @@ def list_quest_instances(hub_id: Optional[str] = Query(None), db: Session = Depe
         if inst.deadline and now > inst.deadline:
             inst.is_active = False
             continue
+
+        # Auto-delete quests past start_time with no participants
+        if inst.start_time and inst.current_participants == 0:
+            try:
+                from datetime import datetime
+                start_dt = datetime.fromisoformat(inst.start_time)
+                if datetime.now() > start_dt:
+                    inst.is_active = False
+                    continue
+            except:
+                pass  # Invalid date format, skip auto-deletion
+
         tpl = db.query(models.QuestTemplate).filter(models.QuestTemplate.id == inst.template_id).first()
         if not tpl:
             continue
         pids = [p.user_id for p in db.query(models.InstanceParticipant).filter(
             models.InstanceParticipant.instance_id == inst.instance_id).all()]
-        result.append(instance_to_dict(inst, tpl, pids))
+
+        # Get creator name
+        creator_name = None
+        if inst.creator_user_id:
+            creator = db.query(models.User).filter(models.User.id == inst.creator_user_id).first()
+            if creator:
+                creator_name = creator.name
+
+        result.append(instance_to_dict(inst, tpl, pids, creator_name))
     db.commit()  # Persist any deadline-based deactivations
     return result
 
@@ -1134,9 +1162,10 @@ def create_quest_instance(body: CreateInstanceRequest, user: dict = Depends(get_
         instance_id=inst_id,
         template_id=tpl.id,
         hub_id=body.hubId,
+        creator_user_id=user["id"],
         current_participants=1,
         is_active=True,
-        start_time=None,
+        start_time=body.startTime,
         location=body.location or hub.location,
         deadline=deadline,
     )
@@ -1148,7 +1177,27 @@ def create_quest_instance(body: CreateInstanceRequest, user: dict = Depends(get_
     db.commit()
 
     pids = [user["id"]]
-    return instance_to_dict(inst, tpl, pids)
+    return instance_to_dict(inst, tpl, pids, user["name"])
+
+
+@app.delete("/api/quests/instances/{instance_id}", tags=["Quests"])
+def delete_quest_instance(instance_id: str, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Delete a quest instance. Only the creator can delete it."""
+    inst = db.query(models.QuestInstance).filter(models.QuestInstance.instance_id == instance_id).first()
+    if not inst:
+        raise HTTPException(status_code=404, detail="Quest not found")
+
+    # Check if user is the creator
+    if inst.creator_user_id != user["id"]:
+        raise HTTPException(status_code=403, detail="Only the quest creator can delete this quest")
+
+    # Delete related records
+    db.query(models.InstanceParticipant).filter(models.InstanceParticipant.instance_id == instance_id).delete()
+    db.query(models.LobbyParticipant).filter(models.LobbyParticipant.instance_id == instance_id).delete()
+    db.delete(inst)
+    db.commit()
+
+    return {"ok": True, "message": "Quest deleted successfully"}
 
 
 @app.post("/api/quests/instances/{instance_id}/join", tags=["Quests"])
@@ -1167,8 +1216,15 @@ def join_quest_instance(instance_id: str, user: dict = Depends(get_current_user)
     pids = [p.user_id for p in db.query(models.InstanceParticipant).filter(
         models.InstanceParticipant.instance_id == instance_id).all()]
 
+    # Get creator name
+    creator_name = None
+    if inst.creator_user_id:
+        creator = db.query(models.User).filter(models.User.id == inst.creator_user_id).first()
+        if creator:
+            creator_name = creator.name
+
     if user["id"] in pids:
-        return instance_to_dict(inst, tpl, pids)
+        return instance_to_dict(inst, tpl, pids, creator_name)
 
     if inst.current_participants >= tpl.max_participants:
         raise HTTPException(status_code=400, detail="Quest is full")
@@ -1185,7 +1241,7 @@ def join_quest_instance(instance_id: str, user: dict = Depends(get_current_user)
     db.commit()
 
     pids.append(user["id"])
-    return instance_to_dict(inst, tpl, pids)
+    return instance_to_dict(inst, tpl, pids, creator_name)
 
 
 # ── Lobby ────────────────────────────────────────────────────────────────────
@@ -1197,7 +1253,15 @@ def _build_lobby_state(db: Session, instance_id: str) -> dict:
     tpl = db.query(models.QuestTemplate).filter(models.QuestTemplate.id == inst.template_id).first()
     pids = [p.user_id for p in db.query(models.InstanceParticipant).filter(
         models.InstanceParticipant.instance_id == instance_id).all()]
-    quest_dict = instance_to_dict(inst, tpl, pids)
+
+    # Get creator name
+    creator_name = None
+    if inst.creator_user_id:
+        creator = db.query(models.User).filter(models.User.id == inst.creator_user_id).first()
+        if creator:
+            creator_name = creator.name
+
+    quest_dict = instance_to_dict(inst, tpl, pids, creator_name)
 
     lobby_parts = db.query(models.LobbyParticipant).filter(
         models.LobbyParticipant.instance_id == instance_id).all()
@@ -1533,15 +1597,15 @@ def get_word_selection_status(
     selections = db.query(models.WordSelection).filter(
         models.WordSelection.quest_id == quest_id
     ).all()
-    
+
     participants = db.query(models.LobbyParticipant).filter(
         models.LobbyParticipant.instance_id == quest_id
     ).all()
-    
+
     all_selected = len(selections) == len(participants)
     all_same_word = all_selected and len(set(s.word for s in selections)) == 1
     chosen_word = selections[0].word if selections and all_same_word else None
-    
+
     return {
         "allSelected": all_selected,
         "allSameWord": all_same_word,
@@ -1549,6 +1613,178 @@ def get_word_selection_status(
         "totalSelections": len(selections),
         "totalParticipants": len(participants),
     }
+
+
+@app.post("/api/quests/reaction-selection", tags=["Quest Completion"])
+def submit_reaction_selection(
+    body: ReactionSelectionRequest,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Submit a reaction selection for group reaction verification."""
+    # Remove any previous selection by this user for this quest and attempt
+    db.query(models.ReactionSelection).filter(
+        models.ReactionSelection.quest_id == body.questId,
+        models.ReactionSelection.user_id == user["id"],
+        models.ReactionSelection.attempt == body.attempt
+    ).delete()
+
+    # Add new selection
+    db.add(models.ReactionSelection(
+        quest_id=body.questId,
+        user_id=user["id"],
+        reaction=body.reaction,
+        attempt=body.attempt,
+        timestamp=time.time() * 1000,
+    ))
+    db.commit()
+
+    # Check if all participants selected the same reaction for this attempt
+    selections = db.query(models.ReactionSelection).filter(
+        models.ReactionSelection.quest_id == body.questId,
+        models.ReactionSelection.attempt == body.attempt
+    ).all()
+
+    # Get participant count
+    participants = db.query(models.LobbyParticipant).filter(
+        models.LobbyParticipant.instance_id == body.questId
+    ).all()
+
+    all_selected = len(selections) == len(participants)
+    all_same_reaction = all_selected and len(set(s.reaction for s in selections)) == 1
+
+    return {
+        "success": True,
+        "allSelected": all_selected,
+        "allSameReaction": all_same_reaction,
+        "selectedReaction": body.reaction,
+        "totalSelections": len(selections),
+        "totalParticipants": len(participants),
+        "attempt": body.attempt,
+    }
+
+
+@app.get("/api/quests/{quest_id}/reaction-status", tags=["Quest Completion"])
+def get_reaction_selection_status(
+    quest_id: str,
+    attempt: int = Query(1),
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get the current status of reaction selections for a quest."""
+    selections = db.query(models.ReactionSelection).filter(
+        models.ReactionSelection.quest_id == quest_id,
+        models.ReactionSelection.attempt == attempt
+    ).all()
+
+    participants = db.query(models.LobbyParticipant).filter(
+        models.LobbyParticipant.instance_id == quest_id
+    ).all()
+
+    all_selected = len(selections) == len(participants)
+    all_same_reaction = all_selected and len(set(s.reaction for s in selections)) == 1
+    chosen_reaction = selections[0].reaction if selections and all_same_reaction else None
+
+    return {
+        "allSelected": all_selected,
+        "allSameReaction": all_same_reaction,
+        "chosenReaction": chosen_reaction,
+        "totalSelections": len(selections),
+        "totalParticipants": len(participants),
+        "attempt": attempt,
+    }
+
+
+@app.post("/api/quests/{quest_id}/complete-with-reaction", tags=["Quest Completion"])
+def complete_quest_with_reaction(
+    quest_id: str,
+    attempt: int = Query(3),
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Complete quest after reaction verification. Give crystals if matched, delete quest if failed."""
+    inst = db.query(models.QuestInstance).filter(models.QuestInstance.instance_id == quest_id).first()
+    if not inst:
+        raise HTTPException(status_code=404, detail="Quest not found")
+
+    # Check if all reactions matched
+    selections = db.query(models.ReactionSelection).filter(
+        models.ReactionSelection.quest_id == quest_id,
+        models.ReactionSelection.attempt == attempt
+    ).all()
+
+    participants = db.query(models.LobbyParticipant).filter(
+        models.LobbyParticipant.instance_id == quest_id
+    ).all()
+
+    all_selected = len(selections) == len(participants)
+    all_same_reaction = all_selected and len(set(s.reaction for s in selections)) == 1
+
+    tpl = db.query(models.QuestTemplate).filter(models.QuestTemplate.id == inst.template_id).first()
+    quest_name = tpl.title if tpl else "Unknown Quest"
+    quest_type = tpl.type if tpl else "unknown"
+    duration = tpl.duration if tpl else 0
+
+    if all_same_reaction:
+        # SUCCESS: Give crystals to all participants
+        crystals_earned = 200
+        participant_ids = [p.user_id for p in participants]
+
+        for participant_id in participant_ids:
+            m = db.query(models.Monster).filter(models.Monster.user_id == participant_id).first()
+            if m:
+                m.crystals = m.crystals + crystals_earned
+                m.level = compute_level(m.crystals)
+                m.quests_completed = m.quests_completed + 1
+                m.social_score = m.social_score + 10
+                pqt = dict(m.preferred_quest_types or {})
+                pqt[quest_type] = pqt.get(quest_type, 0) + 1
+                m.preferred_quest_types = pqt
+
+            # Record in quest history
+            db.add(models.QuestHistory(
+                user_id=participant_id,
+                quest_id=quest_id,
+                quest_type=quest_type,
+                start_time=time.time() * 1000,
+                status="completed",
+                group_size=len(participants),
+                duration=duration,
+                end_time=time.time() * 1000,
+            ))
+
+        # Mark instance inactive
+        inst.is_active = False
+        db.commit()
+
+        return {
+            "success": True,
+            "matched": True,
+            "crystalsEarned": crystals_earned,
+            "questName": quest_name,
+            "connections": len(participants) - 1,
+            "message": "Quest completed successfully!",
+        }
+    else:
+        # FAILURE: Delete quest, no crystals
+        # Delete related records
+        db.query(models.ReactionSelection).filter(models.ReactionSelection.quest_id == quest_id).delete()
+        db.query(models.WordSelection).filter(models.WordSelection.quest_id == quest_id).delete()
+        db.query(models.InstanceParticipant).filter(models.InstanceParticipant.instance_id == quest_id).delete()
+        db.query(models.LobbyParticipant).filter(models.LobbyParticipant.instance_id == quest_id).delete()
+        db.query(models.QuestPhoto).filter(models.QuestPhoto.quest_id == quest_id).delete()
+        db.query(models.CheckinCode).filter(models.CheckinCode.quest_id == quest_id).delete()
+        db.delete(inst)
+        db.commit()
+
+        return {
+            "success": True,
+            "matched": False,
+            "crystalsEarned": 0,
+            "questName": quest_name,
+            "connections": 0,
+            "message": "Reactions did not match. Quest deleted.",
+        }
 
 
 # ── Monster ──────────────────────────────────────────────────────────────────

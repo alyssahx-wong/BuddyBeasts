@@ -15,7 +15,7 @@ const CATEGORIES = [
 
 export default function QuestBoard() {
   const navigate = useNavigate()
-  const { currentHub } = useAuthStore()
+  const { currentHub, user } = useAuthStore()
   const { getRecommendations } = useDataStore()
   const [quests, setQuests] = useState([])
   const [monster, setMonster] = useState({ crystals: 0, questsCompleted: 0 })
@@ -86,7 +86,7 @@ export default function QuestBoard() {
   const handleJoinQuest = async (quest) => {
     try {
       const instanceId = quest.instanceId
-      
+
       if (!instanceId) {
         console.error('No instance ID found for quest')
         return
@@ -94,12 +94,37 @@ export default function QuestBoard() {
 
       // Join the existing instance
       await api.post(`/api/quests/instances/${instanceId}/join`)
-      
+
       // Navigate to lobby
       navigate(`/lobby/${instanceId}`)
     } catch (err) {
       console.error('Failed to join quest:', err)
       alert('Could not join quest. Please try again.')
+    }
+  }
+
+  const handleDeleteQuest = async (quest) => {
+    if (!confirm(`Are you sure you want to delete "${quest.title}"?`)) {
+      return
+    }
+
+    try {
+      await api.delete(`/api/quests/instances/${quest.instanceId}`)
+
+      // Refresh quest list
+      const instancesRes = await api.get('/api/quests/instances', {
+        params: { hub_id: currentHub.id }
+      })
+      const instances = (instancesRes.data || []).map(q => ({
+        ...q,
+        isRecommended: recommendations?.recommendedTypes?.includes(q.type) || false,
+      }))
+      setQuests(instances)
+
+      alert('Quest deleted successfully')
+    } catch (err) {
+      console.error('Failed to delete quest:', err)
+      alert(err.response?.data?.detail || 'Could not delete quest. Please try again.')
     }
   }
 
@@ -185,6 +210,26 @@ export default function QuestBoard() {
                 ${quest.isRecommended ? 'border-pixel-yellow bg-pixel-yellow bg-opacity-5' : ''}
               `}
             >
+              {/* Creator & Delete Button */}
+              <div className="flex items-center justify-between mb-3">
+                {quest.creatorName && (
+                  <p className="text-xs text-pixel-green font-game">
+                    👤 Created by: {quest.creatorName}
+                  </p>
+                )}
+                {quest.creatorUserId === user?.id && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDeleteQuest(quest)
+                    }}
+                    className="pixel-button bg-pixel-pink hover:bg-red-600 text-white px-3 py-1 text-xs"
+                  >
+                    🗑️ Delete
+                  </button>
+                )}
+              </div>
+
               {/* Title row */}
               <div className="flex items-start gap-3 mb-2">
                 <div className="text-3xl">{quest.icon}</div>
@@ -214,10 +259,23 @@ export default function QuestBoard() {
                 </span>
               </div>
 
-              {/* Location */}
-              <p className="text-xs text-pixel-blue font-game mb-4">
-                📍 {quest.location}
-              </p>
+              {/* Location & Start Time */}
+              <div className="space-y-1 mb-4">
+                <p className="text-xs text-pixel-blue font-game">
+                  📍 {quest.location}
+                </p>
+                {quest.startTime && (
+                  <p className="text-xs text-pixel-yellow font-game">
+                    ⏰ Starts: {new Date(quest.startTime).toLocaleString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true
+                    })}
+                  </p>
+                )}
+              </div>
 
               {/* Join Button */}
               <button

@@ -91,6 +91,7 @@ class QuestInstance(Base):
     instance_id = Column(String, primary_key=True)
     template_id = Column(String, ForeignKey("quest_templates.id"), nullable=False)
     hub_id = Column(String, ForeignKey("hubs.id"), nullable=False)
+    creator_user_id = Column(String, ForeignKey("users.id"), nullable=True)
     current_participants = Column(Integer, nullable=False, default=0)
     is_active = Column(Boolean, nullable=False, default=True)
     start_time = Column(String, nullable=True)
@@ -211,4 +212,15 @@ class WordSelection(Base):
     quest_id = Column(String, nullable=False)
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
     word = Column(String, nullable=False)
+    timestamp = Column(Float, nullable=False)
+
+
+class ReactionSelection(Base):
+    __tablename__ = "reaction_selections"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    quest_id = Column(String, nullable=False)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    reaction = Column(String, nullable=False)
+    attempt = Column(Integer, nullable=False, default=1)
     timestamp = Column(Float, nullable=False)

@@ -31,8 +31,12 @@ export default function CreateQuest() {
     location: currentHub?.location || '',
     duration: 30,
     difficulty: 'easy',
-    crystals: 100,
+    maxParticipants: 2,
+    startTime: '',
   })
+
+  // Auto-calculate reward crystals: participantCount × 100
+  const rewardCrystals = formData.maxParticipants * 100
 
   const handleTypeChange = (type) => {
     const selectedType = QUEST_TYPES.find(t => t.id === type)
@@ -48,8 +52,8 @@ export default function CreateQuest() {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    if (!formData.title || !formData.description) {
-      setError('Please fill in all required fields')
+    if (!formData.title || !formData.description || !formData.startTime) {
+      setError('Please fill in all required fields including the event time')
       return
     }
 
@@ -72,10 +76,10 @@ export default function CreateQuest() {
         title: formData.title,
         description: formData.description,
         duration: formData.duration,
-        minParticipants: 1,
-        maxParticipants: 1,
+        minParticipants: formData.maxParticipants,
+        maxParticipants: formData.maxParticipants,
         difficulty: formData.difficulty,
-        crystals: formData.crystals,
+        crystals: rewardCrystals,
         icon: formData.icon,
         type: formData.type,
         tags: ['custom', formData.type],
@@ -86,6 +90,7 @@ export default function CreateQuest() {
         templateId,
         hubId: currentHub.id,
         location: formData.location,
+        startTime: formData.startTime,
       })
 
       // Navigate to lobby
@@ -215,6 +220,42 @@ export default function CreateQuest() {
             />
           </div>
 
+          {/* Event Start Time */}
+          <div className="pixel-card p-5">
+            <label className="block font-pixel text-xs text-pixel-yellow mb-3">
+              Event Start Time *
+            </label>
+            <input
+              type="datetime-local"
+              value={formData.startTime}
+              onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+              className="w-full bg-pixel-dark border-2 border-pixel-purple rounded px-3 py-2 text-pixel-light font-game text-sm focus:border-pixel-blue outline-none"
+              required
+            />
+            <p className="text-xs text-pixel-blue font-game mt-2">
+              Quest will auto-delete if this time passes and no one joins
+            </p>
+          </div>
+
+          {/* Number of Participants */}
+          <div className="pixel-card p-5">
+            <label className="block font-pixel text-xs text-pixel-yellow mb-3">
+              Number of Participants *
+            </label>
+            <input
+              type="number"
+              value={formData.maxParticipants}
+              onChange={(e) => setFormData({ ...formData, maxParticipants: Math.max(1, Math.min(10, parseInt(e.target.value) || 2)) })}
+              min="1"
+              max="10"
+              className="w-full bg-pixel-dark border-2 border-pixel-purple rounded px-3 py-2 text-pixel-light font-game text-sm focus:border-pixel-blue outline-none"
+              required
+            />
+            <p className="text-xs text-pixel-blue font-game mt-2">
+              All {formData.maxParticipants} participants must join before the quest can start (max 10)
+            </p>
+          </div>
+
           {/* Duration & Difficulty */}
           <div className="grid md:grid-cols-2 gap-4">
             <div className="pixel-card p-5">
@@ -247,22 +288,22 @@ export default function CreateQuest() {
             </div>
           </div>
 
-          {/* Reward Crystals */}
-          <div className="pixel-card p-5">
+          {/* Auto-calculated Reward Display */}
+          <div className="pixel-card p-5 bg-pixel-green bg-opacity-10">
             <label className="block font-pixel text-xs text-pixel-yellow mb-3">
-              Reward Crystals
+              Reward Per Participant
             </label>
-            <input
-              type="number"
-              value={formData.crystals}
-              onChange={(e) => setFormData({ ...formData, crystals: parseInt(e.target.value) || 100 })}
-              min="50"
-              max="500"
-              className="w-full bg-pixel-dark border-2 border-pixel-purple rounded px-3 py-2 text-pixel-light font-game text-sm focus:border-pixel-blue outline-none"
-            />
-            <p className="text-xs text-pixel-blue font-game mt-2">
-              Participants will earn this many crystals upon completion
-            </p>
+            <div className="flex items-center gap-3">
+              <div className="text-3xl">💎</div>
+              <div>
+                <p className="text-2xl font-pixel text-pixel-green">
+                  {rewardCrystals} Crystals
+                </p>
+                <p className="text-xs text-pixel-light font-game mt-1">
+                  Auto-calculated: {formData.maxParticipants} participants × 100 crystals
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Submit Button */}
