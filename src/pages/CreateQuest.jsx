@@ -35,8 +35,9 @@ export default function CreateQuest() {
     startTime: '',
   })
 
-  // Auto-calculate reward crystals: participantCount × 100
-  const rewardCrystals = formData.maxParticipants * 100
+  // Auto-calculate rewards: coins (100 × participants), crystals (10 × participants)
+  const rewardCoins = formData.maxParticipants * 100
+  const rewardCrystals = formData.maxParticipants * 10
 
   const handleTypeChange = (type) => {
     const selectedType = QUEST_TYPES.find(t => t.id === type)
@@ -57,8 +58,13 @@ export default function CreateQuest() {
       return
     }
 
-    if (monster.crystals < 100) {
-      setError('You need at least 100 crystals to create a quest')
+    if (monster.level < 4) {
+      setError(`Level 4 required to create quests (current: Level ${monster.level})`)
+      return
+    }
+
+    if (monster.coins < 100) {
+      setError(`You need at least 100 coins to create a quest (current: ${monster.coins} coins)`)
       return
     }
 
@@ -66,9 +72,7 @@ export default function CreateQuest() {
       setLoading(true)
       setError(null)
 
-      // Deduct 100 crystals
-      await addCrystals(-100)
-
+      // Note: Backend will deduct 100 coins and check level 4 requirement
       // Create quest template
       const templateId = `custom_${Date.now()}`
       await api.post('/api/quests/templates', {
@@ -98,8 +102,6 @@ export default function CreateQuest() {
     } catch (err) {
       console.error('Failed to create quest:', err)
       setError(err.response?.data?.detail || 'Failed to create quest. Please try again.')
-      // Refund crystals on error
-      await addCrystals(100)
     } finally {
       setLoading(false)
     }
@@ -125,12 +127,13 @@ export default function CreateQuest() {
               Create Quest
             </h1>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-game text-pixel-light">
-              Your Crystals:
+          <div className="flex items-center gap-3 text-xs font-game">
+            <span className="text-pixel-light">
+              💎 {monster.crystals || 0} Crystals
             </span>
-            <span className="text-sm font-pixel text-pixel-yellow">
-              💎 {monster.crystals}
+            <span className="text-pixel-yellow">|</span>
+            <span className="text-pixel-light">
+              🪙 {monster.coins || 0} Coins
             </span>
           </div>
         </div>
@@ -139,7 +142,7 @@ export default function CreateQuest() {
       <div className="max-w-4xl mx-auto p-4">
         <div className="pixel-card p-4 mb-6 bg-pixel-blue bg-opacity-20">
           <p className="text-xs text-pixel-light font-game">
-            💡 Creating a quest costs 100 crystals. Set up for 1 participant for demo purposes.
+            💡 Creating a quest costs 100 coins and requires Level 4. Choose participants to set rewards.
           </p>
         </div>
 
@@ -293,15 +296,28 @@ export default function CreateQuest() {
             <label className="block font-pixel text-xs text-pixel-yellow mb-3">
               Reward Per Participant
             </label>
-            <div className="flex items-center gap-3">
-              <div className="text-3xl">💎</div>
-              <div>
-                <p className="text-2xl font-pixel text-pixel-green">
-                  {rewardCrystals} Crystals
-                </p>
-                <p className="text-xs text-pixel-light font-game mt-1">
-                  Auto-calculated: {formData.maxParticipants} participants × 100 crystals
-                </p>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="text-3xl">💎</div>
+                <div>
+                  <p className="text-xl font-pixel text-pixel-green">
+                    {rewardCrystals} Crystals
+                  </p>
+                  <p className="text-xs text-pixel-light font-game">
+                    {formData.maxParticipants} participants × 10 crystals
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-3xl">🪙</div>
+                <div>
+                  <p className="text-xl font-pixel text-pixel-yellow">
+                    {rewardCoins} Coins
+                  </p>
+                  <p className="text-xs text-pixel-light font-game">
+                    {formData.maxParticipants} participants × 100 coins
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -310,18 +326,23 @@ export default function CreateQuest() {
           <div className="pixel-card p-5 bg-pixel-purple bg-opacity-20">
             <div className="flex items-center justify-between mb-4">
               <span className="text-xs font-game text-pixel-light">Creation Cost:</span>
-              <span className="text-sm font-pixel text-pixel-yellow">💎 100 Crystals</span>
+              <span className="text-sm font-pixel text-pixel-yellow">🪙 100 Coins</span>
             </div>
             <button
               type="submit"
-              disabled={loading || monster.crystals < 100}
+              disabled={loading || monster.coins < 100 || monster.level < 4}
               className="pixel-button bg-pixel-green hover:bg-pixel-yellow text-pixel-dark w-full py-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Creating Quest...' : 'Create Quest (100 💎)'}
+              {loading ? 'Creating Quest...' : 'Create Quest (100 🪙)'}
             </button>
-            {monster.crystals < 100 && (
+            {monster.level < 4 && (
               <p className="text-xs text-pixel-pink font-game mt-2 text-center">
-                Not enough crystals! Complete more quests to earn crystals.
+                Level 4 required to create quests! Current: Level {monster.level}
+              </p>
+            )}
+            {monster.level >= 4 && monster.coins < 100 && (
+              <p className="text-xs text-pixel-pink font-game mt-2 text-center">
+                Not enough coins! Complete more quests to earn coins.
               </p>
             )}
           </div>

@@ -18,7 +18,7 @@ export default function QuestBoard() {
   const { currentHub, user } = useAuthStore()
   const { getRecommendations } = useDataStore()
   const [quests, setQuests] = useState([])
-  const [monster, setMonster] = useState({ crystals: 0, questsCompleted: 0 })
+  const [monster, setMonster] = useState({ crystals: 0, coins: 0, level: 1, questsCompleted: 0 })
   const [filter, setFilter] = useState('all')
   const [recommendations, setRecommendations] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -150,8 +150,16 @@ export default function QuestBoard() {
               </h1>
             </div>
             <button
-              onClick={() => navigate('/quests/create')}
-              className="pixel-button bg-pixel-green hover:bg-pixel-yellow text-pixel-dark px-3 py-2 text-xs"
+              onClick={() => {
+                if (monster.level < 4) {
+                  alert(`Level ${monster.level} - Create Unlocks at Level 4`)
+                } else {
+                  navigate('/quests/create')
+                }
+              }}
+              className={`pixel-button bg-pixel-green hover:bg-pixel-yellow text-pixel-dark px-3 py-2 text-xs ${
+                monster.level < 4 ? 'opacity-40' : ''
+              }`}
             >
               + Create
             </button>
@@ -251,11 +259,18 @@ export default function QuestBoard() {
                 <span>
                   👥 {quest.minParticipants}-{quest.maxParticipants} people
                 </span>
-                <span className="text-pixel-yellow">
-                  💎 {quest.crystals}
-                </span>
                 <span className={spotsLeft(quest) <= 1 ? 'text-pixel-pink' : 'text-pixel-green'}>
                   {spotsLeft(quest)} spots left
+                </span>
+              </div>
+
+              {/* Rewards row */}
+              <div className="flex flex-wrap gap-3 mb-3 text-xs font-game">
+                <span className="text-pixel-yellow">
+                  💎 {quest.maxParticipants * 10} Crystals
+                </span>
+                <span className="text-pixel-green">
+                  🪙 {quest.maxParticipants * 100} Coins
                 </span>
               </div>
 
