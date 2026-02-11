@@ -23,6 +23,7 @@ class User(Base):
     email = Column(String, nullable=True)
     picture = Column(String, nullable=True)
     created_at = Column(Float, nullable=True)
+    google_refresh_token = Column(Text, nullable=True)
 
 
 class Session(Base):
@@ -203,7 +204,8 @@ class QuestPhoto(Base):
     id = Column(String, primary_key=True)
     quest_id = Column(String, nullable=False)
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
-    image_data = Column(Text, nullable=False)  # base64 encoded image
+    image_data = Column(Text, nullable=True)  # base64 encoded image (fallback for demo users)
+    image_url = Column(String, nullable=True)  # Google Drive URL
     group_memory = Column(String, nullable=True)
     group_size = Column(Integer, nullable=False, default=1)
     timestamp = Column(Float, nullable=False)

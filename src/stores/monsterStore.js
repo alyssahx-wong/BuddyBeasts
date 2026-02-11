@@ -280,6 +280,7 @@ export const useMonsterStore = create(
         const photo = {
           id: `photo_${Date.now()}`,
           imageBase64: photoData.imageBase64,
+          imageUrl: photoData.imageUrl || null,
           questTitle: photoData.questTitle,
           questIcon: photoData.questIcon,
           groupMemory: photoData.groupMemory,

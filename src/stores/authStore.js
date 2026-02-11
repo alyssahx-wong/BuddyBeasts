@@ -16,8 +16,9 @@ export const useAuthStore = create(
         return data
       },
 
-      loginGoogle: async (credential) => {
-        const { data } = await api.post('/api/auth/google', { token: credential })
+      loginGoogle: async (credential, code) => {
+        const payload = code ? { code } : { token: credential }
+        const { data } = await api.post('/api/auth/google', payload)
         set({ user: data.user, token: data.token })
         return data
       },

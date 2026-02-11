@@ -56,9 +56,10 @@ export default function QRCheckIn() {
     const interval = setInterval(async () => {
       try {
         const { data } = await api.get(`/api/quests/${questId}/group-photo`)
-        if (data.photoData && !groupPhotoData) {
+        const photoSrc = data.imageUrl || data.photoData
+        if (photoSrc && !groupPhotoData) {
           setGroupPhotoData({
-            photoData: data.photoData,
+            photoData: photoSrc,
             uploadedBy: data.uploadedBy || 'Someone',
           })
         }
@@ -146,16 +147,19 @@ export default function QRCheckIn() {
     if (!photoPreview) return
 
     try {
-      await api.post('/api/quests/photos/upload', {
+      const { data: uploadResult } = await api.post('/api/quests/photos/upload', {
         questId,
         imageData: photoPreview,
         groupMemory: 'Together',
         groupSize: lobby?.participants?.length || 1,
       })
 
+      const displaySrc = uploadResult.imageUrl || photoPreview
+
       if (saveGroupPhoto) {
         saveGroupPhoto({
           imageBase64: photoPreview,
+          imageUrl: uploadResult.imageUrl || null,
           questTitle: lobby?.quest?.title || 'Shared Moment',
           questIcon: lobby?.quest?.icon || '📷',
           groupMemory: 'Together',
@@ -165,7 +169,7 @@ export default function QRCheckIn() {
 
       setPhotoUploaded(true)
       setGroupPhotoData({
-        photoData: photoPreview,
+        photoData: displaySrc,
         uploadedBy: user?.name || 'You'
       })
     } catch (err) {
