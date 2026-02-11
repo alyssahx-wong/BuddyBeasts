@@ -198,14 +198,7 @@ export default function Lobby() {
                     animation: `float ${2 + index * 0.5}s ease-in-out infinite`
                   }}
                 >
-                  <PixelMonster
-                    evolution={participant.monster?.evolution || 'baby'}
-                    monsterType={participant.monster?.monsterType}
-                    size="medium"
-                    animated={true}
-                    isPlayer={participant.id === user.id}
-                  />
-                  <div className="mt-2 pixel-card p-2 bg-pixel-dark bg-opacity-75 inline-block">
+                  <div className="mb-2 pixel-card p-2 bg-pixel-dark bg-opacity-75 inline-block">
                     <p className="font-game text-xs text-white">
                       {participant.name}
                       {participant.id === user.id && ' (You)'}
@@ -218,6 +211,13 @@ export default function Lobby() {
                       )}
                     </p>
                   </div>
+                  <PixelMonster
+                    evolution={participant.monster?.evolution || 'baby'}
+                    monsterType={participant.monster?.monsterType}
+                    size="medium"
+                    animated={true}
+                    isPlayer={participant.id === user.id}
+                  />
                 </div>
               ))}
             </div>

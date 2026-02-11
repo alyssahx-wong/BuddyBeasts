@@ -8,6 +8,7 @@ Run:  python main.py          → http://localhost:8000/docs
 from __future__ import annotations
 
 import math
+import random
 import secrets
 import time
 import uuid
@@ -460,6 +461,8 @@ def monster_to_dict(m: models.Monster) -> dict:
         "level": m.level,
         "crystals": m.crystals,
         "evolution": m.evolution,
+        "monsterType": m.selected_monster,
+        "collectedMonsters": m.collected_monsters or [],
         "traits": m.traits or [],
         "questsCompleted": m.quests_completed,
         "socialScore": m.social_score,
@@ -534,6 +537,8 @@ def ensure_user_stores(db: Session, user_id: str) -> None:
     """Ensure the user has a monster row."""
     existing = db.query(models.Monster).filter(models.Monster.user_id == user_id).first()
     if not existing:
+        # Assign a random starting monster type from 1-9
+        starting_type = random.randint(1, 9)
         m = models.Monster(
             id=user_id,
             user_id=user_id,
@@ -541,6 +546,9 @@ def ensure_user_stores(db: Session, user_id: str) -> None:
             level=compute_level(1000),
             crystals=1000,
             evolution="baby",
+            monster_type=starting_type,
+            selected_monster=starting_type,
+            collected_monsters=[starting_type],  # Start with one collected monster
             traits=[],
             quests_completed=0,
             social_score=0,
@@ -1050,6 +1058,7 @@ def hub_online_users(hub_id: str, db: Session = Depends(get_db)):
             "monster": {
                 "evolution": m.evolution if m else "baby",
                 "level": m.level if m else 1,
+                "monsterType": m.selected_monster if m else 1,
                 "position": {
                     "x": hash(mem.user_id) % 100,
                     "y": hash(mem.user_id + "y") % 100,
@@ -1839,6 +1848,22 @@ def evolve_monster(body: EvolveRequest, user: dict = Depends(get_current_user), 
             status_code=400,
             detail=f"Level {level_req} required for this evolution (current: {m.level})",
         )
+
+
+@app.post("/api/monsters/me/select", tags=["Monster"])
+def select_monster(body: dict, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Change the currently displayed monster character."""
+    m = db.query(models.Monster).filter(models.Monster.user_id == user["id"]).first()
+    if not m:
+        raise HTTPException(status_code=404, detail="Monster not found")
+    
+    monster_type = body.get("monsterType")
+    if not monster_type or monster_type not in (m.collected_monsters or []):
+        raise HTTPException(status_code=400, detail="Monster not collected yet")
+    
+    m.selected_monster = monster_type
+    db.commit()
+    return monster_to_dict(m)
 
     m.evolution = body.evolution
     m.traits = body.traits if body.traits else m.traits

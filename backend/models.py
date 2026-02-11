@@ -42,6 +42,9 @@ class Monster(Base):
     level = Column(Integer, nullable=False, default=1)
     crystals = Column(Integer, nullable=False, default=0)
     evolution = Column(String, nullable=False, default="baby")
+    monster_type = Column(Integer, nullable=False, default=1)
+    collected_monsters = Column(JSON, nullable=False, default=list)  # List of collected monster type IDs
+    selected_monster = Column(Integer, nullable=False, default=1)  # Currently active monster type
     traits = Column(JSON, nullable=False, default=list)
     quests_completed = Column(Integer, nullable=False, default=0)
     social_score = Column(Integer, nullable=False, default=0)

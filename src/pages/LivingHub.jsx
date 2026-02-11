@@ -100,6 +100,11 @@ export default function LivingHub() {
           {/* Player's Monster */}
           <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2 z-10">
             <div className="text-center">
+              <div className="mb-2 px-3 py-1.5 bg-pixel-pink rounded-lg inline-block border-2 border-pixel-light">
+                <p className="font-cute text-sm text-white font-bold">
+                  {user.name} (You)
+                </p>
+              </div>
               <PixelMonster
                 evolution={monster.evolution}
                 monsterType={monster.monsterType}
@@ -107,11 +112,6 @@ export default function LivingHub() {
                 animated={true}
                 isPlayer={true}
               />
-              <div className="mt-2 px-3 py-1.5 bg-pixel-pink rounded-lg inline-block border-2 border-pixel-light">
-                <p className="font-cute text-sm text-white font-bold">
-                  {user.name} (You)
-                </p>
-              </div>
             </div>
           </div>
 
@@ -141,15 +141,15 @@ export default function LivingHub() {
                   }}
                   className="text-center hover:scale-110 transition-transform"
                 >
+                  <div className="mb-1 bg-pixel-dark bg-opacity-80 px-2 py-1 rounded-lg text-xs font-cute text-pixel-light">
+                    {onlineUser.name}
+                  </div>
                   <PixelMonster
                     evolution={onlineUser.monster?.evolution || 'baby'}
                     monsterType={onlineUser.monster?.monsterType}
                     size="medium"
                     animated={true}
                   />
-                  <div className="mt-1 bg-pixel-dark bg-opacity-80 px-2 py-1 rounded-lg text-xs font-cute text-pixel-light">
-                    {onlineUser.name}
-                  </div>
                 </button>
               </div>
             )
