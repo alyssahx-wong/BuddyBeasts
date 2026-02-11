@@ -27,16 +27,19 @@ export default function Chat() {
   const [selectedConversation, setSelectedConversation] = useState(null)
   const [showConversationList, setShowConversationList] = useState(true)
   const [showNewDMModal, setShowNewDMModal] = useState(false)
-  const [connections, setConnections] = useState([])
+  const [dmContacts, setDmContacts] = useState([])
   const [dmSearchQuery, setDmSearchQuery] = useState('')
+  const [friendsList, setFriendsList] = useState([])
   const messagesEndRef = useRef(null)
 
-  // Ensure hub conversation exists on mount & load DM conversations
+  // Ensure hub conversation exists on mount & load DM conversations + friends
   useEffect(() => {
     if (currentHub) {
       ensureHubConversation(currentHub.id, currentHub.name)
     }
     fetchDMConversations()
+    // Load friends list for sidebar
+    api.get('/api/friends').then(({ data }) => setFriendsList(data)).catch(() => {})
   }, [currentHub, ensureHubConversation, fetchDMConversations])
 
   // Initialize - select first available conversation or hub chat
@@ -96,13 +99,14 @@ export default function Chat() {
   const questConversations = conversations.filter((c) => c.isQuest)
   const hubChatId = `hub_${currentHub?.id}`
 
-  // Load connections when opening the New DM modal
+  // Load contacts from single backend endpoint for DM modal
   const handleOpenNewDM = async () => {
     try {
-      const { data } = await api.get('/api/connections')
-      setConnections(data)
+      const { data } = await api.get('/api/dm/contacts')
+      setDmContacts(data)
     } catch (err) {
-      console.error('Failed to load connections:', err)
+      console.error('Failed to load DM contacts:', err)
+      setDmContacts([])
     }
     setDmSearchQuery('')
     setShowNewDMModal(true)
@@ -116,8 +120,16 @@ export default function Chat() {
     }
   }
 
-  const filteredConnections = connections.filter((c) =>
-    c.connectedUserName.toLowerCase().includes(dmSearchQuery.toLowerCase())
+  // Tap a friend in sidebar → open/create DM and select it
+  const handleFriendDM = async (friendId, friendName) => {
+    const lobbyId = await startDMConversation(friendId, friendName)
+    if (lobbyId) {
+      handleSelectConversation(lobbyId)
+    }
+  }
+
+  const filteredContacts = dmContacts.filter((c) =>
+    c.name.toLowerCase().includes(dmSearchQuery.toLowerCase())
   )
 
   return (
@@ -179,32 +191,34 @@ export default function Chat() {
                   Quest Teams
                 </p>
               </div>
-              {questConversations.map((conv) => (
-                <div
-                  key={conv.id}
-                  onClick={() => handleSelectConversation(conv.id)}
-                  className={`pixel-card p-4 cursor-pointer transition-all ${
-                    selectedConversation === conv.id
-                      ? 'border-pixel-yellow bg-pixel-yellow bg-opacity-10'
-                      : 'hover:border-pixel-blue'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-lg">📋</span>
-                    <h3 className="font-pixel text-xs text-pixel-light">
-                      {conv.name}
-                    </h3>
-                  </div>
-                  <p className="text-xs text-pixel-blue font-game">
-                    {conv.members.length} members
-                  </p>
-                  {conv.lastMessage && (
-                    <p className="text-xs text-pixel-light opacity-75 mt-2 truncate">
-                      {conv.lastMessage}
+              <div className="max-h-[270px] overflow-y-auto space-y-2 chat-scroll">
+                {questConversations.map((conv) => (
+                  <div
+                    key={conv.id}
+                    onClick={() => handleSelectConversation(conv.id)}
+                    className={`pixel-card p-4 cursor-pointer transition-all ${
+                      selectedConversation === conv.id
+                        ? 'border-pixel-yellow bg-pixel-yellow bg-opacity-10'
+                        : 'hover:border-pixel-blue'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-lg">📋</span>
+                      <h3 className="font-pixel text-xs text-pixel-light">
+                        {conv.name}
+                      </h3>
+                    </div>
+                    <p className="text-xs text-pixel-blue font-game">
+                      {conv.members.length} member{conv.members.length !== 1 ? 's' : ''}
                     </p>
-                  )}
-                </div>
-              ))}
+                    {conv.lastMessage && (
+                      <p className="text-xs text-pixel-light opacity-75 mt-2 truncate">
+                        {conv.lastMessage}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
             </>
           )}
 
@@ -216,7 +230,7 @@ export default function Chat() {
             </div>
           )}
 
-          {/* Direct Messages */}
+          {/* Direct Messages — show friends list */}
           <div className="px-2 py-1 flex items-center justify-between">
             <p className="text-xs font-pixel text-pixel-yellow">
               Direct Messages
@@ -230,34 +244,47 @@ export default function Chat() {
             </button>
           </div>
 
-          {dmConversations.length > 0 ? (
-            dmConversations.map((dm) => (
-              <div
-                key={dm.id}
-                onClick={() => handleSelectConversation(dm.id)}
-                className={`pixel-card p-4 cursor-pointer transition-all ${
-                  selectedConversation === dm.id
-                    ? 'border-pixel-yellow bg-pixel-yellow bg-opacity-10'
-                    : 'hover:border-pixel-blue'
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-lg">💬</span>
-                  <h3 className="font-pixel text-xs text-pixel-light">
-                    {dm.otherUserName}
-                  </h3>
-                </div>
-                {dm.lastMessage && (
-                  <p className="text-xs text-pixel-light opacity-75 mt-1 truncate">
-                    {dm.lastMessage}
-                  </p>
-                )}
-              </div>
-            ))
+          {friendsList.length > 0 ? (
+            <div className="max-h-[200px] overflow-y-auto space-y-2 chat-scroll">
+              {friendsList.map((friend) => {
+                // Check if there's an active DM conversation with this friend
+                const existingDM = dmConversations.find(
+                  (dm) => dm.otherUserId === friend.id
+                )
+                return (
+                  <div
+                    key={friend.id}
+                    onClick={() => handleFriendDM(friend.id, friend.name)}
+                    className={`pixel-card p-3 cursor-pointer transition-all ${
+                      existingDM && selectedConversation === existingDM.id
+                        ? 'border-pixel-yellow bg-pixel-yellow bg-opacity-10'
+                        : 'hover:border-pixel-blue'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-pixel-purple flex items-center justify-center text-xs font-pixel">
+                        {friend.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-pixel text-xs text-pixel-light truncate">
+                          {friend.name}
+                        </h3>
+                        {existingDM?.lastMessage && (
+                          <p className="text-xs text-pixel-light opacity-60 truncate">
+                            {existingDM.lastMessage}
+                          </p>
+                        )}
+                      </div>
+                      <span className="text-xs opacity-50">💬</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           ) : (
             <div className="pixel-card p-4 bg-pixel-dark border-2 border-pixel-purple opacity-50">
               <p className="text-xs text-pixel-light font-game text-center">
-                Tap + to message a connection!
+                Complete quests to add friends!
               </p>
             </div>
           )}
@@ -379,38 +406,41 @@ export default function Chat() {
                 type="text"
                 value={dmSearchQuery}
                 onChange={(e) => setDmSearchQuery(e.target.value)}
-                placeholder="Search connections..."
+                placeholder="Search friends..."
                 className="w-full p-3 bg-pixel-dark border-2 border-pixel-purple text-pixel-light font-game text-sm placeholder-pixel-blue placeholder-opacity-50 focus:outline-none focus:border-pixel-yellow rounded"
               />
             </div>
 
             <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2">
-              {filteredConnections.length > 0 ? (
-                filteredConnections.map((conn) => (
+              {filteredContacts.length > 0 ? (
+                filteredContacts.map((contact) => (
                   <div
-                    key={conn.id}
-                    onClick={() => handleStartDM(conn.connectedUserId, conn.connectedUserName)}
+                    key={contact.id}
+                    onClick={() => handleStartDM(contact.id, contact.name)}
                     className="pixel-card p-3 cursor-pointer hover:border-pixel-green transition-all flex items-center gap-3"
                   >
                     <div className="w-8 h-8 rounded-full bg-pixel-purple flex items-center justify-center text-sm">
-                      {conn.connectedUserName.charAt(0).toUpperCase()}
+                      {contact.name.charAt(0).toUpperCase()}
                     </div>
-                    <span className="font-game text-sm text-pixel-light">
-                      {conn.connectedUserName}
-                    </span>
+                    <div className="flex-1 min-w-0">
+                      <span className="font-game text-sm text-pixel-light">
+                        {contact.name}
+                      </span>
+                    </div>
+                    <span className="text-xs opacity-60">🤝</span>
                   </div>
                 ))
-              ) : connections.length === 0 ? (
+              ) : dmContacts.length === 0 ? (
                 <div className="text-center py-8">
-                  <div className="text-4xl mb-2">🤝</div>
+                  <div className="text-4xl mb-2">👋</div>
                   <p className="text-xs text-pixel-light font-game">
-                    Complete quests to make connections first!
+                    Complete a quest with others to add friends!
                   </p>
                 </div>
               ) : (
                 <div className="text-center py-8">
                   <p className="text-xs text-pixel-light font-game">
-                    No matching connections found
+                    No matching people found
                   </p>
                 </div>
               )}

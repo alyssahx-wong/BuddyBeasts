@@ -24,6 +24,7 @@ class User(Base):
     picture = Column(String, nullable=True)
     created_at = Column(Float, nullable=True)
     google_refresh_token = Column(Text, nullable=True)
+    friends = Column(JSON, nullable=False, default=list)  # [{"id": ..., "name": ...}]
 
 
 class Session(Base):
@@ -175,6 +176,19 @@ class ChatMessage(Base):
     user_name = Column(String, nullable=False)
     content = Column(Text, nullable=False)
     timestamp = Column(Float, nullable=False)
+
+
+class DMConversation(Base):
+    __tablename__ = "dm_conversations"
+
+    id = Column(String, primary_key=True)
+    user1_id = Column(String, ForeignKey("users.id"), nullable=False)
+    user2_id = Column(String, ForeignKey("users.id"), nullable=False)
+    user1_name = Column(String, nullable=False)
+    user2_name = Column(String, nullable=False)
+    created_at = Column(Float, nullable=False)
+
+    __table_args__ = (UniqueConstraint("user1_id", "user2_id"),)
 
 
 class Report(Base):
