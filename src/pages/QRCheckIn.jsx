@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { useMonsterStore } from '../stores/monsterStore'
+import { useChatStore } from '../stores/chatStore'
 import api from '../api'
 
 const REACTIONS = ['🎉 Fun', '😊 Chill', '💪 Productive', '🌿 Calm', '⚡ Energizing']
@@ -11,6 +12,7 @@ export default function QRCheckIn() {
   const { questId } = useParams()
   const { user } = useAuthStore()
   const { saveGroupPhoto } = useMonsterStore()
+  const { addQuestParticipants } = useChatStore()
 
   const [lobby, setLobby] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -221,6 +223,11 @@ export default function QRCheckIn() {
       })
       setCompletionResult(data)
       setStep('complete')
+
+      // Create a quest team conversation so participants can keep chatting
+      if (data.matched && lobby?.participants) {
+        addQuestParticipants(questId, lobby.quest?.title || 'Quest', lobby.participants)
+      }
     } catch (err) {
       console.error('Failed to complete quest:', err)
     }

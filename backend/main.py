@@ -2212,7 +2212,9 @@ def belonging_trend(user: dict = Depends(get_current_user), db: Session = Depend
 
 @app.get("/api/chat/{lobby_id}", tags=["Chat"])
 def get_chat_messages(lobby_id: str, _user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
-    rows = db.query(models.ChatMessage).filter(models.ChatMessage.lobby_id == lobby_id).all()
+    rows = db.query(models.ChatMessage).filter(
+        models.ChatMessage.lobby_id == lobby_id
+    ).order_by(models.ChatMessage.timestamp.asc()).all()
     return [
         {
             "id": r.id,
