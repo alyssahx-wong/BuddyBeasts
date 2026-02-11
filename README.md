@@ -42,9 +42,10 @@ A GPS-based, community-centered mobile-first web game that reduces isolation by 
 - Real-time participant tracking
 
 ### 6. **QR Code Check-In**
-- Verify in-person meetups via QR code scanning
-- Prevents solo grinding - rewards require real presence
-- Safe, public location requirements
+- Verify in-person meetups with a group photo
+- Attendance confirmed via matching emoji reactions
+- Encourages real participation, not solo grinding
+- Promotes safe, public meetups
 
 ### 7. **Monster Evolution System**
 - Earn crystals by completing quests
@@ -68,11 +69,6 @@ BuddyBeasts tracks meaningful outcomes:
 - Repeat interaction rate (returning to same group/hub)
 - Group vs solo quest ratio
 - Belonging score changes over time
-
-### Community Metrics
-- Hub engagement trends
-- Most successful quest types
-- Growth in repeat events
 
 ## 🛡️ Safety & Trust
 
