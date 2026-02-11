@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { useMonsterStore } from '../stores/monsterStore'
@@ -6,18 +6,25 @@ import { useMonsterStore } from '../stores/monsterStore'
 export default function PersonalityQuiz() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const { initializeMonster } = useMonsterStore()
+  const { monster, initializeMonster } = useMonsterStore()
 
   const [currentQuestion, setCurrentQuestion] = useState(0)
-  const [scores, setScores] = useState({ social: 0, creative: 0, adventurous: 0, calm: 0 })
+  const [scores, setScores] = useState({ social: 0, creative: 0, adventurous: 0, calm: 0, nurturing: 0 })
   const [quizComplete, setQuizComplete] = useState(false)
   const [assignedMonsterId, setAssignedMonsterId] = useState(null)
+
+  // Skip quiz if user already has personality scores
+  useEffect(() => {
+    if (monster?.personalityScores) {
+      navigate('/hub-selection', { replace: true })
+    }
+  }, [monster?.personalityScores, navigate])
 
   const MONSTERS = [
     { id: 1, name: 'Spark', traits: ['adventurous', 'creative'] },
     { id: 2, name: 'Whisper', traits: ['calm', 'creative'] },
     { id: 3, name: 'Bounce', traits: ['social', 'adventurous'] },
-    { id: 4, name: 'Echo', traits: ['calm', 'social'] },
+    { id: 4, name: 'Echo', traits: ['calm', 'nurturing'] },
     { id: 5, name: 'Flame', traits: ['adventurous', 'adventurous'] },
     { id: 6, name: 'Drift', traits: ['calm', 'calm'] },
     { id: 7, name: 'Pulse', traits: ['creative', 'creative'] },
@@ -25,7 +32,7 @@ export default function PersonalityQuiz() {
     { id: 9, name: 'Ember', traits: ['adventurous', 'creative'] },
     { id: 10, name: 'Glow', traits: ['calm', 'creative'] },
     { id: 11, name: 'Dash', traits: ['social', 'adventurous'] },
-    { id: 12, name: 'Seraph', traits: ['calm', 'social'] },
+    { id: 12, name: 'Seraph', traits: ['nurturing', 'social'] },
     { id: 13, name: 'Blaze', traits: ['adventurous', 'adventurous'] },
     { id: 14, name: 'Hush', traits: ['calm', 'calm'] },
     { id: 15, name: 'Twirl', traits: ['creative', 'creative'] },
@@ -42,6 +49,7 @@ export default function PersonalityQuiz() {
         { text: 'With friends at a gathering', trait: 'social', points: 1 },
         { text: 'Creating or making something', trait: 'creative', points: 1 },
         { text: 'Relaxing and recharging', trait: 'calm', points: 1 },
+        { text: 'Helping others and making them feel welcome', trait: 'nurturing', points: 1 },
       ],
     },
     {
@@ -51,6 +59,7 @@ export default function PersonalityQuiz() {
         { text: 'Being around people and connecting', trait: 'social', points: 1 },
         { text: 'Expressing yourself artistically', trait: 'creative', points: 1 },
         { text: 'Finding peace and stillness', trait: 'calm', points: 1 },
+        { text: 'Supporting someone through a tough time', trait: 'nurturing', points: 1 },
       ],
     },
     {
@@ -60,6 +69,7 @@ export default function PersonalityQuiz() {
         { text: 'Ask others for their perspective', trait: 'social', points: 1 },
         { text: 'Think of unique, unconventional solutions', trait: 'creative', points: 1 },
         { text: 'Take time to analyze and plan carefully', trait: 'calm', points: 1 },
+        { text: 'Making sure everyone feels included', trait: 'nurturing', points: 1 },
       ],
     },
     {
@@ -69,6 +79,7 @@ export default function PersonalityQuiz() {
         { text: 'Being part of a connected community', trait: 'social', points: 1 },
         { text: 'Inspiring each other creatively', trait: 'creative', points: 1 },
         { text: 'Deep, calm conversations', trait: 'calm', points: 1 },
+        { text: 'Being there for each other no matter what', trait: 'nurturing', points: 1 },
       ],
     },
     {
@@ -78,6 +89,7 @@ export default function PersonalityQuiz() {
         { text: 'Brings people together and connects them', trait: 'social', points: 1 },
         { text: 'Shares new ideas and perspectives', trait: 'creative', points: 1 },
         { text: 'Listens deeply and offers perspective', trait: 'calm', points: 1 },
+        { text: 'Checks in on everyone and lifts spirits', trait: 'nurturing', points: 1 },
       ],
     },
   ]
@@ -118,6 +130,7 @@ export default function PersonalityQuiz() {
     initializeMonster(user?.id, {
       name: assignedMonster.name,
       monsterId: assignedMonster.id,
+      personalityScores: finalScores,
     })
   }
 
