@@ -7,7 +7,9 @@ Run:  python main.py          → http://localhost:8000/docs
 
 from __future__ import annotations
 
+import base64
 import math
+import os
 import random
 import secrets
 import time
@@ -17,14 +19,21 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional
 
+import httpx
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaInMemoryUpload
 from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from database import Base, engine, get_db
 import models
+
+GOOGLE_CLIENT_ID = os.environ.get("VITE_GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 
 
 # ── Seed Data ────────────────────────────────────────────────────────────────
@@ -650,7 +659,8 @@ app.add_middleware(
 # ── Pydantic Models ─────────────────────────────────────────────────────────
 
 class GoogleAuthRequest(BaseModel):
-    token: str
+    token: Optional[str] = None  # Legacy ID token path
+    code: Optional[str] = None   # Auth-code exchange path (for Drive access)
 
 class DemoAuthRequest(BaseModel):
     name: str = "Demo User"
@@ -945,10 +955,37 @@ def cleanup_all_participants(db: Session = Depends(get_db)):
 async def auth_google(body: GoogleAuthRequest, db: Session = Depends(get_db)):
     from jose import jwt as jose_jwt
 
-    try:
-        decoded = jose_jwt.get_unverified_claims(body.token)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid Google token")
+    refresh_token = None
+
+    if body.code:
+        # Auth-code exchange: trade code for access_token + refresh_token + id_token
+        token_resp = httpx.post(
+            "https://oauth2.googleapis.com/token",
+            data={
+                "code": body.code,
+                "client_id": GOOGLE_CLIENT_ID,
+                "client_secret": GOOGLE_CLIENT_SECRET,
+                "redirect_uri": "postmessage",
+                "grant_type": "authorization_code",
+            },
+        )
+        if token_resp.status_code != 200:
+            raise HTTPException(status_code=400, detail="Failed to exchange auth code")
+        token_data = token_resp.json()
+        id_token_str = token_data.get("id_token", "")
+        refresh_token = token_data.get("refresh_token")
+        try:
+            decoded = jose_jwt.get_unverified_claims(id_token_str)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid ID token from code exchange")
+    elif body.token:
+        # Legacy ID token path (backward compat)
+        try:
+            decoded = jose_jwt.get_unverified_claims(body.token)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid Google token")
+    else:
+        raise HTTPException(status_code=400, detail="Either 'code' or 'token' is required")
 
     user_id = decoded.get("sub", str(uuid.uuid4()))
     existing = db.query(models.User).filter(models.User.id == user_id).first()
@@ -956,6 +993,8 @@ async def auth_google(body: GoogleAuthRequest, db: Session = Depends(get_db)):
         existing.name = decoded.get("name", "Google User")
         existing.email = decoded.get("email", "")
         existing.picture = decoded.get("picture")
+        if refresh_token:
+            existing.google_refresh_token = refresh_token
     else:
         db.add(models.User(
             id=user_id,
@@ -963,6 +1002,7 @@ async def auth_google(body: GoogleAuthRequest, db: Session = Depends(get_db)):
             email=decoded.get("email", ""),
             picture=decoded.get("picture"),
             created_at=time.time(),
+            google_refresh_token=refresh_token,
         ))
     db.commit()
     ensure_user_stores(db, user_id)
@@ -1496,6 +1536,55 @@ def confirm_checkin(
     }
 
 
+def upload_to_google_drive(user_id: str, image_bytes: bytes, filename: str, db: Session) -> str:
+    """Upload an image to the user's Google Drive 'BuddyBeasts' folder.
+
+    Returns a publicly viewable Drive URL.
+    """
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user or not user.google_refresh_token:
+        raise ValueError("No Google refresh token for this user")
+
+    creds = Credentials(
+        token=None,
+        refresh_token=user.google_refresh_token,
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=GOOGLE_CLIENT_ID,
+        client_secret=GOOGLE_CLIENT_SECRET,
+    )
+
+    service = build("drive", "v3", credentials=creds)
+
+    # Find or create BuddyBeasts folder
+    query = "name='BuddyBeasts' and mimeType='application/vnd.google-apps.folder' and trashed=false"
+    results = service.files().list(q=query, spaces="drive", fields="files(id)").execute()
+    folders = results.get("files", [])
+
+    if folders:
+        folder_id = folders[0]["id"]
+    else:
+        folder_meta = {
+            "name": "BuddyBeasts",
+            "mimeType": "application/vnd.google-apps.folder",
+        }
+        folder = service.files().create(body=folder_meta, fields="id").execute()
+        folder_id = folder["id"]
+
+    # Upload the image
+    file_meta = {"name": filename, "parents": [folder_id]}
+    media = MediaInMemoryUpload(image_bytes, mimetype="image/jpeg")
+    uploaded = service.files().create(body=file_meta, media_body=media, fields="id").execute()
+    file_id = uploaded["id"]
+
+    # Make publicly viewable
+    service.permissions().create(
+        fileId=file_id,
+        body={"role": "reader", "type": "anyone"},
+    ).execute()
+
+    return f"https://drive.google.com/uc?id={file_id}&export=view"
+
+
 @app.post("/api/quests/photos/upload", tags=["Quest Photos"])
 def upload_quest_photo(
     body: UploadPhotoRequest,
@@ -1504,22 +1593,44 @@ def upload_quest_photo(
 ):
     """Upload a group photo after completing a quest."""
     photo_id = f"photo_{uuid.uuid4().hex[:12]}"
-    
+    image_url = None
+    image_data = None
+    is_demo = user["id"].startswith("demo_")
+
+    if not is_demo:
+        # Try Google Drive upload for authenticated users
+        try:
+            # Strip data URI prefix if present
+            raw = body.imageData
+            if "," in raw:
+                raw = raw.split(",", 1)[1]
+            image_bytes = base64.b64decode(raw)
+            filename = f"quest_{body.questId}_{photo_id}.jpg"
+            image_url = upload_to_google_drive(user["id"], image_bytes, filename, db)
+        except Exception as exc:
+            # Fall back to base64 storage if Drive upload fails
+            image_data = body.imageData
+    else:
+        # Demo users: store base64 directly
+        image_data = body.imageData
+
     db.add(models.QuestPhoto(
         id=photo_id,
         quest_id=body.questId,
         user_id=user["id"],
-        image_data=body.imageData,
+        image_data=image_data,
+        image_url=image_url,
         group_memory=body.groupMemory,
         group_size=body.groupSize,
         timestamp=time.time() * 1000,
     ))
     db.commit()
-    
+
     return {
         "success": True,
         "photoId": photo_id,
-        "message": "Photo saved to gallery"
+        "imageUrl": image_url,
+        "message": "Photo saved to gallery",
     }
 
 
@@ -1528,22 +1639,44 @@ def get_gallery_photos(
     user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Get all gallery photos for the current user."""
-    photos = db.query(models.QuestPhoto).filter(
-        models.QuestPhoto.user_id == user["id"]
-    ).order_by(models.QuestPhoto.timestamp.desc()).all()
-    
+    """Get gallery photos from all quests the user has participated in."""
+    # Find all quest instance IDs the user participated in
+    participant_rows = db.query(models.InstanceParticipant).filter(
+        models.InstanceParticipant.user_id == user["id"]
+    ).all()
+    quest_ids = [p.instance_id for p in participant_rows]
+
+    # Also include quests from quest history
+    history_rows = db.query(models.QuestHistory).filter(
+        models.QuestHistory.user_id == user["id"]
+    ).all()
+    quest_ids.extend([h.quest_id for h in history_rows])
+    quest_ids = list(set(quest_ids))
+
+    # Get photos from those quests + photos uploaded by this user
+    if quest_ids:
+        photos = db.query(models.QuestPhoto).filter(
+            (models.QuestPhoto.quest_id.in_(quest_ids)) | (models.QuestPhoto.user_id == user["id"])
+        ).order_by(models.QuestPhoto.timestamp.desc()).all()
+    else:
+        photos = db.query(models.QuestPhoto).filter(
+            models.QuestPhoto.user_id == user["id"]
+        ).order_by(models.QuestPhoto.timestamp.desc()).all()
+
     result = []
     for photo in photos:
+        uploader = db.query(models.User).filter(models.User.id == photo.user_id).first()
         result.append({
             "id": photo.id,
             "questId": photo.quest_id,
             "imageData": photo.image_data,
+            "imageUrl": photo.image_url,
             "groupMemory": photo.group_memory,
             "groupSize": photo.group_size,
             "timestamp": photo.timestamp,
+            "uploadedBy": uploader.name if uploader else "Unknown",
         })
-    
+
     return {"photos": result}
 
 
@@ -1559,14 +1692,16 @@ def get_group_photo(
     ).order_by(models.QuestPhoto.timestamp.desc()).first()
     
     if photo:
+        uploader = db.query(models.User).filter(models.User.id == photo.user_id).first()
         return {
             "photoData": photo.image_data,
-            "uploadedBy": db.query(models.User).filter(models.User.id == photo.user_id).first().name,
+            "imageUrl": photo.image_url,
+            "uploadedBy": uploader.name if uploader else "Unknown",
             "groupMemory": photo.group_memory,
             "timestamp": photo.timestamp,
         }
-    
-    return {"photoData": None}
+
+    return {"photoData": None, "imageUrl": None}
 
 
 @app.post("/api/quests/word-selection", tags=["Quest Photos"])
