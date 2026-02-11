@@ -214,6 +214,7 @@ export default function Lobby() {
                   <PixelMonster
                     evolution={participant.monster?.evolution || 'baby'}
                     monsterType={participant.monster?.monsterType}
+                    customImageUrl={participant.monster?.customCharacterUrl}
                     size="medium"
                     animated={true}
                     isPlayer={participant.id === user.id}

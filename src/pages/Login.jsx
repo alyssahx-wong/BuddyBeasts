@@ -2,14 +2,42 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useGoogleLogin } from '@react-oauth/google'
 import { useAuthStore } from '../stores/authStore'
+import { useMonsterStore } from '../stores/monsterStore'
 import LoginBackground from '../components/LoginBackground'
+import api from '../api'
 
 export default function Login() {
   const navigate = useNavigate()
   const loginDemo = useAuthStore((state) => state.loginDemo)
   const loginGoogle = useAuthStore((state) => state.loginGoogle)
+  const fetchMonster = useMonsterStore((state) => state.fetchMonster)
+  const resetMonster = useMonsterStore((state) => state.resetMonster)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+
+  // After login, check onboarding status and route accordingly
+  const routeAfterLogin = async () => {
+    // Clear any stale monster data from a previous user session
+    resetMonster()
+
+    try {
+      const monsterData = await fetchMonster()
+      // Backend always creates a default monster, so check character-specific fields
+      const hasCustomCharacter = monsterData?.customCharacterUrl
+      // personalityScores is local-only; after reset it's null for new users.
+      // Use customCharacterUrl (backend-persisted) as the real onboarding check.
+      if (hasCustomCharacter) {
+        // Fully onboarded — go to hub selection
+        navigate('/hub-selection')
+      } else {
+        // New or incomplete user — start from quiz
+        navigate('/quiz')
+      }
+    } catch {
+      // Fallback: if fetch fails, start from quiz
+      navigate('/quiz')
+    }
+  }
 
   const googleLogin = useGoogleLogin({
     flow: 'auth-code',
@@ -21,7 +49,7 @@ export default function Login() {
         setLoading(true)
         setError(null)
         await loginGoogle(null, codeResponse.code)
-        navigate('/hub-selection')
+        await routeAfterLogin()
       } catch (err) {
         console.error('Login error:', err)
         setError('Google login failed. Please try again.')
@@ -39,7 +67,7 @@ export default function Login() {
       setLoading(true)
       setError(null)
       await loginDemo('Demo Player')
-      navigate('/hub-selection')
+      await routeAfterLogin()
     } catch (err) {
       console.error('Demo login error:', err)
       setError('Could not connect to server. Is the backend running?')

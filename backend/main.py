@@ -478,6 +478,7 @@ def monster_to_dict(m: models.Monster) -> dict:
         "socialScore": m.social_score,
         "preferredQuestTypes": m.preferred_quest_types or {},
         "preferredGroupSize": m.preferred_group_size,
+        "customCharacterUrl": m.custom_character_url,
     }
 
 
@@ -598,6 +599,12 @@ def _seed_data() -> None:
         if "friends" not in user_columns:
             with engine.begin() as conn:
                 conn.execute(text("ALTER TABLE users ADD COLUMN friends JSON DEFAULT '[]'"))
+
+        # Migrate: add custom_character_url column to monsters table if it doesn't exist
+        monster_columns = [c["name"] for c in inspector.get_columns("monsters")]
+        if "custom_character_url" not in monster_columns:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE monsters ADD COLUMN custom_character_url VARCHAR"))
 
         # Seed hubs if empty
         if db.query(models.Hub).count() == 0:
@@ -1109,6 +1116,7 @@ def hub_online_users(hub_id: str, db: Session = Depends(get_db)):
                 "evolution": m.evolution if m else "baby",
                 "level": m.level if m else 1,
                 "monsterType": m.selected_monster if m else 1,
+                "customCharacterUrl": m.custom_character_url if m else None,
                 "position": {
                     "x": hash(mem.user_id) % 100,
                     "y": hash(mem.user_id + "y") % 100,
@@ -2517,6 +2525,115 @@ def get_recommendations(user: dict = Depends(get_current_user), db: Session = De
         "recommendedTypes": recommended_types,
         "recommendedGroupSize": group_size,
         "bestTimeOfDay": best_time,
+    }
+
+
+# ── Character Generation (proxy to Node.js Sogni service) ────────────────────
+
+CHARACTER_GEN_URL = os.environ.get("CHARACTER_GEN_URL", "http://localhost:3001")
+
+
+class GenerateCharacterRequest(BaseModel):
+    prompt: str
+    answers: dict = Field(default_factory=dict)
+    personalityScores: Optional[dict] = None
+
+
+class SaveCharacterRequest(BaseModel):
+    imageData: str  # base64-encoded PNG (with or without data URI prefix)
+    name: str = "Buddy"
+
+
+@app.post("/api/generate-character", tags=["Character Generation"])
+async def generate_character(
+    body: GenerateCharacterRequest,
+    user: dict = Depends(get_current_user),
+):
+    """Proxy character generation to the Node.js Sogni AI service."""
+    try:
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            resp = await client.post(
+                f"{CHARACTER_GEN_URL}/generate",
+                json={"prompt": body.prompt},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            return data
+    except httpx.ConnectError:
+        fallback_id = random.randint(1, 18)
+        return {
+            "imageUrl": f"/src/monster_imgs/{fallback_id}.png",
+            "fallback": True,
+            "message": "Character generation service is not running. Using pre-made character.",
+        }
+    except Exception as exc:
+        fallback_id = random.randint(1, 18)
+        return {
+            "imageUrl": f"/src/monster_imgs/{fallback_id}.png",
+            "fallback": True,
+            "message": f"Generation error: {str(exc)}. Using pre-made character.",
+        }
+
+
+@app.post("/api/generate-character/save", tags=["Character Generation"])
+def save_generated_character(
+    body: SaveCharacterRequest,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Upload the generated character image to Google Drive and save the URL
+    on the user's monster record so it is used everywhere in the app."""
+
+    is_demo = user["id"].startswith("demo_")
+    image_url = None
+    fallback_local = None
+
+    # Decode the base64 image data
+    raw = body.imageData
+    if "," in raw:
+        raw = raw.split(",", 1)[1]
+    try:
+        image_bytes = base64.b64decode(raw)
+    except Exception:
+        image_bytes = None
+
+    # Try uploading to Google Drive (same bucket as gallery photos)
+    if not is_demo and image_bytes:
+        try:
+            filename = f"character_{user['id']}_{uuid.uuid4().hex[:8]}.png"
+            image_url = upload_to_google_drive(user["id"], image_bytes, filename, db)
+        except Exception as exc:
+            # Drive upload failed — store as a data URI fallback
+            image_url = None
+            fallback_local = body.imageData
+
+    # For demo users or if Drive failed, use the data URI directly
+    if not image_url and not fallback_local:
+        fallback_local = body.imageData
+
+    final_url = image_url or fallback_local
+
+    # Upsert monster record with custom character URL and name
+    m = db.query(models.Monster).filter(models.Monster.user_id == user["id"]).first()
+    if m:
+        m.custom_character_url = final_url
+        m.name = body.name
+    else:
+        m = models.Monster(
+            id=f"m_{uuid.uuid4().hex[:12]}",
+            user_id=user["id"],
+            name=body.name,
+            custom_character_url=final_url,
+        )
+        db.add(m)
+    db.commit()
+    db.refresh(m)
+
+    return {
+        "success": True,
+        "customCharacterUrl": final_url,
+        "driveUpload": image_url is not None,
+        "monster": monster_to_dict(m),
     }
 
 

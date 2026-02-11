@@ -252,6 +252,7 @@ export default function Profile() {
             <PixelMonster
               evolution={monster.evolution}
               monsterType={monster.monsterType}
+              customImageUrl={monster.customCharacterUrl}
               size="large"
               animated={true}
               isPlayer={true}
