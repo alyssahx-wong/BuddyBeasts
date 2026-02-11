@@ -12,6 +12,7 @@ import PersonalityQuiz from './pages/PersonalityQuiz'
 import HubSelection from './pages/HubSelection'
 import LivingHub from './pages/LivingHub'
 import QuestBoard from './pages/QuestBoard'
+import CreateQuest from './pages/CreateQuest'
 import Lobby from './pages/Lobby'
 import QRCheckIn from './pages/QRCheckIn'
 import Profile from './pages/Profile'
@@ -66,6 +67,11 @@ function App() {
             <Route path="/quests" element={
               <ProtectedRoute>
                 <QuestBoard />
+              </ProtectedRoute>
+            } />
+            <Route path="/quests/create" element={
+              <ProtectedRoute>
+                <CreateQuest />
               </ProtectedRoute>
             } />
             <Route path="/lobby/:questId" element={

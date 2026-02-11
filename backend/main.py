@@ -536,8 +536,8 @@ def ensure_user_stores(db: Session, user_id: str) -> None:
             id=user_id,
             user_id=user_id,
             name="Buddy",
-            level=1,
-            crystals=0,
+            level=compute_level(1000),
+            crystals=1000,
             evolution="baby",
             traits=[],
             quests_completed=0,
@@ -1354,19 +1354,17 @@ def confirm_checkin(
 
     tpl = None
     quest_name = "Unknown Quest"
-    base_crystals = 50
     quest_type = "unknown"
     duration = 0
     if inst:
         tpl = db.query(models.QuestTemplate).filter(models.QuestTemplate.id == inst.template_id).first()
         if tpl:
             quest_name = tpl.title
-            base_crystals = tpl.crystals
             quest_type = tpl.type
             duration = tpl.duration
 
     is_group = body.participantCount > 1
-    crystals_earned = math.floor(base_crystals * 1.5) if is_group else base_crystals
+    crystals_earned = 200
 
     # Update monster
     m = db.query(models.Monster).filter(models.Monster.user_id == user["id"]).first()
