@@ -160,17 +160,6 @@ class QuestHistory(Base):
     end_time = Column(Float, nullable=True)
 
 
-class ChatMessage(Base):
-    __tablename__ = "chat_messages"
-
-    id = Column(String, primary_key=True)
-    lobby_id = Column(String, nullable=False)
-    user_id = Column(String, ForeignKey("users.id"), nullable=False)
-    user_name = Column(String, nullable=False)
-    content = Column(Text, nullable=False)
-    timestamp = Column(Float, nullable=False)
-
-
 class Report(Base):
     __tablename__ = "reports"
 
@@ -190,3 +179,72 @@ class CheckinCode(Base):
     quest_id = Column(String, nullable=False)
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
     timestamp = Column(Float, nullable=False)
+<<<<<<< Updated upstream
+=======
+
+
+class QuestPhoto(Base):
+    __tablename__ = "quest_photos"
+
+    id = Column(String, primary_key=True)
+    quest_id = Column(String, nullable=False)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)  # uploader
+    participant_ids = Column(Text, nullable=True)  # comma-separated list of all participant IDs
+    image_data_base64 = Column(Text, nullable=False)  # base64 encoded image data
+    image_mime_type = Column(String, nullable=False, default="image/jpeg")  # image format
+    group_memory = Column(String, nullable=True)
+    group_size = Column(Integer, nullable=False, default=1)
+    timestamp = Column(Float, nullable=False)
+
+
+class WordSelection(Base):
+    __tablename__ = "word_selections"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    quest_id = Column(String, nullable=False)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    word = Column(String, nullable=False)
+    timestamp = Column(Float, nullable=False)
+
+
+class ReactionSelection(Base):
+    __tablename__ = "reaction_selections"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    quest_id = Column(String, nullable=False)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    reaction = Column(String, nullable=False)
+    attempt = Column(Integer, nullable=False, default=1)
+    timestamp = Column(Float, nullable=False)
+
+
+class ChatRoom(Base):
+    __tablename__ = "chat_rooms"
+
+    id = Column(String, primary_key=True)
+    type = Column(String, nullable=False)  # 'quest' or 'dm'
+    quest_id = Column(String, nullable=True)
+    name = Column(String, nullable=True)
+    created_at = Column(Float, nullable=False)
+    last_message_at = Column(Float, nullable=True)
+
+
+class ChatParticipant(Base):
+    __tablename__ = "chat_participants"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    room_id = Column(String, ForeignKey("chat_rooms.id"), nullable=False)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    joined_at = Column(Float, nullable=False)
+    last_read_at = Column(Float, nullable=True)
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    room_id = Column(String, ForeignKey("chat_rooms.id"), nullable=False)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    message = Column(Text, nullable=False)
+    timestamp = Column(Float, nullable=False)
+>>>>>>> Stashed changes

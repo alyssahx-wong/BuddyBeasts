@@ -75,9 +75,25 @@ export default function QRCheckIn() {
 >>>>>>> junhern
   }
 
+<<<<<<< Updated upstream
   const handleCancel = () => {
     navigate('/quests')
   }
+=======
+    const interval = setInterval(async () => {
+      try {
+        const { data } = await api.get(`/api/quests/${questId}/group-photo`)
+        if (data.photoUrl && !groupPhotoData) {
+          setGroupPhotoData({
+            photoUrl: data.photoUrl,
+            uploadedBy: data.uploadedBy || 'Someone',
+          })
+        }
+      } catch (err) {
+        console.error('Failed to fetch group photo:', err)
+      }
+    }, 1500)
+>>>>>>> Stashed changes
 
   const EMOTES = ['🎉 Fun', '😊 Chill', '💪 Productive', '🌿 Calm', '⚡ Energizing']
   const WORDS = ['Fun', 'Calm', 'Focused', 'Energizing', 'Meaningful']
@@ -94,7 +110,23 @@ export default function QRCheckIn() {
     setSignals((prev) => ({ ...prev, [key]: true }))
   }
 
+<<<<<<< Updated upstream
   const signalCount = Object.values(signals).filter(Boolean).length
+=======
+        if (data.allSameReaction) {
+          // All matched!
+          setPollingReaction(false)
+          handleReactionMatch()
+        } else if (data.allSelected && !data.allSameReaction) {
+          // All selected but didn't match
+          setPollingReaction(false)
+          handleReactionMismatch()
+        }
+      } catch (err) {
+        console.error('Failed to fetch reaction status:', err)
+      }
+    }, 1500)
+>>>>>>> Stashed changes
 
   const finishIfQualified = () => {
     if (signalCount >= 2 && !checkedIn) {
@@ -209,6 +241,127 @@ export default function QRCheckIn() {
     setCameraActive(false)
   }
 
+<<<<<<< Updated upstream
+=======
+  const handleSavePhoto = async () => {
+    if (!photoPreview) return
+
+    try {
+      await api.post('/api/quests/photos/upload', {
+        questId,
+        imageData: photoPreview,
+        groupMemory: 'Together',
+        groupSize: lobby?.participants?.length || 1,
+      })
+
+      if (saveGroupPhoto) {
+        saveGroupPhoto({
+          imageBase64: photoPreview,
+          questTitle: lobby?.quest?.title || 'Shared Moment',
+          questIcon: lobby?.quest?.icon || '📷',
+          groupMemory: 'Together',
+          groupSize: lobby?.participants?.length || 1,
+        })
+      }
+
+      setPhotoUploaded(true)
+      setGroupPhotoData({
+        photoUrl: photoPreview,
+        uploadedBy: user?.name || 'You'
+      })
+    } catch (err) {
+      console.error('Failed to upload photo:', err)
+      alert('Failed to save photo. Please try again.')
+    }
+  }
+
+  const handlePhotoContinue = () => {
+    if (groupPhotoData?.photoUrl) {
+      setStep('reaction')
+    } else {
+      alert('Please take or wait for a group photo first')
+    }
+  }
+
+  const handleReactionSelect = async (reaction) => {
+    setMyReaction(reaction)
+
+    try {
+      const { data } = await api.post('/api/quests/reaction-selection', {
+        questId,
+        reaction,
+        attempt,
+      })
+
+      setReactionStatus(data)
+
+      if (data.allSameReaction) {
+        // All matched immediately!
+        handleReactionMatch()
+      } else if (data.allSelected && !data.allSameReaction) {
+        // All selected but didn't match
+        // Don't start polling, handle it now
+      } else {
+        // Wait for others
+        setPollingReaction(true)
+      }
+    } catch (err) {
+      console.error('Failed to submit reaction:', err)
+    }
+  }
+
+  const handleReactionMatch = async () => {
+    // All reactions matched! Complete the quest
+    setPollingGroupPhoto(false)  // Stop polling
+    setPollingReaction(false)  // Stop reaction polling
+    
+    try {
+      console.log('🎉 Calling complete-with-reaction endpoint, attempt:', attempt)
+      const { data } = await api.post(`/api/quests/${questId}/complete-with-reaction`, null, {
+        params: { attempt }
+      })
+      console.log('✅ Quest completion response:', data)
+      setCompletionResult(data)
+      setStep('complete')
+    } catch (err) {
+      console.error('❌ Failed to complete quest:', err)
+      console.error('Error response:', err.response?.data)
+      // Stop polling on error
+      setPollingGroupPhoto(false)
+      setPollingReaction(false)
+      // Show error to user and move to complete anyway with a fallback result
+      alert(`Quest completion error: ${err.response?.data?.detail || err.message}. Returning to hub.`)
+      navigate('/hub')
+    }
+  }
+
+  const handleReactionMismatch = async () => {
+    if (attempt < maxAttempts) {
+      // Try again
+      const nextAttempt = attempt + 1
+      setAttempt(nextAttempt)
+      setMyReaction(null)
+      setReactionStatus(null)
+      alert(`Reactions didn't match! You have ${maxAttempts - attempt} more ${maxAttempts - attempt === 1 ? 'try' : 'tries'}.`)
+    } else {
+      // Out of attempts, fail the quest
+      try {
+        const { data } = await api.post(`/api/quests/${questId}/complete-with-reaction`, null, {
+          params: { attempt: maxAttempts }
+        })
+        setCompletionResult(data)
+        setStep('complete')
+      } catch (err) {
+        console.error('Failed to complete quest:', err)
+      }
+    }
+  }
+
+  const handleReturnToHub = () => {
+    navigate('/hub')
+  }
+
+>>>>>>> Stashed changes
   useEffect(() => {
     return () => {
       if (cameraStream) {
@@ -287,6 +440,7 @@ export default function QRCheckIn() {
                     </button>
                   ))}
                 </div>
+<<<<<<< Updated upstream
               </div>
             )}
 
@@ -301,6 +455,40 @@ export default function QRCheckIn() {
                 <div className="text-4xl mb-3 animate-float">🐥 🐥 🐥</div>
                 <p className="text-xs text-pixel-blue font-game mb-4">
                   Reaction: {groupReaction}
+=======
+              ) : (
+                <div>
+                  <img
+                    src={photoPreview}
+                    alt="Preview"
+                    className="w-full max-h-40 object-cover mb-3 pixel-card"
+                  />
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    <button
+                      onClick={() => setPhotoPreview(null)}
+                      className="pixel-button bg-pixel-pink text-white text-xs py-2"
+                    >
+                      Change Photo
+                    </button>
+                    <button
+                      onClick={handleSavePhoto}
+                      className="pixel-button bg-pixel-blue text-white text-xs py-2"
+                    >
+                      {photoUploaded ? 'Saved ✓' : 'Save Photo'}
+                    </button>
+                  </div>
+                </div>
+              )
+            ) : (
+              <div className="text-center">
+                <img
+                  src={groupPhotoData.photoUrl}
+                  alt="Group Photo"
+                  className="w-full max-h-40 object-cover mb-3 pixel-card"
+                />
+                <p className="text-xs text-pixel-green font-game mb-3">
+                  ✓ Group photo captured by {groupPhotoData.uploadedBy}
+>>>>>>> Stashed changes
                 </p>
                 <button
                   onClick={handleReactionConfirm}

@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import api from '../api'
 
+console.log('📦 monsterStore.js loaded!')
+
 export const useMonsterStore = create(
   persist(
     (set) => ({
@@ -321,6 +323,45 @@ export const useMonsterStore = create(
         if (!nextMonster) return state
         return { monster: nextMonster }
       }),
+
+      fetchGroupPhotos: async () => {
+        try {
+          console.log('📸 Fetching group photos from backend...')
+          console.log('API instance:', api)
+          
+          const response = await api.get('/api/quests/photos/gallery')
+          console.log('✅ Raw response:', response)
+          
+          const { data } = response
+          console.log('✅ Response data:', data)
+          
+          if (data && data.photos && Array.isArray(data.photos)) {
+            console.log(`Found ${data.photos.length} photos from backend`)
+            const photos = data.photos.map((photo) => {
+              console.log('Processing photo:', photo.id)
+              return {
+                id: photo.id,
+                imageBase64: photo.imageData,
+                questTitle: photo.questId,
+                questIcon: '📸',
+                groupMemory: photo.groupMemory,
+                groupSize: photo.groupSize,
+                timestamp: photo.timestamp,
+              }
+            })
+            console.log('📷 Setting', photos.length, 'photos to state')
+            set({ groupPhotos: photos })
+            return photos
+          } else {
+            console.warn('⚠️ No photos in response or wrong format:', data)
+            return []
+          }
+        } catch (err) {
+          console.error('❌ Failed to fetch group photos:', err.message)
+          console.error('Error details:', err)
+          return []
+        }
+      },
 
       saveGroupPhoto: (photoData) => set((state) => {
         const photo = {

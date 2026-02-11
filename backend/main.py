@@ -15,15 +15,94 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional
+import os
+import base64
+from io import BytesIO
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from sqlalchemy import func
+from sqlalchemy import func, inspect, text
 from sqlalchemy.orm import Session
+import boto3
 
 from database import Base, engine, get_db
 import models
+
+
+# ── AWS S3 Configuration ──────────────────────────────────────────────────────
+S3_BUCKET = os.getenv("AWS_S3_BUCKET", "gatherlings-photos")
+AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
+AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID", "test")
+AWS_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "test")
+AWS_ENDPOINT_URL = os.getenv("AWS_ENDPOINT_URL")
+
+# Create photos directory for local storage
+PHOTOS_DIR = "/tmp/gatherlings-photos"
+os.makedirs(PHOTOS_DIR, exist_ok=True)
+
+s3_client = None
+if AWS_ENDPOINT_URL:
+    try:
+        s3_client = boto3.client(
+            "s3",
+            region_name=AWS_REGION,
+            aws_access_key_id=AWS_ACCESS_KEY,
+            aws_secret_access_key=AWS_SECRET_KEY,
+            endpoint_url=AWS_ENDPOINT_URL,
+            verify=False
+        )
+    except Exception:
+        s3_client = None
+
+
+def ensure_s3_bucket():
+    """Create S3 bucket if it doesn't exist (for LocalStack)."""
+    if not s3_client:
+        print(f"✅ Using local file storage for photos at {PHOTOS_DIR}")
+        return
+    
+    try:
+        s3_client.head_bucket(Bucket=S3_BUCKET)
+    except Exception:
+        try:
+            s3_client.create_bucket(Bucket=S3_BUCKET)
+            print(f"✅ Created S3 bucket: {S3_BUCKET}")
+        except Exception as e:
+            print(f"⚠️  Could not create S3 bucket: {e}")
+
+
+def upload_image_to_s3(image_data: str, filename: str) -> str:
+    """Upload base64 image to S3 or local storage and return the URL."""
+    try:
+        # Decode base64 image
+        image_bytes = base64.b64decode(image_data.split(",")[-1])
+        
+        if s3_client:
+            # Upload to S3
+            s3_client.put_object(
+                Bucket=S3_BUCKET,
+                Key=filename,
+                Body=image_bytes,
+                ContentType="image/png"
+            )
+            
+            # Return the S3 URL
+            s3_url = f"{AWS_ENDPOINT_URL}/{S3_BUCKET}/{filename}"
+            return s3_url
+        else:
+            # Save to local disk
+            file_path = os.path.join(PHOTOS_DIR, filename)
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            with open(file_path, "wb") as f:
+                f.write(image_bytes)
+            
+            # Return a local URL that the frontend can access
+            # Using a special endpoint that serves photos from disk
+            local_url = f"/api/photos/{filename}"
+            return local_url
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Photo upload failed: {str(e)}")
 
 
 # ── Seed Data ────────────────────────────────────────────────────────────────
@@ -304,6 +383,36 @@ def get_current_user(authorization: str = Header(None), db: Session = Depends(ge
     return user_to_dict(user)
 
 
+def _migrate_to_base64() -> None:
+    """Migrate from image_url to image_data_base64 storage."""
+    db = Session(bind=engine)
+    try:
+        inspector = inspect(engine)
+        columns = [col['name'] for col in inspector.get_columns('quest_photos')]
+        
+        # Add image_data_base64 column if missing
+        if 'image_data_base64' not in columns:
+            with engine.begin() as conn:
+                conn.execute(text("""
+                    ALTER TABLE quest_photos
+                    ADD COLUMN image_data_base64 TEXT
+                """))
+                print("✅ Added image_data_base64 column")
+        
+        # Add image_mime_type column if missing
+        if 'image_mime_type' not in columns:
+            with engine.begin() as conn:
+                conn.execute(text("""
+                    ALTER TABLE quest_photos
+                    ADD COLUMN image_mime_type VARCHAR(50) DEFAULT 'image/jpeg'
+                """))
+                print("✅ Added image_mime_type column")
+    except Exception as e:
+        print(f"⚠️  Migration check failed: {e}")
+    finally:
+        db.close()
+
+
 # ── Lifespan (create tables + seed) ─────────────────────────────────────────
 
 def _seed_data() -> None:
@@ -346,7 +455,9 @@ def _seed_data() -> None:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    _migrate_to_base64()  # Migrate database schema
     _seed_data()
+    ensure_s3_bucket()  # Create S3 bucket on startup
     yield
 
 
@@ -361,10 +472,12 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_origins=["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=600,
 )
 
 
@@ -568,6 +681,89 @@ def health():
     return {"status": "ok", "timestamp": time.time()}
 
 
+<<<<<<< Updated upstream
+=======
+@app.get("/api/photos/{filepath:path}", tags=["Utility"])
+def serve_photo(filepath: str):
+    """Serve locally stored photos."""
+    from fastapi.responses import FileResponse
+    
+    file_path = os.path.join(PHOTOS_DIR, filepath)
+    
+    # Security check: prevent directory traversal
+    if not os.path.abspath(file_path).startswith(os.path.abspath(PHOTOS_DIR)):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Photo not found")
+    
+    return FileResponse(file_path)
+
+
+@app.delete("/api/admin/cleanup-demo-users", tags=["Utility"])
+def cleanup_demo_users(db: Session = Depends(get_db)):
+    """Remove all demo users (demo_*) from quest instances."""
+    # Delete demo user participants
+    demo_participants = db.query(models.InstanceParticipant).filter(
+        models.InstanceParticipant.user_id.like('demo_%')
+    ).all()
+    
+    affected_instances = set()
+    for p in demo_participants:
+        affected_instances.add(p.instance_id)
+        db.delete(p)
+    
+    # Update participant counts
+    for instance_id in affected_instances:
+        inst = db.query(models.QuestInstance).filter(
+            models.QuestInstance.instance_id == instance_id
+        ).first()
+        if inst:
+            count = db.query(models.InstanceParticipant).filter(
+                models.InstanceParticipant.instance_id == instance_id
+            ).count()
+            inst.current_participants = count
+    
+    db.commit()
+    
+    return {
+        "removed": len(demo_participants),
+        "affected_quests": len(affected_instances)
+    }
+
+
+@app.delete("/api/admin/cleanup-all-participants", tags=["Utility"])
+def cleanup_all_participants(db: Session = Depends(get_db)):
+    """Remove ALL participants from ALL quest instances (fresh start)."""
+    # Delete all participants
+    all_participants = db.query(models.InstanceParticipant).all()
+    
+    affected_instances = set()
+    for p in all_participants:
+        affected_instances.add(p.instance_id)
+        db.delete(p)
+    
+    # Reset all participant counts to 0
+    for instance_id in affected_instances:
+        inst = db.query(models.QuestInstance).filter(
+            models.QuestInstance.instance_id == instance_id
+        ).first()
+        if inst:
+            inst.current_participants = 0
+    
+    # Also clean up lobby participants
+    db.query(models.LobbyParticipant).delete()
+    
+    db.commit()
+    
+    return {
+        "removed": len(all_participants),
+        "affected_quests": len(affected_instances),
+        "message": "All quest participants cleared"
+    }
+
+
+>>>>>>> Stashed changes
 # ── Auth ─────────────────────────────────────────────────────────────────────
 
 @app.post("/api/auth/google", response_model=AuthResponse, tags=["Auth"])
@@ -1017,6 +1213,404 @@ def confirm_checkin(
     }
 
 
+<<<<<<< Updated upstream
+=======
+@app.post("/api/quests/photos/upload", tags=["Quest Photos"])
+def upload_quest_photo(
+    body: UploadPhotoRequest,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Upload a group photo - stores participant IDs with the photo."""
+    photo_id = f"photo_{uuid.uuid4().hex[:12]}"
+    timestamp = time.time() * 1000
+    
+    # Get all participants in this quest - try multiple sources
+    participants = db.query(models.InstanceParticipant).filter(
+        models.InstanceParticipant.instance_id == body.questId
+    ).all()
+    
+    # If no participants found, try LobbyParticipant
+    if not participants:
+        participants = db.query(models.LobbyParticipant).filter(
+            models.LobbyParticipant.instance_id == body.questId
+        ).all()
+    
+    # If still no participants, try getting from WordSelection or ReactionSelection
+    # (these exist during the quest flow even if participants were cleared)
+    participant_ids = set()
+    if not participants:
+        word_selections = db.query(models.WordSelection).filter(
+            models.WordSelection.quest_id == body.questId
+        ).all()
+        participant_ids.update(ws.user_id for ws in word_selections)
+        
+        reaction_selections = db.query(models.ReactionSelection).filter(
+            models.ReactionSelection.quest_id == body.questId
+        ).all()
+        participant_ids.update(rs.user_id for rs in reaction_selections)
+    else:
+        participant_ids = set(p.user_id for p in participants)
+    
+    # Always include the uploader
+    participant_ids.add(user["id"])
+    
+    # Store participant IDs as comma-separated string
+    participant_ids_str = ",".join(sorted(participant_ids))
+    
+    # Extract MIME type from base64 data (e.g., "data:image/jpeg;base64,...")
+    mime_type = "image/jpeg"  # default
+    if body.imageData.startswith("data:"):
+        mime_part = body.imageData.split(":")[1].split(";")[0]
+        if mime_part:
+            mime_type = mime_part
+    
+    # Store base64 image data directly in database
+    db.add(models.QuestPhoto(
+        id=photo_id,
+        quest_id=body.questId,
+        user_id=user["id"],  # uploader
+        participant_ids=participant_ids_str,
+        image_data_base64=body.imageData,  # Store base64 encoded image
+        image_mime_type=mime_type,
+        group_memory=body.groupMemory,
+        group_size=body.groupSize,
+        timestamp=timestamp,
+    ))
+    
+    db.commit()
+    
+    return {
+        "success": True,
+        "photoId": photo_id,
+        "photoData": body.imageData,  # Return the image data so frontend can display it
+        "message": f"Photo saved for {len(participant_ids)} participants"
+    }
+
+
+@app.get("/api/quests/photos/gallery", tags=["Quest Photos"])
+def get_gallery_photos(
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get all gallery photos where user is a participant."""
+    all_photos = db.query(models.QuestPhoto).order_by(models.QuestPhoto.timestamp.desc()).all()
+    
+    result = []
+    for photo in all_photos:
+        # Check if current user is in the participant_ids
+        if photo.participant_ids and user["id"] in photo.participant_ids.split(","):
+            result.append({
+                "id": photo.id,
+                "questId": photo.quest_id,
+                "photoData": photo.image_data_base64,  # Return base64 image data
+                "groupMemory": photo.group_memory,
+                "groupSize": photo.group_size,
+                "timestamp": photo.timestamp,
+            })
+    
+    return {"photos": result}
+
+
+@app.get("/api/quests/{quest_id}/group-photo", tags=["Quest Photos"])
+@app.get("/api/quests/{quest_id}/group-photo", tags=["Quest Photos"])
+def get_group_photo(
+    quest_id: str,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get the group photo for a quest (uploaded by any participant)."""
+    photo = db.query(models.QuestPhoto).filter(
+        models.QuestPhoto.quest_id == quest_id
+    ).order_by(models.QuestPhoto.timestamp.desc()).first()
+    
+    if photo:
+        return {
+            "photoUrl": photo.image_data_base64,  # Return base64 image data
+            "uploadedBy": db.query(models.User).filter(models.User.id == photo.user_id).first().name,
+            "groupMemory": photo.group_memory,
+            "timestamp": photo.timestamp,
+        }
+    
+    return {"photoUrl": None}
+
+
+@app.post("/api/quests/word-selection", tags=["Quest Photos"])
+def submit_word_selection(
+    body: WordSelectionRequest,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Submit a word selection for group memory verification."""
+    # Remove any previous selection by this user for this quest
+    db.query(models.WordSelection).filter(
+        models.WordSelection.quest_id == body.questId,
+        models.WordSelection.user_id == user["id"]
+    ).delete()
+    
+    # Add new selection
+    db.add(models.WordSelection(
+        quest_id=body.questId,
+        user_id=user["id"],
+        word=body.word,
+        timestamp=time.time() * 1000,
+    ))
+    db.commit()
+    
+    # Check if all participants selected the same word
+    selections = db.query(models.WordSelection).filter(
+        models.WordSelection.quest_id == body.questId
+    ).all()
+    
+    # Get participant count
+    participants = db.query(models.LobbyParticipant).filter(
+        models.LobbyParticipant.instance_id == body.questId
+    ).all()
+    
+    all_selected = len(selections) == len(participants)
+    all_same_word = all_selected and len(set(s.word for s in selections)) == 1
+    
+    return {
+        "success": True,
+        "allSelected": all_selected,
+        "allSameWord": all_same_word,
+        "selectedWord": body.word,
+        "totalSelections": len(selections),
+        "totalParticipants": len(participants),
+    }
+
+
+@app.get("/api/quests/{quest_id}/word-status", tags=["Quest Photos"])
+def get_word_selection_status(
+    quest_id: str,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get the current status of word selections for a quest."""
+    selections = db.query(models.WordSelection).filter(
+        models.WordSelection.quest_id == quest_id
+    ).all()
+
+    participants = db.query(models.LobbyParticipant).filter(
+        models.LobbyParticipant.instance_id == quest_id
+    ).all()
+
+    all_selected = len(selections) == len(participants)
+    all_same_word = all_selected and len(set(s.word for s in selections)) == 1
+    chosen_word = selections[0].word if selections and all_same_word else None
+
+    return {
+        "allSelected": all_selected,
+        "allSameWord": all_same_word,
+        "chosenWord": chosen_word,
+        "totalSelections": len(selections),
+        "totalParticipants": len(participants),
+    }
+
+
+@app.post("/api/quests/reaction-selection", tags=["Quest Completion"])
+def submit_reaction_selection(
+    body: ReactionSelectionRequest,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Submit a reaction selection for group reaction verification."""
+    # Remove any previous selection by this user for this quest and attempt
+    db.query(models.ReactionSelection).filter(
+        models.ReactionSelection.quest_id == body.questId,
+        models.ReactionSelection.user_id == user["id"],
+        models.ReactionSelection.attempt == body.attempt
+    ).delete()
+
+    # Add new selection
+    db.add(models.ReactionSelection(
+        quest_id=body.questId,
+        user_id=user["id"],
+        reaction=body.reaction,
+        attempt=body.attempt,
+        timestamp=time.time() * 1000,
+    ))
+    db.commit()
+
+    # Check if all participants selected the same reaction for this attempt
+    selections = db.query(models.ReactionSelection).filter(
+        models.ReactionSelection.quest_id == body.questId,
+        models.ReactionSelection.attempt == body.attempt
+    ).all()
+
+    # Get participant count
+    participants = db.query(models.LobbyParticipant).filter(
+        models.LobbyParticipant.instance_id == body.questId
+    ).all()
+
+    all_selected = len(selections) == len(participants)
+    all_same_reaction = all_selected and len(set(s.reaction for s in selections)) == 1
+
+    return {
+        "success": True,
+        "allSelected": all_selected,
+        "allSameReaction": all_same_reaction,
+        "selectedReaction": body.reaction,
+        "totalSelections": len(selections),
+        "totalParticipants": len(participants),
+        "attempt": body.attempt,
+    }
+
+
+@app.get("/api/quests/{quest_id}/reaction-status", tags=["Quest Completion"])
+def get_reaction_selection_status(
+    quest_id: str,
+    attempt: int = Query(1),
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get the current status of reaction selections for a quest."""
+    selections = db.query(models.ReactionSelection).filter(
+        models.ReactionSelection.quest_id == quest_id,
+        models.ReactionSelection.attempt == attempt
+    ).all()
+
+    participants = db.query(models.LobbyParticipant).filter(
+        models.LobbyParticipant.instance_id == quest_id
+    ).all()
+
+    all_selected = len(selections) == len(participants)
+    all_same_reaction = all_selected and len(set(s.reaction for s in selections)) == 1
+    chosen_reaction = selections[0].reaction if selections and all_same_reaction else None
+
+    return {
+        "allSelected": all_selected,
+        "allSameReaction": all_same_reaction,
+        "chosenReaction": chosen_reaction,
+        "totalSelections": len(selections),
+        "totalParticipants": len(participants),
+        "attempt": attempt,
+    }
+
+
+@app.post("/api/quests/{quest_id}/complete-with-reaction", tags=["Quest Completion"])
+def complete_quest_with_reaction(
+    quest_id: str,
+    attempt: int = Query(3),
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Complete quest after reaction verification. Give crystals if matched, delete quest if failed."""
+    inst = db.query(models.QuestInstance).filter(models.QuestInstance.instance_id == quest_id).first()
+    if not inst:
+        raise HTTPException(status_code=404, detail="Quest not found")
+
+    # Check if all reactions matched
+    selections = db.query(models.ReactionSelection).filter(
+        models.ReactionSelection.quest_id == quest_id,
+        models.ReactionSelection.attempt == attempt
+    ).all()
+
+    participants = db.query(models.LobbyParticipant).filter(
+        models.LobbyParticipant.instance_id == quest_id
+    ).all()
+
+    all_selected = len(selections) == len(participants)
+    all_same_reaction = all_selected and len(set(s.reaction for s in selections)) == 1
+
+    tpl = db.query(models.QuestTemplate).filter(models.QuestTemplate.id == inst.template_id).first()
+    quest_name = tpl.title if tpl else "Unknown Quest"
+    quest_type = tpl.type if tpl else "unknown"
+    duration = tpl.duration if tpl else 0
+
+    if all_same_reaction:
+        # SUCCESS: Give crystals to all participants
+        crystals_earned = 200
+        participant_ids = [p.user_id for p in participants]
+
+        for participant_id in participant_ids:
+            m = db.query(models.Monster).filter(models.Monster.user_id == participant_id).first()
+            if m:
+                m.crystals = m.crystals + crystals_earned
+                m.level = compute_level(m.crystals)
+                m.quests_completed = m.quests_completed + 1
+                m.social_score = m.social_score + 10
+                pqt = dict(m.preferred_quest_types or {})
+                pqt[quest_type] = pqt.get(quest_type, 0) + 1
+                m.preferred_quest_types = pqt
+
+            # Record in quest history
+            db.add(models.QuestHistory(
+                user_id=participant_id,
+                quest_id=quest_id,
+                quest_type=quest_type,
+                start_time=time.time() * 1000,
+                status="completed",
+                group_size=len(participants),
+                duration=duration,
+                end_time=time.time() * 1000,
+            ))
+
+        # Mark instance inactive first
+        inst.is_active = False
+        db.commit()
+
+        # Create a group chat room for the quest AFTER quest completion
+        # This ensures chat room creation doesn't block quest completion
+        chat_room_id = f"quest_{quest_id}"
+        try:
+            existing_room = db.query(models.ChatRoom).filter(models.ChatRoom.id == chat_room_id).first()
+            
+            if not existing_room:
+                chat_room = models.ChatRoom(
+                    id=chat_room_id,
+                    type="quest",
+                    quest_id=quest_id,
+                    name=quest_name,
+                    created_at=time.time()
+                )
+                db.add(chat_room)
+                db.commit()  # Commit the room first
+                
+                # Add all participants to the chat room
+                for participant_id in participant_ids:
+                    db.add(models.ChatParticipant(
+                        room_id=chat_room_id,
+                        user_id=participant_id,
+                        joined_at=time.time()
+                    ))
+                db.commit()  # Commit participants separately
+        except Exception as e:
+            print(f"Failed to create chat room: {e}")
+            db.rollback()  # Rollback chat room transaction, quest is already complete
+
+        return {
+            "success": True,
+            "matched": True,
+            "crystalsEarned": crystals_earned,
+            "questName": quest_name,
+            "connections": len(participants) - 1,
+            "message": "Quest completed successfully!",
+            "chatRoomId": chat_room_id,
+        }
+    else:
+        # FAILURE: Delete quest, no crystals
+        # Delete related records
+        db.query(models.ReactionSelection).filter(models.ReactionSelection.quest_id == quest_id).delete()
+        db.query(models.WordSelection).filter(models.WordSelection.quest_id == quest_id).delete()
+        db.query(models.InstanceParticipant).filter(models.InstanceParticipant.instance_id == quest_id).delete()
+        db.query(models.LobbyParticipant).filter(models.LobbyParticipant.instance_id == quest_id).delete()
+        db.query(models.QuestPhoto).filter(models.QuestPhoto.quest_id == quest_id).delete()
+        db.query(models.CheckinCode).filter(models.CheckinCode.quest_id == quest_id).delete()
+        db.delete(inst)
+        db.commit()
+
+        return {
+            "success": True,
+            "matched": False,
+            "crystalsEarned": 0,
+            "questName": quest_name,
+            "connections": 0,
+            "message": "Reactions did not match. Quest deleted.",
+        }
+
+
+>>>>>>> Stashed changes
 # ── Monster ──────────────────────────────────────────────────────────────────
 
 @app.get("/api/monsters/me", tags=["Monster"])
