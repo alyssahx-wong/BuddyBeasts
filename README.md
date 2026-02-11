@@ -255,6 +255,7 @@ FUTURE DEVELOPMENT:
 - Suggest quest to work on areas of imporvement based on users personality trait.
 - Personalised and tailored to each individual user based on the personality type.
 - Self sustaining and continously works on a feedback loop as quests are completed and personality scores are updated, keeping reccomendation fresh and unique as user completes more quest!
+<img width="558" height="535" alt="image" src="https://github.com/user-attachments/assets/ed52c93d-9892-43f9-b413-fb7c561c0dfd" />
 
 ## TECH STACK
 
