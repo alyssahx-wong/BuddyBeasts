@@ -1864,12 +1864,20 @@ def evolve_monster(body: EvolveRequest, user: dict = Depends(get_current_user), 
             detail=f"Cannot evolve from {m.evolution} to {body.evolution}",
         )
 
-    level_req = 10 if m.evolution == "baby" else 20
+    level_req = 5 if m.evolution == "baby" else 20
     if m.level < level_req:
         raise HTTPException(
             status_code=400,
             detail=f"Level {level_req} required for this evolution (current: {m.level})",
         )
+
+    m.evolution = body.evolution
+    if body.traits:
+        existing = m.traits.split(",") if m.traits else []
+        merged = list(set(existing + body.traits))
+        m.traits = ",".join(t for t in merged if t)
+    db.commit()
+    return monster_to_dict(m)
 
 
 @app.post("/api/monsters/me/select", tags=["Monster"])
