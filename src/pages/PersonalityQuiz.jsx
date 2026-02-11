@@ -13,12 +13,15 @@ export default function PersonalityQuiz() {
   const [quizComplete, setQuizComplete] = useState(false)
   const [assignedMonsterId, setAssignedMonsterId] = useState(null)
 
-  // Skip quiz if user already has personality scores
+  // Skip quiz if user already completed onboarding
   useEffect(() => {
-    if (monster?.personalityScores) {
+    // customCharacterUrl is backend-persisted — the authoritative onboarding check
+    if (monster?.customCharacterUrl) {
       navigate('/hub-selection', { replace: true })
     }
-  }, [monster?.personalityScores, navigate])
+    // If they have local personalityScores but no character yet,
+    // let them stay on the quiz page (they can redo it) or continue
+  }, [monster?.customCharacterUrl, navigate])
 
   const MONSTERS = [
     { id: 1, name: 'Spark', traits: ['adventurous', 'creative'] },
@@ -135,7 +138,7 @@ export default function PersonalityQuiz() {
   }
 
   const handleContinue = () => {
-    navigate('/hub-selection')
+    navigate('/create-character')
   }
 
   if (!user) {

@@ -146,6 +146,7 @@ const { filteredRecommended, filteredComfortZone } = useMemo(() => {
               <PixelMonster
                 evolution={monster.evolution}
                 monsterType={monster.monsterType}
+                customImageUrl={monster.customCharacterUrl}
                 size="large"
                 animated={true}
                 isPlayer={true}
@@ -183,6 +184,7 @@ const { filteredRecommended, filteredComfortZone } = useMemo(() => {
                   <PixelMonster
                     evolution={onlineUser.monster?.evolution || 'baby'}
                     monsterType={onlineUser.monster?.monsterType}
+                    customImageUrl={onlineUser.monster?.customCharacterUrl}
                     size="medium"
                     animated={true}
                   />
