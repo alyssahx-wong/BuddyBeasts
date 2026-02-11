@@ -41,7 +41,7 @@ A GPS-based, community-centered mobile-first web game that reduces isolation by 
 - Simple icebreaker actions (wave, cheer, ready button)
 - Real-time participant tracking
 
-### 6. **QR Code Check-In**
+### 6. **Group Photo Check-In**
 - Verify in-person meetups with a group photo
 - Attendance confirmed via matching emoji reactions
 - Encourages real participation, not solo grinding
