@@ -3,34 +3,40 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { useChatStore } from '../stores/chatStore'
 import { useHubStore } from '../stores/hubStore'
-import { useDataStore } from '../stores/dataStore'
 import NavigationBar from '../components/NavigationBar'
 
 export default function Chat() {
   const navigate = useNavigate()
   const { user, currentHub } = useAuthStore()
   const {
-    messages,
+    messagesByLobby,
     conversations,
-    currentConversationId,
     sendMessage,
     setCurrentConversation,
+    ensureHubConversation,
+    startPolling,
+    stopPolling,
   } = useChatStore()
   const { onlineUsers: hubOnlineUsers } = useHubStore()
-  const { questHistory } = useDataStore()
 
   const [messageText, setMessageText] = useState('')
   const [selectedConversation, setSelectedConversation] = useState(null)
   const [showConversationList, setShowConversationList] = useState(true)
   const messagesEndRef = useRef(null)
 
+  // Ensure hub conversation exists on mount
+  useEffect(() => {
+    if (currentHub) {
+      ensureHubConversation(currentHub.id, currentHub.name)
+    }
+  }, [currentHub, ensureHubConversation])
+
   // Initialize - select first available conversation or hub chat
   useEffect(() => {
     if (!selectedConversation && currentHub) {
       const hubChatId = `hub_${currentHub.id}`
       const questConvs = conversations.filter((c) => c.isQuest)
-      
-      // Select first quest conversation if available, else hub chat
+
       if (questConvs.length > 0) {
         setSelectedConversation(questConvs[0].id)
       } else {
@@ -39,25 +45,25 @@ export default function Chat() {
     }
   }, [selectedConversation, currentHub, conversations])
 
+  // Start/stop polling when selected conversation changes
+  useEffect(() => {
+    if (selectedConversation) {
+      startPolling(selectedConversation)
+    }
+    return () => stopPolling()
+  }, [selectedConversation, startPolling, stopPolling])
+
+  // Derive messages for current conversation
+  const conversationMessages = messagesByLobby[selectedConversation] || []
+
   // Auto-scroll to latest message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [conversationMessages])
 
   const handleSendMessage = () => {
     if (!messageText.trim() || !selectedConversation) return
-
-    const conversation = conversations.find((c) => c.id === selectedConversation)
-    const conversationName = conversation?.name || currentHub?.name || 'Chat'
-
-    sendMessage({
-      userId: user.id,
-      userName: user.name,
-      userAvatar: user.picture,
-      text: messageText,
-      conversationName,
-    })
-
+    sendMessage(selectedConversation, messageText.trim())
     setMessageText('')
   }
 
@@ -67,15 +73,10 @@ export default function Chat() {
     setShowConversationList(false)
   }
 
-  const conversationMessages = messages.filter(
-    (m) => m.conversationId === selectedConversation
-  )
-
   const currentConversation = conversations.find(
     (c) => c.id === selectedConversation
   )
 
-  // Quest conversations from recent quests
   const questConversations = conversations.filter((c) => c.isQuest)
   const hubChatId = `hub_${currentHub?.id}`
 
@@ -86,7 +87,7 @@ export default function Chat() {
         <div className="max-w-4xl mx-auto flex justify-between items-center">
           <div>
             <h1 className="font-pixel text-lg md:text-2xl text-pixel-yellow">
-              💬 Messages
+              Messages
             </h1>
             <p className="text-xs text-pixel-light font-game mt-1">
               {currentConversation?.name || 'Select a conversation'}
@@ -97,14 +98,14 @@ export default function Chat() {
               onClick={() => setShowConversationList(true)}
               className="pixel-button bg-pixel-purple hover:bg-pixel-blue text-white text-xs px-3 py-2"
             >
-              📋 Chats
+              Chats
             </button>
           )}
         </div>
       </div>
 
       <div className="flex-1 max-w-4xl w-full mx-auto flex flex-col md:flex-row gap-4 px-4 py-4">
-        {/* Conversation List - Mobile: Toggle, Desktop: Always Show */}
+        {/* Conversation List */}
         <div
           className={`${
             showConversationList ? 'block' : 'hidden'
@@ -126,7 +127,7 @@ export default function Chat() {
               </h3>
             </div>
             <p className="text-xs text-pixel-blue font-game">
-              👥 {hubOnlineUsers.length + 1} online
+              {hubOnlineUsers.length + 1} online
             </p>
           </div>
 
@@ -176,7 +177,7 @@ export default function Chat() {
           )}
         </div>
 
-        {/* Messages Area - Mobile: Show when conversation selected */}
+        {/* Messages Area */}
         <div
           className={`${
             showConversationList ? 'hidden md:flex' : 'flex'
@@ -199,8 +200,8 @@ export default function Chat() {
                       <div
                         className={`max-w-xs ${
                           message.userId === user.id
-                            ? 'order-2 bg-pixel-green'
-                            : 'order-1 bg-pixel-blue'
+                            ? 'bg-pixel-green'
+                            : 'bg-pixel-blue'
                         } pixel-card p-3 rounded`}
                       >
                         {message.userId !== user.id && (
@@ -218,16 +219,6 @@ export default function Chat() {
                           })}
                         </p>
                       </div>
-
-                      {message.userId !== user.id && message.userAvatar && (
-                        <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-pixel-pink order-1">
-                          <img
-                            src={message.userAvatar}
-                            alt={message.userName}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      )}
                     </div>
                   ))
                 ) : (
@@ -262,11 +253,11 @@ export default function Chat() {
                     disabled={!messageText.trim()}
                     className="pixel-button bg-pixel-green hover:bg-pixel-blue text-white disabled:opacity-50 disabled:cursor-not-allowed px-4"
                   >
-                    📤
+                    Send
                   </button>
                 </div>
                 <p className="text-xs text-pixel-blue font-game mt-2 opacity-75">
-                  💡 Chat with quest teammates and hub members!
+                  Chat with hub members and quest teammates!
                 </p>
               </div>
             </>

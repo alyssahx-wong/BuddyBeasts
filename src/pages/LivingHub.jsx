@@ -136,9 +136,7 @@ export default function LivingHub() {
                 style={pos}
               >
                 <button
-                  onClick={() => {
-                    console.log('Interact with', onlineUser.name)
-                  }}
+                  onClick={() => navigate('/chat')}
                   className="text-center hover:scale-110 transition-transform"
                 >
                   <div className="mb-1 bg-pixel-dark bg-opacity-80 px-2 py-1 rounded-lg text-xs font-cute text-pixel-light">

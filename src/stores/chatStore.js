@@ -1,94 +1,113 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import api from '../api'
 
 export const useChatStore = create(
   persist(
-    (set) => ({
-      messages: [],
+    (set, get) => ({
+      messagesByLobby: {},
       conversations: [],
       currentConversationId: null,
-      onlineUsers: [],
-      questParticipants: [], // Track who participated in recent quests
-      
-      // Send a message
-      sendMessage: (message) =>
-        set((state) => {
-          const conversationId =
-            state.currentConversationId || `conv_${Date.now()}`
-          const newMessage = {
-            id: `msg_${Date.now()}`,
-            conversationId,
-            userId: message.userId,
-            userName: message.userName,
-            userAvatar: message.userAvatar,
-            text: message.text,
-            timestamp: new Date().toISOString(),
-            read: false,
+      pollingInterval: null,
+
+      // Fetch messages from backend for a lobby
+      fetchMessages: async (lobbyId) => {
+        try {
+          const { data } = await api.get(`/api/chat/${lobbyId}`)
+          const messages = data.map((msg) => ({
+            id: msg.id,
+            conversationId: lobbyId,
+            userId: msg.userId,
+            userName: msg.userName,
+            text: msg.content,
+            timestamp: new Date(msg.timestamp * 1000).toISOString(),
+          }))
+          set((state) => ({
+            messagesByLobby: {
+              ...state.messagesByLobby,
+              [lobbyId]: messages,
+            },
+          }))
+        } catch (err) {
+          console.error('Failed to fetch messages:', err)
+        }
+      },
+
+      // Send a message via backend
+      sendMessage: async (lobbyId, content) => {
+        try {
+          const { data } = await api.post(`/api/chat/${lobbyId}`, { content })
+          const message = {
+            id: data.id,
+            conversationId: lobbyId,
+            userId: data.userId,
+            userName: data.userName,
+            text: data.content,
+            timestamp: new Date(data.timestamp * 1000).toISOString(),
           }
-
-          // Add message to messages
-          const updatedMessages = [...state.messages, newMessage]
-
-          // Update or create conversation
-          const conversationIndex = state.conversations.findIndex(
-            (c) => c.id === conversationId
-          )
-          let updatedConversations = state.conversations
-
-          if (conversationIndex >= 0) {
-            updatedConversations = state.conversations.map((c) =>
-              c.id === conversationId
-                ? {
-                    ...c,
-                    lastMessage: newMessage.text,
-                    lastMessageTime: newMessage.timestamp,
-                    unreadCount: 0,
-                  }
+          set((state) => ({
+            messagesByLobby: {
+              ...state.messagesByLobby,
+              [lobbyId]: [...(state.messagesByLobby[lobbyId] || []), message],
+            },
+            conversations: state.conversations.map((c) =>
+              c.id === lobbyId
+                ? { ...c, lastMessage: content, lastMessageTime: message.timestamp }
                 : c
-            )
-          } else {
-            updatedConversations = [
-              ...state.conversations,
+            ),
+          }))
+        } catch (err) {
+          console.error('Failed to send message:', err)
+        }
+      },
+
+      // Poll for new messages every 3 seconds (same pattern as hubStore)
+      startPolling: (lobbyId) => {
+        const { fetchMessages, stopPolling } = get()
+        stopPolling()
+        fetchMessages(lobbyId)
+        const interval = setInterval(() => fetchMessages(lobbyId), 3000)
+        set({ pollingInterval: interval })
+      },
+
+      stopPolling: () => {
+        const { pollingInterval } = get()
+        if (pollingInterval) {
+          clearInterval(pollingInterval)
+          set({ pollingInterval: null })
+        }
+      },
+
+      // Ensure a hub conversation entry exists in the sidebar list
+      ensureHubConversation: (hubId, hubName) =>
+        set((state) => {
+          const convId = `hub_${hubId}`
+          if (state.conversations.find((c) => c.id === convId)) return state
+          return {
+            conversations: [
               {
-                id: conversationId,
-                name: message.conversationName || 'Hub Chat',
-                members: [message.userId],
-                lastMessage: newMessage.text,
-                lastMessageTime: newMessage.timestamp,
+                id: convId,
+                name: `${hubName} Hub`,
+                members: [],
+                lastMessage: '',
+                lastMessageTime: new Date().toISOString(),
                 unreadCount: 0,
                 createdAt: new Date().toISOString(),
+                isQuest: false,
               },
-            ]
-          }
-
-          return {
-            messages: updatedMessages,
-            conversations: updatedConversations,
-            currentConversationId: conversationId,
+              ...state.conversations,
+            ],
           }
         }),
-      
-      // Get messages for a conversation
-      getConversationMessages: (conversationId) =>
-        set((state) => ({
-          currentConversationId: conversationId,
-        })),
-      
-      // Set online users in current hub
-      setOnlineUsers: (users) => set({ onlineUsers: users }),
-      
-      // Add quest participants for chat
+
+      // Add quest participants to create a quest team conversation
       addQuestParticipants: (questId, questName, participants) =>
         set((state) => {
           const existingConv = state.conversations.find(
             (c) => c.questId === questId
           )
+          if (existingConv) return state
 
-          if (existingConv) {
-            return state
-          }
-
-          // Create a new conversation for this quest
           const newConversation = {
             id: `quest_${questId}`,
             questId,
@@ -104,17 +123,13 @@ export const useChatStore = create(
 
           return {
             conversations: [newConversation, ...state.conversations],
-            questParticipants: [
-              ...state.questParticipants,
-              { questId, questName, participants, timestamp: Date.now() },
-            ],
           }
         }),
-      
-      // Switch to a conversation
+
+      // Switch active conversation
       setCurrentConversation: (conversationId) =>
         set({ currentConversationId: conversationId }),
-      
+
       // Mark conversation as read
       markAsRead: (conversationId) =>
         set((state) => ({
@@ -122,8 +137,8 @@ export const useChatStore = create(
             c.id === conversationId ? { ...c, unreadCount: 0 } : c
           ),
         })),
-      
-      // Create a new group conversation
+
+      // Create a group conversation
       createGroupConversation: (name, memberIds) =>
         set((state) => ({
           conversations: [
@@ -140,18 +155,17 @@ export const useChatStore = create(
             },
           ],
         })),
-      
-      // Delete a message
-      deleteMessage: (messageId) =>
-        set((state) => ({
-          messages: state.messages.filter((m) => m.id !== messageId),
-        })),
-      
-      // Clear all messages
-      clearChat: () => set({ messages: [], conversations: [], currentConversationId: null }),
+
+      // Clear local state
+      clearChat: () =>
+        set({ messagesByLobby: {}, conversations: [], currentConversationId: null }),
     }),
     {
       name: 'buddybeasts-chat',
+      partialize: (state) => ({
+        conversations: state.conversations,
+        currentConversationId: state.currentConversationId,
+      }),
     }
   )
 )
