@@ -53,7 +53,6 @@ class Monster(Base):
     social_score = Column(Integer, nullable=False, default=0)
     preferred_quest_types = Column(JSON, nullable=False, default=dict)
     preferred_group_size = Column(String, nullable=False, default="small")
-    custom_character_url = Column(String, nullable=True)  # Google Drive URL for AI-generated character
 
 
 class Hub(Base):

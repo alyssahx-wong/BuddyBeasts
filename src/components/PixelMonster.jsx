@@ -47,7 +47,6 @@ export function getEvolveAnim(monsterType) {
 export default function PixelMonster({
   evolution = 'baby',
   monsterType = null,
-  customImageUrl = null,
   size = 'medium',
   animated = false,
   isPlayer = false,
@@ -65,11 +64,7 @@ export default function PixelMonster({
 
   // Use evolved sprite if evolution is teen or above AND an evolved form exists
   const isEvolved = evolution !== 'baby' && monsterData.evolved
-  const defaultSrc = isEvolved ? monsterData.evolved : monsterData.src
-
-  // If a custom AI-generated character image exists, use it; otherwise use the default sprite
-  const spriteSrc = customImageUrl || defaultSrc
-  const altText = customImageUrl ? 'Your character' : monsterData.name
+  const spriteSrc = isEvolved ? monsterData.evolved : monsterData.src
 
   return (
     <div
@@ -80,14 +75,12 @@ export default function PixelMonster({
     >
       <img
         src={spriteSrc}
-        alt={altText}
+        alt={monsterData.name}
         width={px}
         height={px}
         style={{
           imageRendering: 'pixelated',
-          mixBlendMode: customImageUrl ? 'normal' : 'multiply',
-          borderRadius: customImageUrl ? '8px' : '0',
-          objectFit: 'contain',
+          mixBlendMode: 'multiply',
         }}
         draggable={false}
       />

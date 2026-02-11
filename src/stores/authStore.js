@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import api from '../api'
-import { useMonsterStore } from './monsterStore'
 
 export const useAuthStore = create(
   persist(
@@ -32,8 +31,6 @@ export const useAuthStore = create(
         } catch {
           // ignore if token already invalid
         }
-        // Clear all user-specific state
-        useMonsterStore.getState().resetMonster()
         set({ user: null, token: null, currentHub: null })
       },
 
