@@ -464,7 +464,7 @@ def monster_to_dict(m: models.Monster) -> dict:
         "evolution": m.evolution,
         "monsterType": m.selected_monster,
         "collectedMonsters": m.collected_monsters or [],
-        "traits": m.traits or [],
+        "traits": m.traits if isinstance(m.traits, list) else (m.traits.split(",") if isinstance(m.traits, str) and m.traits else []),
         "questsCompleted": m.quests_completed,
         "socialScore": m.social_score,
         "preferredQuestTypes": m.preferred_quest_types or {},
@@ -1873,9 +1873,9 @@ def evolve_monster(body: EvolveRequest, user: dict = Depends(get_current_user), 
 
     m.evolution = body.evolution
     if body.traits:
-        existing = m.traits.split(",") if m.traits else []
+        existing = m.traits if isinstance(m.traits, list) else []
         merged = list(set(existing + body.traits))
-        m.traits = ",".join(t for t in merged if t)
+        m.traits = [t for t in merged if t]
     db.commit()
     return monster_to_dict(m)
 

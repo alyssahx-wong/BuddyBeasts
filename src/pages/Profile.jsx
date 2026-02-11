@@ -244,7 +244,7 @@ export default function Profile() {
           </div>
 
           {/* Traits */}
-          {monster.traits && monster.traits.length > 0 && (
+          {Array.isArray(monster.traits) && monster.traits.length > 0 && (
             <div className="mb-4">
               <p className="text-xs text-pixel-blue font-game mb-2">Traits</p>
               <div className="flex flex-wrap gap-2 justify-center">
@@ -273,12 +273,19 @@ export default function Profile() {
             >
               ✨ Evolve!
             </button>
-          ) : (
+          ) : monster.evolution === 'baby' ? (
             <button
               disabled
               className="pixel-button bg-pixel-pink text-white w-full py-3 opacity-50"
             >
               🔒 Reach Level 5 to Evolve
+            </button>
+          ) : (
+            <button
+              disabled
+              className="pixel-button bg-pixel-green text-white w-full py-3 opacity-75"
+            >
+              ✅ Evolved to {monster.evolution}
             </button>
           )}
         </div>
