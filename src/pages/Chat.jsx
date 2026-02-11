@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/authStore'
 import { useChatStore } from '../stores/chatStore'
 import { useHubStore } from '../stores/hubStore'
 import NavigationBar from '../components/NavigationBar'
+import api from '../api'
 
 export default function Chat() {
   const navigate = useNavigate()
@@ -11,9 +12,12 @@ export default function Chat() {
   const {
     messagesByLobby,
     conversations,
+    dmConversations,
     sendMessage,
     setCurrentConversation,
     ensureHubConversation,
+    fetchDMConversations,
+    startDMConversation,
     startPolling,
     stopPolling,
   } = useChatStore()
@@ -22,14 +26,18 @@ export default function Chat() {
   const [messageText, setMessageText] = useState('')
   const [selectedConversation, setSelectedConversation] = useState(null)
   const [showConversationList, setShowConversationList] = useState(true)
+  const [showNewDMModal, setShowNewDMModal] = useState(false)
+  const [connections, setConnections] = useState([])
+  const [dmSearchQuery, setDmSearchQuery] = useState('')
   const messagesEndRef = useRef(null)
 
-  // Ensure hub conversation exists on mount
+  // Ensure hub conversation exists on mount & load DM conversations
   useEffect(() => {
     if (currentHub) {
       ensureHubConversation(currentHub.id, currentHub.name)
     }
-  }, [currentHub, ensureHubConversation])
+    fetchDMConversations()
+  }, [currentHub, ensureHubConversation, fetchDMConversations])
 
   // Initialize - select first available conversation or hub chat
   useEffect(() => {
@@ -77,11 +85,43 @@ export default function Chat() {
     (c) => c.id === selectedConversation
   )
 
+  const currentDM = dmConversations.find(
+    (c) => c.id === selectedConversation
+  )
+
+  // Derive display name for the active conversation
+  const activeConversationName = currentConversation?.name
+    || (currentDM ? currentDM.otherUserName : 'Select a conversation')
+
   const questConversations = conversations.filter((c) => c.isQuest)
   const hubChatId = `hub_${currentHub?.id}`
 
+  // Load connections when opening the New DM modal
+  const handleOpenNewDM = async () => {
+    try {
+      const { data } = await api.get('/api/connections')
+      setConnections(data)
+    } catch (err) {
+      console.error('Failed to load connections:', err)
+    }
+    setDmSearchQuery('')
+    setShowNewDMModal(true)
+  }
+
+  const handleStartDM = async (targetUserId, targetUserName) => {
+    const lobbyId = await startDMConversation(targetUserId, targetUserName)
+    if (lobbyId) {
+      setShowNewDMModal(false)
+      handleSelectConversation(lobbyId)
+    }
+  }
+
+  const filteredConnections = connections.filter((c) =>
+    c.connectedUserName.toLowerCase().includes(dmSearchQuery.toLowerCase())
+  )
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-pixel-dark via-pixel-purple to-pixel-dark pb-20 flex flex-col">
+    <div className="h-screen bg-gradient-to-b from-pixel-dark via-pixel-purple to-pixel-dark flex flex-col overflow-hidden">
       {/* Header */}
       <div className="bg-pixel-dark border-b-4 border-pixel-purple p-4 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
@@ -90,7 +130,7 @@ export default function Chat() {
               Messages
             </h1>
             <p className="text-xs text-pixel-light font-game mt-1">
-              {currentConversation?.name || 'Select a conversation'}
+              {activeConversationName}
             </p>
           </div>
           {!showConversationList && (
@@ -104,12 +144,12 @@ export default function Chat() {
         </div>
       </div>
 
-      <div className="flex-1 max-w-4xl w-full mx-auto flex flex-col md:flex-row gap-4 px-4 py-4">
+      <div className="flex-1 min-h-0 max-w-4xl w-full mx-auto flex flex-col md:flex-row gap-4 px-4 py-4 pb-20">
         {/* Conversation List */}
         <div
           className={`${
             showConversationList ? 'block' : 'hidden'
-          } md:block md:w-1/3 space-y-2`}
+          } md:block md:w-1/3 space-y-2 overflow-y-auto min-h-0 max-h-full chat-scroll`}
         >
           {/* Hub Chat */}
           <div
@@ -175,18 +215,64 @@ export default function Chat() {
               </p>
             </div>
           )}
+
+          {/* Direct Messages */}
+          <div className="px-2 py-1 flex items-center justify-between">
+            <p className="text-xs font-pixel text-pixel-yellow">
+              Direct Messages
+            </p>
+            <button
+              onClick={handleOpenNewDM}
+              className="text-pixel-green hover:text-pixel-yellow text-lg leading-none"
+              title="New Direct Message"
+            >
+              +
+            </button>
+          </div>
+
+          {dmConversations.length > 0 ? (
+            dmConversations.map((dm) => (
+              <div
+                key={dm.id}
+                onClick={() => handleSelectConversation(dm.id)}
+                className={`pixel-card p-4 cursor-pointer transition-all ${
+                  selectedConversation === dm.id
+                    ? 'border-pixel-yellow bg-pixel-yellow bg-opacity-10'
+                    : 'hover:border-pixel-blue'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg">💬</span>
+                  <h3 className="font-pixel text-xs text-pixel-light">
+                    {dm.otherUserName}
+                  </h3>
+                </div>
+                {dm.lastMessage && (
+                  <p className="text-xs text-pixel-light opacity-75 mt-1 truncate">
+                    {dm.lastMessage}
+                  </p>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="pixel-card p-4 bg-pixel-dark border-2 border-pixel-purple opacity-50">
+              <p className="text-xs text-pixel-light font-game text-center">
+                Tap + to message a connection!
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Messages Area */}
         <div
           className={`${
             showConversationList ? 'hidden md:flex' : 'flex'
-          } flex-1 flex-col`}
+          } flex-1 flex-col min-h-0`}
         >
           {selectedConversation ? (
             <>
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto mb-4 space-y-3 pixel-card p-4 bg-pixel-dark bg-opacity-50">
+              <div className="flex-1 min-h-0 overflow-y-auto mb-4 space-y-3 pixel-card p-4 bg-pixel-dark bg-opacity-50 chat-scroll">
                 {conversationMessages.length > 0 ? (
                   conversationMessages.map((message) => (
                     <div
@@ -257,7 +343,7 @@ export default function Chat() {
                   </button>
                 </div>
                 <p className="text-xs text-pixel-blue font-game mt-2 opacity-75">
-                  Chat with hub members and quest teammates!
+                  Chat with hub members, quest teammates, or friends!
                 </p>
               </div>
             </>
@@ -273,6 +359,65 @@ export default function Chat() {
           )}
         </div>
       </div>
+
+      {/* New DM Modal */}
+      {showNewDMModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4">
+          <div className="pixel-card bg-pixel-dark border-4 border-pixel-purple w-full max-w-md max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b-2 border-pixel-purple">
+              <h2 className="font-pixel text-sm text-pixel-yellow">New Message</h2>
+              <button
+                onClick={() => setShowNewDMModal(false)}
+                className="text-pixel-light hover:text-pixel-yellow text-xl leading-none"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4">
+              <input
+                type="text"
+                value={dmSearchQuery}
+                onChange={(e) => setDmSearchQuery(e.target.value)}
+                placeholder="Search connections..."
+                className="w-full p-3 bg-pixel-dark border-2 border-pixel-purple text-pixel-light font-game text-sm placeholder-pixel-blue placeholder-opacity-50 focus:outline-none focus:border-pixel-yellow rounded"
+              />
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2">
+              {filteredConnections.length > 0 ? (
+                filteredConnections.map((conn) => (
+                  <div
+                    key={conn.id}
+                    onClick={() => handleStartDM(conn.connectedUserId, conn.connectedUserName)}
+                    className="pixel-card p-3 cursor-pointer hover:border-pixel-green transition-all flex items-center gap-3"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-pixel-purple flex items-center justify-center text-sm">
+                      {conn.connectedUserName.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="font-game text-sm text-pixel-light">
+                      {conn.connectedUserName}
+                    </span>
+                  </div>
+                ))
+              ) : connections.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-2">🤝</div>
+                  <p className="text-xs text-pixel-light font-game">
+                    Complete quests to make connections first!
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-xs text-pixel-light font-game">
+                    No matching connections found
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <NavigationBar />
     </div>

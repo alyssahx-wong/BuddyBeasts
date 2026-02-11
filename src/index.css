@@ -60,6 +60,30 @@ canvas, img {
   background: #5B4BA3;
 }
 
+/* Thin scrollbar for chat panels */
+.chat-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-scroll::-webkit-scrollbar-thumb {
+  background: #4A3B8C;
+  border-radius: 3px;
+}
+
+.chat-scroll::-webkit-scrollbar-thumb:hover {
+  background: #5B4BA3;
+}
+
+/* Firefox thin scrollbar */
+.chat-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #4A3B8C transparent;
+}
+
 /* Animations */
 @keyframes float {
   0%, 100% { transform: translateY(0px); }

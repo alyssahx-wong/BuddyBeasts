@@ -7,6 +7,7 @@ export const useChatStore = create(
     (set, get) => ({
       messagesByLobby: {},
       conversations: [],
+      dmConversations: [],
       currentConversationId: null,
       pollingInterval: null,
 
@@ -51,6 +52,11 @@ export const useChatStore = create(
               [lobbyId]: [...(state.messagesByLobby[lobbyId] || []), message],
             },
             conversations: state.conversations.map((c) =>
+              c.id === lobbyId
+                ? { ...c, lastMessage: content, lastMessageTime: message.timestamp }
+                : c
+            ),
+            dmConversations: state.dmConversations.map((c) =>
               c.id === lobbyId
                 ? { ...c, lastMessage: content, lastMessageTime: message.timestamp }
                 : c
@@ -156,14 +162,59 @@ export const useChatStore = create(
           ],
         })),
 
+      // ── Direct Messages ─────────────────────────────────────────
+
+      // Fetch all DM conversations from backend
+      fetchDMConversations: async () => {
+        try {
+          const { data } = await api.get('/api/dm/conversations')
+          set({ dmConversations: data })
+        } catch (err) {
+          console.error('Failed to fetch DM conversations:', err)
+        }
+      },
+
+      // Start (or retrieve) a DM conversation with another user
+      startDMConversation: async (targetUserId, targetUserName) => {
+        try {
+          const { data } = await api.post('/api/dm/start', {
+            targetUserId,
+            targetUserName,
+          })
+          // Add to local DM conversations list if not already present
+          set((state) => {
+            const exists = state.dmConversations.find((c) => c.id === data.id)
+            if (exists) return state
+            return {
+              dmConversations: [
+                {
+                  id: data.id,
+                  otherUserId: targetUserId,
+                  otherUserName: targetUserName,
+                  lastMessage: '',
+                  lastMessageTime: data.createdAt,
+                  createdAt: data.createdAt,
+                },
+                ...state.dmConversations,
+              ],
+            }
+          })
+          return data.id
+        } catch (err) {
+          console.error('Failed to start DM:', err)
+          return null
+        }
+      },
+
       // Clear local state
       clearChat: () =>
-        set({ messagesByLobby: {}, conversations: [], currentConversationId: null }),
+        set({ messagesByLobby: {}, conversations: [], dmConversations: [], currentConversationId: null }),
     }),
     {
       name: 'buddybeasts-chat',
       partialize: (state) => ({
         conversations: state.conversations,
+        dmConversations: state.dmConversations,
         currentConversationId: state.currentConversationId,
       }),
     }
