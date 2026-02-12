@@ -11,6 +11,7 @@ export default function LivingHub() {
   const { user, currentHub } = useAuthStore()
   const { onlineUsers, startPolling, stopPolling } = useHubStore()
   const [monster, setMonster] = useState({ evolution: 'baby', level: 1 })
+  const [userStats, setUserStats] = useState({ questsDone: 0, friendsMet: 0, streak: 0 })
   const [showWelcome, setShowWelcome] = useState(true)
   const [traitRecs, setTraitRecs] = useState({ recommended: [], comfortZone: [] })
 
@@ -20,10 +21,18 @@ export default function LivingHub() {
       return
     }
 
+
     // Fetch the player's own monster from the backend
     api.get('/api/monsters/me').then(({ data }) => {
       if (data && data.id) setMonster(data)
     }).catch(() => {})
+
+    // Fetch user stats for this hub
+    if (currentHub?.id) {
+      api.get(`/api/hubs/${currentHub.id}/user-stats`).then(({ data }) => {
+        setUserStats(data)
+      }).catch(() => {})
+    }
 
     // Fetch trait-based quest recommendations
     api.get('/api/quests/trait-recommendations', { params: { hub_id: currentHub.id, limit: 3 } })
@@ -182,17 +191,17 @@ export default function LivingHub() {
         <div className="mt-6 grid grid-cols-3 gap-3 text-center">
           <div className="pixel-card p-3">
             <p className="text-xl">🏆</p>
-            <p className="font-cute text-sm text-pixel-light font-bold">{monster.questsCompleted}</p>
+            <p className="font-cute text-sm text-pixel-light font-bold">{userStats.questsDone}</p>
             <p className="text-[10px] font-cute text-pixel-blue">Quests Done</p>
           </div>
           <div className="pixel-card p-3">
             <p className="text-xl">🤝</p>
-            <p className="font-cute text-sm text-pixel-light font-bold">{onlineUsers.length}</p>
+            <p className="font-cute text-sm text-pixel-light font-bold">{userStats.friendsMet}</p>
             <p className="text-[10px] font-cute text-pixel-blue">Friends Met</p>
           </div>
           <div className="pixel-card p-3">
             <p className="text-xl">🔥</p>
-            <p className="font-cute text-sm text-pixel-light font-bold">5 days</p>
+            <p className="font-cute text-sm text-pixel-light font-bold">{userStats.streak} days</p>
             <p className="text-[10px] font-cute text-pixel-blue">Streak</p>
           </div>
         </div>
