@@ -1,9 +1,7 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { useHubStore } from '../stores/hubStore'
-import { useMonsterStore } from '../stores/monsterStore'
-import { getComfortZoneQuests, getRecommendedQuests } from '../utils/questTraits'
 import PixelMonster from '../components/PixelMonster'
 import NavigationBar from '../components/NavigationBar'
 import api from '../api'
@@ -12,10 +10,9 @@ export default function LivingHub() {
   const navigate = useNavigate()
   const { user, currentHub } = useAuthStore()
   const { onlineUsers, startPolling, stopPolling } = useHubStore()
-  const personalityScores = useMonsterStore((s) => s.monster.personalityScores)
   const [monster, setMonster] = useState({ evolution: 'baby', level: 1 })
-  const [quests, setQuests] = useState([])
   const [showWelcome, setShowWelcome] = useState(true)
+  const [traitRecs, setTraitRecs] = useState({ recommended: [], comfortZone: [] })
 
   useEffect(() => {
     if (!currentHub) {
@@ -28,9 +25,9 @@ export default function LivingHub() {
       if (data && data.id) setMonster(data)
     }).catch(() => {})
 
-    // Fetch quests for comfort zone section
-    api.get('/api/quests/instances', { params: { hub_id: currentHub.id } })
-      .then(({ data }) => setQuests(data || []))
+    // Fetch trait-based quest recommendations
+    api.get('/api/quests/trait-recommendations', { params: { hub_id: currentHub.id, limit: 3 } })
+      .then(({ data }) => setTraitRecs(data))
       .catch(() => {})
 
     // Start polling for online users
@@ -44,24 +41,6 @@ export default function LivingHub() {
       clearTimeout(timer)
     }
   }, [currentHub, navigate, startPolling, stopPolling])
-
-const { filteredRecommended, filteredComfortZone } = useMemo(() => {
-    // 1. Get the "Comfort Zone" (Growth) quests first as they have priority
-    const cz = getComfortZoneQuests(quests, personalityScores).slice(0, 3)
-    
-    // 2. Create a Set of IDs currently used in the Comfort Zone section
-    const czIds = new Set(cz.map((q) => q.instanceId || q.id))
-
-    // 3. Get Recommended quests, but filter out any that are already in the CZ section
-    const rec = getRecommendedQuests(quests, personalityScores)
-      .filter((q) => !czIds.has(q.instanceId || q.id))
-      .slice(0, 3)
-
-    return {
-      filteredRecommended: rec,
-      filteredComfortZone: cz,
-    }
-  }, [quests, personalityScores])
 
   const handleJoinQuest = async (quest) => {
     try {
@@ -218,49 +197,24 @@ const { filteredRecommended, filteredComfortZone } = useMemo(() => {
           </div>
         </div>
 
-        {/* Active Quest */}
-        <div className="mt-6">
-          <h3 className="font-pixel text-xs text-pixel-yellow mb-3">Active Quest</h3>
-          <div className="pixel-card p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="text-2xl">☕</div>
-              <div>
-                <p className="font-cute text-sm text-pixel-light font-bold">Coffee Chat</p>
-                <p className="text-[10px] font-cute text-pixel-blue">Starts in 15 min · 2/3 joined</p>
-              </div>
-            </div>
-            <button
-              onClick={() => navigate('/quests')}
-              className="px-3 py-2 bg-pixel-green rounded font-cute text-xs text-pixel-dark font-bold hover:bg-pixel-yellow transition-colors"
-            >
-              LOBBY
-            </button>
-          </div>
-        </div>
-
         {/* Recommended For You */}
-        {filteredRecommended.length > 0 && (
-          <div className="mt-6">
-            <h3 className="font-pixel text-xs text-pixel-yellow mb-3">Recommended For You</h3>
+        <div className="mt-6">
+          <h3 className="font-pixel text-xs text-pixel-yellow mb-3">Recommended For You</h3>
+          {traitRecs.recommended.length > 0 ? (
             <div className="space-y-3">
-              {filteredRecommended.map((quest) => {
+              {traitRecs.recommended.map((quest) => {
                 const spotsLeft = quest.maxParticipants - quest.currentParticipants
                 return (
                   <div
-                    key={`rec-${quest.instanceId || quest.id}`}
-                    className="pixel-card p-4 flex items-center gap-3 w-full hover:border-pixel-blue transition-all"
+                    key={quest.instanceId}
+                    className="pixel-card p-4 flex items-center gap-3 w-full hover:border-pixel-yellow transition-all"
                   >
                     <div className="text-2xl">{quest.icon}</div>
                     <div className="flex-1">
                       <p className="font-cute text-sm text-pixel-light font-bold">{quest.title}</p>
                       <p className="text-[10px] font-cute text-pixel-blue">
-                        {quest.duration}mins · {spotsLeft} spots
+                        {quest.currentParticipants}/{quest.maxParticipants} joined · {spotsLeft} spots
                       </p>
-                      {quest.matchingTraits.length > 0 && (
-                        <p className="text-[10px] font-cute text-pixel-yellow mt-0.5">
-                          Matches: {quest.matchingTraits.join(', ')}
-                        </p>
-                      )}
                     </div>
                     <button
                       onClick={() => handleJoinQuest(quest)}
@@ -273,48 +227,49 @@ const { filteredRecommended, filteredComfortZone } = useMemo(() => {
                 )
               })}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="pixel-card p-4">
+              <p className="text-xs font-game text-pixel-light text-center">No recommended quests right now — check back soon!</p>
+            </div>
+          )}
+        </div>
 
-        {/* Out of Your Comfort Zone */}
-        {filteredComfortZone.length > 0 && (
-          <div className="mt-6">
-            <h3 className="font-pixel text-xs text-pixel-pink mb-3">
-              🔥 Out of Your Comfort Zone
-            </h3>
+        {/* Get Out of Your Comfort Zone */}
+        <div className="mt-6">
+          <h3 className="font-pixel text-xs text-pixel-pink mb-3">Get Out of Your Comfort Zone</h3>
+          {traitRecs.comfortZone.length > 0 ? (
             <div className="space-y-3">
-              {filteredComfortZone.map((quest) => {
+              {traitRecs.comfortZone.map((quest) => {
                 const spotsLeft = quest.maxParticipants - quest.currentParticipants
                 return (
                   <div
-                    key={`cz-${quest.instanceId || quest.id}`}
+                    key={quest.instanceId}
                     className="pixel-card p-4 flex items-center gap-3 w-full hover:border-pixel-pink transition-all border-pixel-pink border-opacity-40"
                   >
                     <div className="text-2xl">{quest.icon}</div>
                     <div className="flex-1">
                       <p className="font-cute text-sm text-pixel-light font-bold">{quest.title}</p>
-                      <p className="text-[10px] font-cute text-pixel-blue">
-                        {quest.duration}mins · {spotsLeft} spots
+                      <p className="text-[10px] font-cute text-pixel-pink">
+                        {quest.currentParticipants}/{quest.maxParticipants} joined · {spotsLeft} spots
                       </p>
-                      {quest.stretchedTraits.length > 0 && (
-                        <p className="text-[10px] font-cute text-pixel-pink mt-0.5">
-                          🔥 {quest.stretchedTraits.join(', ')}
-                        </p>
-                      )}
                     </div>
                     <button
                       onClick={() => handleJoinQuest(quest)}
                       disabled={spotsLeft <= 0}
                       className="px-3 py-2 bg-pixel-pink rounded font-cute text-xs text-pixel-dark font-bold hover:bg-pixel-yellow transition-colors"
                     >
-                      {spotsLeft <= 0 ? 'FULL' : 'JOIN'}
+                      {spotsLeft <= 0 ? 'FULL' : 'TRY IT'}
                     </button>
                   </div>
                 )
               })}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="pixel-card p-4">
+              <p className="text-xs font-game text-pixel-light text-center">No challenge quests available yet — new ones are coming!</p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Bottom Navigation */}
