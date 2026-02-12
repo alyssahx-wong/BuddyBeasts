@@ -1,290 +1,482 @@
-# BuddyBeasts - Pixel Monster Community Quest Game
+```
+  ____            _     _       ____                  _
+ | __ ) _   _  __| | __| |_   _| __ )  ___  __ _ ___| |_ ___
+ |  _ \| | | |/ _` |/ _` | | | |  _ \ / _ \/ _` / __| __/ __|
+ | |_) | |_| | (_| | (_| | |_| | |_) |  __/ (_| \__ \ |_\__ \
+ |____/ \__,_|\__,_|\__,_|\__, |____/ \___|\__,_|___/\__|___/
+                           |___/
+```
 
-> **Turn local social connection into a living pixel world** – where real-world group quests grow your monster, and data-driven recommendations help people show up again and again.
+# BuddyBeasts
+
+### *Hatch friendships. Grow monsters. Fight loneliness — one quest at a time.*
+
+> A mobile-first pixel RPG where **real-world social meetups** are the gameplay.
+> Join a local hub, complete group quests IRL, and watch your pixel companion
+> evolve as your community grows stronger.
+
+```
+ +-------------------------------------------------+
+ |  THE QUIET PROBLEM                              |
+ |                                                 |
+ |  Many people go days without truly being seen.  |
+ |  Loneliness is silently rising in digital,      |
+ |  urban communities — affecting mental health    |
+ |  and quality of life worldwide.                 |
+ |                                                 |
+ |  BuddyBeasts turns that around by making       |
+ |  real connection feel like a game worth playing.|
+ +-------------------------------------------------+
+```
 
 Built for **Problem Statement 2: Building Belonging Through Community Participation**
 
-## 🎮 What is BuddyBeasts?
+---
 
-A GPS-based, community-centered mobile-first web game that reduces isolation by turning real-world social participation into a shared, playful experience. Users join nearby hubs, complete in-person group quests, and grow pixelated monsters together.
+## WORLD MAP
 
-## ✨ Core Features
+```
+  [Login] --> [Personality Quiz] --> [Hub Selection]
+                                          |
+              +---------------------------+---------------------------+
+              |              |            |            |              |
+          [Living Hub]  [Quest Board]  [Chat]    [Gallery]     [Profile]
+              |              |                        |              |
+              |        [Create Quest]                 |        [Monster Stats]
+              |              |                        |        [Evolution]
+              |         [Lobby] -----> [Check-In] ----+        [Item Shop]
+              |                            |                   [Egg Shop]
+              |                      [Group Photo]             [Insights]
+              |                      [Reactions]
+              |                      [Rewards!]
+              +----------------------------------------------------+
+```
 
-### 1. **Google OAuth Login**
-- Fast, low-friction authentication
-- Secure user verification for safe meetups
+---
 
-### 2. **GPS-Based Hub System**
-- Automatically assigns users to nearby community hubs
-- Manual hub selection available if GPS is unavailable
-- Real-time view of active users in each hub
+## MONSTER CODEX — 9 Starter Beasts
 
-### 3. **Living Pixel Hub**
-- Interactive pixel-art "town" scene
-- Your monster walks around with animations
-- See other users' monsters roaming in real-time
-- Tap monsters to interact or join lobbies
+Your monster is assigned through a **Personality Quiz** — 5 trait-scoring questions that reveal your social style.
 
-### 4. **Quest Board**
-- Social, location-based quests designed for real connection:
-  - ☕ Coffee Chat (2-3 people, 20 min)
-  - 📚 Study Jam (3 people, 60 min)
-  - 🌅 Sunset Walk (2-4 people, 30 min)
-  - 🤝 Help a Neighbor (2 people, 15 min)
-  - And more!
-- Data-driven quest recommendations based on your preferences
-- Difficulty levels and crystal rewards
+| Type | Name | Sprite | Traits |
+|------|------|--------|--------|
+| 1 | **Penguin** | `penguin-penguin-dancing.gif` | Adventurous, Creative |
+| 2 | **Seal** | `torp-the-seal.gif` | Calm, Creative |
+| 3 | **Cleffa** | `pokemon-cleffa.gif` | Friendly, Gentle |
+| 4 | **Duck** | `dancing-duck-karlo.gif` | Playful, Social |
+| 5 | **Pixie** | `cute-pixel.gif` | Curious, Kind |
+| 6 | **Follony** | `follony-side-1-yume-nikki.gif` | Mysterious, Thoughtful |
+| 7 | **Hamster** | `hamster-hamtaro.gif` | Energetic, Loyal |
+| 8 | **Pixie2** | `cute-pixel-2.gif` | Dreamy, Artistic |
+| 9 | **Excited** | `excited-happy.gif` | Bold, Enthusiastic |
 
-### 5. **Lobby System**
-- Online-to-offline bridge
-- Monsters gather around a pixel campfire
-- Simple icebreaker actions (wave, cheer, ready button)
-- Real-time participant tracking
+> 18 additional static monster sprites (`1.png` — `18.png`) are available for collection and display.
 
-### 6. **QR Code Check-In**
-- Verify in-person meetups via QR code scanning
-- Prevents solo grinding - rewards require real presence
-- Safe, public location requirements
+### EVOLUTION TREE
 
-### 7. **Monster Evolution System**
-- Earn crystals by completing quests
-- Monster evolution reflects social growth:
-  - **Baby** → **Teen** → **Adult**
-  - Special evolutions: **Leader** (group quests) or **Support** (volunteer quests)
-- Traits earned through repeated participation
+```
+                          +---> [LEADER]   (group quest ratio > 70%)
+                          |
+  [BABY] --Lv5--> [TEEN] --Lv20--> [ADULT]    (default path)
+                          |
+                          +---> [SUPPORT]  (5+ volunteer quests)
+```
 
-### 8. **Data-Driven Personalization**
-- Tracks quest completions, preferences, and patterns
-- Recommends quests you'll actually enjoy and complete
-- Suggests optimal group sizes to reduce friction
-- Optional weekly "belonging score" tracking
+- **Crystals** fuel leveling: `level = floor(crystals / 100) + 1`
+- Evolution is **manual** — triggered from the Profile page when requirements are met
+- Note:Only Penguin currently has unique evolved sprites; other beasts keep their base form. For future developments, all other creatures will have its own evolved animation.
 
-## 🎯 Measurable Impact
+---
 
-BuddyBeasts tracks meaningful outcomes:
+## QUEST SCROLL — 27 Quest Types
 
-### Primary KPIs
-- Weekly active social participation (≥1 quest/week)
-- Repeat interaction rate (returning to same group/hub)
-- Group vs solo quest ratio
-- Belonging score changes over time
+Real-world activities designed for genuine human connection, not screen time.
 
-### Community Metrics
-- Hub engagement trends
-- Most successful quest types
-- Growth in repeat events
+| Quest | Duration | Party Size | Crystals | Vibe |
+|-------|----------|------------|----------|------|
+DEVELOPED:
+| Coffee Chat | 20 min | 2–3 | 50 | casual, indoor |
+| Study Jam | 60 min | 3–5 | 100 | productive, indoor |
+| Sunset Walk | 30 min | 2–4 | 75 | outdoor, relaxing |
+| Help a Neighbor | 15 min | 2 | 60 | volunteer, community |
+| Lunch Crew | 45 min | 3–6 | 80 | food, social |
+FUTURE DEVELOPMENT:
+| Game Night | 90 min | 4–8 | 150 | fun, indoor |
+| Morning Workout | 40 min | 2–6 | 90 | fitness, outdoor |
+| Art Cafe | 60 min | 3–5 | 110 | creative, indoor |
+| Board Game Night | 120 min | 3–6 | 150 | social, games |
+| Cooking Together | 90 min | 2–4 | 125 | food, skill-building |
+| Photography Walk | 60 min | 2–5 | 80 | outdoor, creative |
+| Karaoke Session | 90 min | 3–8 | 110 | music, fun |
+| Hiking Adventure | 180 min | 3–8 | 200 | nature, adventure |
+| Book Club | 75 min | 3–8 | 95 | intellectual, reading |
+| Movie Night | 150 min | 3–10 | 90 | entertainment |
+| Beach Cleanup | 90 min | 4–12 | 140 | volunteer, environment |
+| Group Yoga | 60 min | 3–10 | 85 | wellness, outdoor |
+| Trivia Night | 120 min | 3–6 | 130 | competitive, intellectual |
+| Poetry Slam | 75 min | 3–10 | 95 | creative, art |
+| Group Bike Ride | 90 min | 3–8 | 115 | fitness, exploration |
+| Picnic in the Park | 90 min | 3–10 | 85 | food, relaxing |
+| Skill Swap Workshop | 60 min | 3–6 | 105 | skill-building, collaborative |
+| Farmers Market Visit | 60 min | 2–6 | 70 | food, community |
+| Meditation Circle | 45 min | 3–12 | 75 | wellness, mindfulness |
+| Dance Class | 75 min | 4–12 | 110 | fitness, fun |
+| Star Gazing Night | 90 min | 2–8 | 80 | nature, educational |
+| Community Volunteering | 120 min | 4–15 | 160 | volunteer, meaningful |
+| Pottery Workshop | 120 min | 3–8 | 135 | creative, art |
 
-## 🛡️ Safety & Trust
+> Players can also **create custom quests** (requires Level 4+ and 100 coins).
 
-- Verified Google accounts
-- Public meet locations only
-- Small group defaults for first interactions
-- Report/block features built-in
-- Moderation tools for hubs and quests
+---
 
-## 🚀 Getting Started
+## GAME MECHANICS
+
+### Currency System
+
+```
+  +----------+     quest rewards     +----------+
+  | CRYSTALS | <==================== | QUESTS   |
+  | (primary)|    group bonus: 1.5x  | (IRL)    |
+  +----------+                       +----------+
+
+  +----------+
+  |  COINS   | -----> Item Shop, Egg Shop, Quest Creation
+  | (secondary)
+  +----------+
+```
+
+### Quest Completion Flow
+
+```
+  1. JOIN QUEST          Party gathers in the lobby
+         |
+  2. READY UP            All members hit "Ready"
+         |
+  3. MEET IRL            Go do the activity together!
+         |
+  4. GROUP PHOTO         One person uploads, all can see it
+         |
+  5. REACTION MATCH      Everyone picks the same emoji to verify attendance(3 tries!)
+         |
+    [MATCHED?]
+     /       \
+   YES        NO
+    |          |
+  REWARDS!   Quest deleted, no crystals.
+  Crystals + Coins awarded to all participants.
+```
+
+### Marketplace
+
+| Shop | What You Get | Cost |
+|------|-------------|------|
+| **Item Shop** | Hats, outfits for your monster | Coins |
+| **Egg Shop** | Mystery eggs that hatch new monsters | Coins |
+
+---
+
+## FEATURE LIST
+
+### Authentication & Onboarding
+- Google OAuth 2.0 login (with Drive scope for photo uploads)
+- Demo mode — no account needed, restricted actions
+- Personality Quiz — 5 questions assign your starter monster. Monster assigned based on traits!
+- GPS-based hub auto-selection
+
+### Living Hub
+- Interactive pixel scene with animated monsters
+- See other hub members roaming in real-time
+- Float, pulse, walk sprite animations
+
+### Quest System
+- 27 seeded quest templates across all social categories
+- Create custom quests (Level 4+, costs 100 coins)
+- Data-driven recommendations (type, group size, time of day)
+- Auto-expiring deadlines
+- Host controls and quest deletion
+
+### Lobby & Pre-Quest
+- Real-time participant list with monster previews
+- Ready-up system (all must confirm)
+- Lobby chat and emote system
+- Host management
+
+### Quest Completion (Multi-Step Verification)
+- Group photo capture (camera or file upload)
+- Real-time photo sync across all participants
+- Group reaction matching for attendance (3 attempts, must all pick the same)
+- Success rewards or quest deletion on failure
+
+### Monster Progression
+- Crystal + coin dual-currency economy
+- Level-up via crystals (`level = crystals/100 + 1`)
+- 4-stage evolution: Baby -> Teen -> Adult -> Leader/Support
+- 9 animated monster types + 18 collectible static sprites (Animated=rare)
+- Monster renaming, collection, and switching
+- Egg hatching with random evolution rolls
+
+### Customization
+- Item shop (hats, outfits)
+- Equipment slots (hat + outfit)
+- Skin system (unlock and equip)
+- Egg shop (buy, hatch, collect)
+
+### Gallery
+- Group photo gallery from all completed quests
+- Quest-scoped photo sharing (all quest participants can view)
+- Lightbox view with quest details and uploader info
+- Download and delete
+
+### Social & Insights
+- Connections list — track who you've met
+- Social score (grows faster from group activities)
+- Belonging survey with trend tracking over time
+- Insights dashboard: personality radar, quest type breakdown, weekly activity chart, connections growth, belonging line chart
+
+### Profile & Stats
+- Monster card with animated sprite
+- Stats: quests completed, crystals, level, social score, connections
+- Quest history log
+- Evolution trigger (manual, from profile page)
+
+### Safety & Moderation
+- Google account verification
+- Report system for flagging behavior
+- In-app notification system
+- Public meet locations enforced by design
+
+### Chat
+- Lobby-based real-time messaging
+
+
+## Reccomendation Engine by Collection of data
+
+- Reccomends quests to users based on their personality trait.
+- Suggest quest to work on areas of imporvement based on users personality trait.
+- Personalised and tailored to each individual user based on the personality type.
+- Self sustaining and continously works on a feedback loop as quests are completed and personality scores are updated, keeping reccomendation fresh and unique as user completes more quest!
+<img width="558" height="535" alt="image" src="https://github.com/user-attachments/assets/ed52c93d-9892-43f9-b413-fb7c561c0dfd" />
+
+## TECH STACK
+
+```
+ FRONTEND                          BACKEND
+ +---------------------------+     +---------------------------+
+ | React 18 + Vite 5         |     | FastAPI (Python)          |
+ | TailwindCSS 3             |     | SQLAlchemy ORM            |
+ | Zustand 4 (persist)       |     | PostgreSQL 17 (Neon)      |
+ | React Router v6           |     | Google OAuth 2.0          |
+ | @react-oauth/google       |     | Google Drive API          |
+ | qrcode.react              |     | python-jose (JWT)         |
+ | html5-qrcode              |     | httpx                     |
+ | recharts (insights)       |     | uvicorn                   |
+ +---------------------------+     +---------------------------+
+              |                                 |
+              +--------[ Docker Compose ]--------+
+```
+
+**Pixel Theme**: Custom TailwindCSS config with `pixel-purple`, `pixel-pink`, `pixel-blue`, `pixel-green`, `pixel-yellow`, `pixel-dark`, `pixel-light` color palette. Fonts: `Press Start 2P` (headers), `VT323` (body). All sprites use `image-rendering: pixelated`.
+
+---
+
+## GETTING STARTED
 
 ### Quick Start (Docker)
 
-The fastest way to run the full stack (frontend + backend):
+```bash
+git clone <repo-url>
+cd Gatherlings
+```
 
-1. **Clone the repository**
-   ```bash
-   git clone <repo-url>
-   cd Gatherlings
-   ```
+Create `.env.local` in the project root:
+```
+VITE_GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+DATABASE_URL=your_postgresql_connection_string
+```
 
-2. **Set up environment variables**
+```bash
+docker compose up --build
+```
 
-   Create a `.env.local` file in the project root:
-   ```
-   VITE_GOOGLE_CLIENT_ID=your_google_client_id_here
-   DATABASE_URL=your_postgresql_connection_string_here
-   ```
+- Frontend: `http://localhost:3000`
+- Backend API docs: `http://localhost:8000/docs`
+- Health check: `http://localhost:8000/api/health`
 
-3. **Build and run with Docker Compose**
-   ```bash
-   docker compose up --build
-   ```
-
-4. **Open in browser**
-   - Frontend: `http://localhost:3000`
-   - Backend API docs: `http://localhost:8000/docs`
-   - Backend health check: `http://localhost:8000/api/health`
-
-   To run in the background, add `-d`:
-   ```bash
-   docker compose up --build -d
-   ```
-
-   To stop:
-   ```bash
-   docker compose down
-   ```
-
-### Manual Setup (Without Docker)
+### Manual Setup
 
 #### Prerequisites
 - Node.js 18+ and npm
 - Python 3.12+
-- A PostgreSQL database (e.g. Neon)
+- PostgreSQL database (e.g. Neon)
 
 #### Frontend
-
-1. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-2. **Run the dev server**
-   ```bash
-   npm run dev
-   ```
-   Opens at `http://localhost:3000`
+```bash
+npm install
+npm run dev          # http://localhost:3000
+```
 
 #### Backend
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python main.py       # http://localhost:8000
+```
 
-1. **Create a virtual environment and install dependencies**
-   ```bash
-   cd backend
-   python3 -m venv venv
-   source venv/bin/activate
-   pip install -r requirements.txt
-   ```
-
-2. **Run the backend**
-   ```bash
-   python main.py
-   ```
-   Runs at `http://localhost:8000` (API docs at `/docs`)
-
-### Building for Production
-
+#### Production Build
 ```bash
 npm run build
 npm run preview
 ```
 
-## 🎨 Tech Stack
+### Demo Mode
 
-- **Frontend**: React 18 + Vite
-- **Backend**: FastAPI (Python) with 39 REST endpoints
-- **Database**: PostgreSQL 17 (Neon) via SQLAlchemy ORM
-- **Styling**: TailwindCSS with custom pixel art theme
-- **State Management**: Zustand (with persistence)
-- **Authentication**: Google OAuth 2.0
-- **QR Codes**: qrcode.react
-- **Routing**: React Router v6
-- **Containerization**: Docker + Docker Compose
-- **Fonts**: Press Start 2P (pixel), VT323 (game)
+No Google account? No problem. Click **"Try Demo"** on the login screen to jump straight in with a temporary player.
 
-## 📱 Mobile-First Design
+---
 
-BuddyBeasts is optimized for mobile devices:
-- Touch-friendly interface
-- Responsive layouts (320px - 768px+)
-- PWA-ready structure
-- GPS integration for location services
-- Optimized animations for mobile performance
+## PROJECT STRUCTURE
 
-## 🎯 Demo Mode
+```
+Gatherlings/
++-- src/                              # Frontend (React + Vite)
+|   +-- pages/                        # 12 route components
+|   |   +-- Login.jsx                 #   Google OAuth + demo login
+|   |   +-- PersonalityQuiz.jsx       #   5-question monster assignment
+|   |   +-- CharacterCreation.jsx     #   Custom character setup
+|   |   +-- HubSelection.jsx          #   GPS-based hub picker
+|   |   +-- LivingHub.jsx             #   Interactive pixel scene
+|   |   +-- QuestBoard.jsx            #   Browse & join quests
+|   |   +-- CreateQuest.jsx           #   Create custom quests
+|   |   +-- Lobby.jsx                 #   Pre-quest gathering
+|   |   +-- QRCheckIn.jsx             #   Multi-step quest completion
+|   |   +-- Chat.jsx                  #   Lobby messaging
+|   |   +-- GroupPhotoGallery.jsx     #   Quest photo gallery
+|   |   +-- Profile.jsx               #   Monster stats & evolution
+|   +-- components/                   # Reusable UI
+|   |   +-- PixelMonster.jsx          #   Monster sprite renderer
+|   |   +-- NavigationBar.jsx         #   Fixed bottom nav (5 tabs)
+|   |   +-- EvolutionOverlay.jsx      #   Evolution animation
+|   |   +-- WelcomePopup.jsx          #   First-time welcome
+|   |   +-- LoginBackground.jsx       #   Animated login backdrop
+|   |   +-- insights/                 #   7 chart/stat components
+|   +-- stores/                       # Zustand state (5 stores)
+|   |   +-- authStore.js              #   User, token, hub
+|   |   +-- monsterStore.js           #   Monster, inventory, photos
+|   |   +-- hubStore.js               #   Online users, polling
+|   |   +-- dataStore.js              #   Quest history, recommendations
+|   |   +-- chatStore.js              #   Messages, conversations
+|   +-- characters/                   # 11 animated GIF sprites
+|   +-- monster_imgs/                 # 18 static PNG monster sprites
+|   +-- icons/                        # Quest category icons
+|   +-- utils/                        # Shared utilities
+|   +-- App.jsx                       # Router + protected routes
+|   +-- api.js                        # Axios instance with auth headers
+|   +-- main.jsx                      # React entry point
+|   +-- index.css                     # Tailwind + custom animations
++-- backend/                          # Backend (FastAPI + SQLAlchemy)
+|   +-- main.py                       # All API endpoints + seed data
+|   +-- models.py                     # 16 SQLAlchemy ORM models
+|   +-- database.py                   # DB engine + session factory
+|   +-- requirements.txt              # Python dependencies
+|   +-- Dockerfile                    # Backend container
+|   +-- neon_migration_*.sql          # DB migration scripts
++-- docker-compose.yaml               # Full stack in one command
++-- Dockerfile                        # Frontend container
++-- package.json                      # Node dependencies + scripts
++-- vite.config.js                    # Vite config (port 3000)
++-- tailwind.config.js                # Pixel theme + custom fonts
++-- postcss.config.js                 # PostCSS for Tailwind
++-- index.html                        # SPA entry point
+```
 
-The app includes a **Demo Login** option that works without Google OAuth setup, perfect for:
-- Quick testing
-- Hackathon demos
-- Local development
+---
 
-Simply click "Try Demo" on the login page!
-
-## 📊 Data & Privacy
+## DATA & PRIVACY
 
 ### What We Track (Minimal & Ethical)
 - Quest completions and drop-offs
 - Preferred quest categories and group sizes
-- Time-of-day patterns
-- Repeat participation metrics
+- Time-of-day participation patterns
+- Repeat interaction metrics
 - Optional 1-tap belonging score
 
 ### How We Use It
 - Recommend quests you're likely to complete
-- Suggest optimal group sizes
+- Suggest optimal group sizes to reduce friction
 - Boost high-success quests in your hub
 - Detect disengagement and offer lower-pressure options
 
-**Frontend stores data client-side via Zustand persist. Backend persists all data to PostgreSQL (Neon).**
-
-## 🔮 Future Enhancements (Phase 2)
-
-- Frontend-backend API integration (backend is ready, frontend calls pending)
-- WebSocket for true real-time updates
-- LLM integration (via Emergent API) for:
-  - Dynamic quest descriptions
-  - Welcoming messages
-  - Community summaries
-- Push notifications for quest reminders
-- Achievement system and leaderboards
-- Hub creator tools
-- Advanced analytics dashboard
-
-## 🏆 Why BuddyBeasts Wins
-
-✅ **Targets the root cause**: Lack of repeated, meaningful social participation  
-✅ **Gamification lowers barriers**: Makes reaching out fun, not scary  
-✅ **Data-driven improvement**: Continuously learns what connects people  
-✅ **Both online & offline**: Living hub presence + real-world GPS check-ins  
-✅ **Sustainable design**: Reinforces community bonds through repeated interactions  
-
-## 📝 Project Structure
-
-```
-Gatherlings/
-├── src/                       # Frontend (React)
-│   ├── components/            # Reusable UI components
-│   │   ├── NavigationBar.jsx
-│   │   └── PixelMonster.jsx
-│   ├── pages/                 # Main application pages
-│   │   ├── Login.jsx
-│   │   ├── HubSelection.jsx
-│   │   ├── LivingHub.jsx
-│   │   ├── QuestBoard.jsx
-│   │   ├── Lobby.jsx
-│   │   ├── QRCheckIn.jsx
-│   │   └── Profile.jsx
-│   ├── stores/                # Zustand state management
-│   │   ├── authStore.js
-│   │   ├── monsterStore.js
-│   │   ├── hubStore.js
-│   │   └── dataStore.js
-│   ├── App.jsx
-│   ├── main.jsx
-│   └── index.css
-├── backend/                   # Backend (FastAPI + SQLAlchemy)
-│   ├── main.py                # 39 API endpoints
-│   ├── models.py              # 16 SQLAlchemy ORM models
-│   ├── database.py            # DB engine, session, dependency
-│   ├── requirements.txt       # Python dependencies
-│   └── Dockerfile
-├── docker-compose.yaml        # Run full stack with one command
-├── Dockerfile                 # Frontend container
-├── .env.local                 # Environment variables (not in git)
-├── .gitignore
-├── package.json
-├── vite.config.js
-└── tailwind.config.js
-```
-
-## 🤝 Contributing
-
-This project was built for a hackathon. Feel free to fork and extend it!
-
-## 📄 License
-
-MIT License - feel free to use this project for your own community-building initiatives!
-
-## 🌟 One-Line Pitch
-
-**"BuddyBeasts turns local social connection into a living pixel world—where real-world group quests grow your monster, and data-driven recommendations help people show up again and again."**
+> All frontend state persists client-side via Zustand. Backend persists to PostgreSQL (Neon).
 
 ---
 
-Built with 💙 for Building Belonging | Hackathon 2026
+## MEASURABLE IMPACT
+
+```
+ +---------------------+------------------------------------------+
+ | KPI                 | What It Measures                         |
+ +---------------------+------------------------------------------+
+ | Weekly Active Quests| >= 1 quest/week per user                 |
+ | Repeat Rate         | Returning to same group/hub              |
+ | Group Quest Ratio   | Group vs solo activity balance           |
+ | Belonging Score     | Self-reported trend over time            |
+ | Connections Count   | Unique people met through quests         |
+ | Social Score        | Cumulative social engagement weight      |
+ +---------------------+------------------------------------------+
+```
+
+---
+
+## WHY BUDDYBEASTS
+
+```
+ [x] Targets the root cause    -- lack of repeated, meaningful social participation
+ [x] Gamification over guilt   -- makes reaching out fun, not scary
+ [x] Data-driven matching      -- continuously learns what connects people
+ [x] Online + offline          -- pixel hub presence + real-world GPS check-ins
+ [x] Proof of presence         -- QR codes + photos + reaction matching
+ [x] Sustainable by design     -- reinforces bonds through repeated interactions
+ [x] Low barrier to entry      -- demo mode, 15-min quests, small groups
+```
+
+---
+
+## ROADMAP
+
+- [ ] WebSocket real-time updates (replace polling)
+- [ ] Google Drive photo integration (upload quest photos to user's Drive)
+- [ ] Push notifications for quest reminders
+- [ ] Achievement system and leaderboards
+- [ ] Hub creator tools
+- [ ] LLM-powered dynamic quest descriptions and community summaries
+- [ ] Advanced analytics dashboard
+
+---
+
+## CONTRIBUTING
+
+This project was built for a hackathon. Fork it, extend it, build belonging in your own community.
+
+## LICENSE
+
+MIT License — use freely for community-building initiatives.
+
+---
+
+```
+ +-------------------------------------------------------+
+ |                                                       |
+ |   "BuddyBeasts turns local social connection into    |
+ |    a living pixel world -- where real-world group     |
+ |    quests grow your monster, and data-driven          |
+ |    recommendations help people show up again          |
+ |    and again."                                        |
+ |                                                       |
+ +-------------------------------------------------------+
+
+          Built with <3 for NTU WIT 
+                    Hackathon 2026
+```

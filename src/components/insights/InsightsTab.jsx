@@ -1,5 +1,7 @@
 import React from 'react'
+
 import PersonalityRadarChart from './PersonalityRadarChart'
+
 import InsightStatCards from './InsightStatCards'
 import BelongingLineChart from './BelongingLineChart'
 import WeeklyActivityChart from './WeeklyActivityChart'

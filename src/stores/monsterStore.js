@@ -25,6 +25,7 @@ export const useMonsterStore = create(
           hat: null,
           outfit: null,
         },
+        personalityScores: null,
       },
       monsters: [],
       inventory: [],
@@ -71,6 +72,7 @@ export const useMonsterStore = create(
           id: userId,
           name: quizData.name || 'Buddy',
           monsterType: quizData.monsterType || state.monster.monsterType,
+          personalityScores: quizData.personalityScores || state.monster.personalityScores,
         }
         const hasMonster = state.monsters.some((m) => m.id === userId)
         return {
@@ -316,6 +318,23 @@ export const useMonsterStore = create(
     }),
     {
       name: 'buddybeasts-monster',
+      version: 1,
+      migrate: (persisted, version) => {
+        if (version === 0 || version === undefined) {
+          // Seed personality scores for existing users who took the quiz
+          // before the nurturing trait was added
+          if (persisted.monster && !persisted.monster.personalityScores) {
+            persisted.monster.personalityScores = {
+              social: 3,
+              creative: 4,
+              adventurous: 2,
+              calm: 3,
+              nurturing: 4,
+            }
+          }
+        }
+        return persisted
+      },
     }
   )
 )

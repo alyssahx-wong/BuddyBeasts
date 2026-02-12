@@ -628,6 +628,14 @@ def _seed_data() -> None:
     Base.metadata.create_all(engine)
     db = Session(bind=engine)
     try:
+        # Migrate: add friends column to users table if it doesn't exist
+        from sqlalchemy import inspect as sa_inspect, text
+        inspector = sa_inspect(engine)
+        user_columns = [c["name"] for c in inspector.get_columns("users")]
+        if "friends" not in user_columns:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN friends JSON DEFAULT '[]'"))
+
         # Seed hubs if empty
         if db.query(models.Hub).count() == 0:
             for h in SEED_HUBS:
@@ -1570,6 +1578,35 @@ def confirm_checkin(
     if inst:
         inst.is_active = False
 
+    # Create Connection records for all quest participants
+    if inst:
+        participants = db.query(models.LobbyParticipant).filter(
+            models.LobbyParticipant.instance_id == inst.instance_id
+        ).all()
+        participant_ids = [p.user_id for p in participants]
+        # Build a name lookup
+        p_users = db.query(models.User).filter(models.User.id.in_(participant_ids)).all()
+        name_map = {u.id: u.name for u in p_users}
+        for pid in participant_ids:
+            for other_pid in participant_ids:
+                if pid == other_pid:
+                    continue
+                # Avoid duplicate connections
+                exists = db.query(models.Connection).filter(
+                    models.Connection.user_id == pid,
+                    models.Connection.connected_user_id == other_pid,
+                ).first()
+                if not exists:
+                    db.add(models.Connection(
+                        id=f"conn_{uuid.uuid4().hex[:8]}",
+                        user_id=pid,
+                        connected_user_id=other_pid,
+                        connected_user_name=name_map.get(other_pid, "Unknown"),
+                        timestamp=time.time(),
+                    ))
+        # Update friends list on User records
+        _add_friends_from_quest(db, participant_ids)
+
     db.commit()
 
     connections_made = max(0, body.participantCount - 1)
@@ -1966,6 +2003,29 @@ def complete_quest_with_reaction(
 
         # Mark instance inactive
         inst.is_active = False
+
+        # Create Connection records for all quest participants
+        p_users = db.query(models.User).filter(models.User.id.in_(participant_ids)).all()
+        name_map = {u.id: u.name for u in p_users}
+        for pid in participant_ids:
+            for other_pid in participant_ids:
+                if pid == other_pid:
+                    continue
+                exists = db.query(models.Connection).filter(
+                    models.Connection.user_id == pid,
+                    models.Connection.connected_user_id == other_pid,
+                ).first()
+                if not exists:
+                    db.add(models.Connection(
+                        id=f"conn_{uuid.uuid4().hex[:8]}",
+                        user_id=pid,
+                        connected_user_id=other_pid,
+                        connected_user_name=name_map.get(other_pid, "Unknown"),
+                        timestamp=time.time(),
+                    ))
+        # Update friends list on User records
+        _add_friends_from_quest(db, participant_ids)
+
         db.commit()
 
         return {
@@ -2279,7 +2339,9 @@ def belonging_trend(user: dict = Depends(get_current_user), db: Session = Depend
 
 @app.get("/api/chat/{lobby_id}", tags=["Chat"])
 def get_chat_messages(lobby_id: str, _user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
-    rows = db.query(models.ChatMessage).filter(models.ChatMessage.lobby_id == lobby_id).all()
+    rows = db.query(models.ChatMessage).filter(
+        models.ChatMessage.lobby_id == lobby_id
+    ).order_by(models.ChatMessage.timestamp.asc()).all()
     return [
         {
             "id": r.id,
@@ -2313,6 +2375,138 @@ def send_chat_message(lobby_id: str, body: SendMessageRequest, user: dict = Depe
         "content": msg.content,
         "timestamp": msg.timestamp,
     }
+
+
+# ── Direct Messages ──────────────────────────────────────────────────────────
+
+class StartDMRequest(BaseModel):
+    targetUserId: str
+    targetUserName: str
+
+
+def _dm_lobby_id(uid1: str, uid2: str) -> str:
+    """Deterministic DM lobby id from two user ids."""
+    a, b = sorted([uid1, uid2])
+    return f"dm_{a}_{b}"
+
+
+def _add_friends_from_quest(db: Session, participant_ids: list[str]):
+    """Add all participants as friends of each other in the users.friends JSON column."""
+    if len(participant_ids) < 2:
+        return
+    from sqlalchemy.orm.attributes import flag_modified
+    users = db.query(models.User).filter(models.User.id.in_(participant_ids)).all()
+    name_map = {u.id: u.name for u in users}
+    user_map = {u.id: u for u in users}
+    for uid in participant_ids:
+        u = user_map.get(uid)
+        if not u:
+            continue
+        current_friends = list(u.friends or [])
+        existing_ids = {f["id"] for f in current_friends}
+        changed = False
+        for other_id in participant_ids:
+            if other_id != uid and other_id not in existing_ids:
+                current_friends.append({"id": other_id, "name": name_map.get(other_id, "Unknown")})
+                changed = True
+        if changed:
+            u.friends = current_friends
+            flag_modified(u, "friends")
+
+
+@app.get("/api/friends", tags=["Chat"])
+def list_friends(user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Return the current user's friends list (people they've done quests with)."""
+    u = db.query(models.User).filter(models.User.id == user["id"]).first()
+    if not u:
+        return []
+    return u.friends or []
+
+
+@app.get("/api/dm/contacts", tags=["Chat"])
+def list_dm_contacts(user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Return DM contacts: friends list from the user record."""
+    u = db.query(models.User).filter(models.User.id == user["id"]).first()
+    if not u:
+        return []
+    return [{"id": f["id"], "name": f["name"], "source": "friend"} for f in (u.friends or [])]
+
+
+@app.post("/api/dm/start", tags=["Chat"])
+def start_dm(body: StartDMRequest, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Create or retrieve a DM conversation between two users."""
+    uid1, uid2 = sorted([user["id"], body.targetUserId])
+    name1 = user["name"] if uid1 == user["id"] else body.targetUserName
+    name2 = body.targetUserName if uid1 == user["id"] else user["name"]
+    lobby_id = _dm_lobby_id(uid1, uid2)
+
+    existing = db.query(models.DMConversation).filter(
+        models.DMConversation.id == lobby_id
+    ).first()
+    if existing:
+        return {
+            "id": existing.id,
+            "user1Id": existing.user1_id,
+            "user2Id": existing.user2_id,
+            "user1Name": existing.user1_name,
+            "user2Name": existing.user2_name,
+            "createdAt": existing.created_at,
+        }
+
+    dm = models.DMConversation(
+        id=lobby_id,
+        user1_id=uid1,
+        user2_id=uid2,
+        user1_name=name1,
+        user2_name=name2,
+        created_at=time.time(),
+    )
+    db.add(dm)
+    db.commit()
+    return {
+        "id": dm.id,
+        "user1Id": dm.user1_id,
+        "user2Id": dm.user2_id,
+        "user1Name": dm.user1_name,
+        "user2Name": dm.user2_name,
+        "createdAt": dm.created_at,
+    }
+
+
+@app.get("/api/dm/conversations", tags=["Chat"])
+def list_dm_conversations(user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """List all DM conversations for the current user."""
+    from sqlalchemy import or_
+    rows = db.query(models.DMConversation).filter(
+        or_(
+            models.DMConversation.user1_id == user["id"],
+            models.DMConversation.user2_id == user["id"],
+        )
+    ).all()
+
+    result = []
+    for r in rows:
+        # Figure out who the *other* person is
+        other_id = r.user2_id if r.user1_id == user["id"] else r.user1_id
+        other_name = r.user2_name if r.user1_id == user["id"] else r.user1_name
+
+        # Get last message preview
+        last_msg = db.query(models.ChatMessage).filter(
+            models.ChatMessage.lobby_id == r.id
+        ).order_by(models.ChatMessage.timestamp.desc()).first()
+
+        result.append({
+            "id": r.id,
+            "otherUserId": other_id,
+            "otherUserName": other_name,
+            "lastMessage": last_msg.content if last_msg else "",
+            "lastMessageTime": last_msg.timestamp if last_msg else r.created_at,
+            "createdAt": r.created_at,
+        })
+
+    # Sort by most recent activity
+    result.sort(key=lambda x: x["lastMessageTime"], reverse=True)
+    return result
 
 
 # ── Safety ───────────────────────────────────────────────────────────────────
