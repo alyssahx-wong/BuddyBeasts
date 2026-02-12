@@ -1178,6 +1178,7 @@ def hub_online_users(hub_id: str, db: Session = Depends(get_db)):
                 "evolution": m.evolution if m else "baby",
                 "level": m.level if m else 1,
                 "monsterType": m.selected_monster if m else 1,
+                "monsterImageUrl": m.monster_image_url if m else None,
                 "position": {
                     "x": hash(mem.user_id) % 100,
                     "y": hash(mem.user_id + "y") % 100,
@@ -2826,7 +2827,10 @@ def get_trait_recommendations(
 
     scored.sort(key=lambda x: x[0])
     recommended = [item for _, item in scored[:limit]]
-    comfort_zone = [item for _, item in scored[-limit:]][::-1] if len(scored) > limit else []
+
+    # Comfort zone = furthest distance (opposite of recommended), excluding any already in recommended
+    rec_ids = {item["instanceId"] for item in recommended}
+    comfort_zone = [item for _, item in reversed(scored) if item["instanceId"] not in rec_ids][:limit]
 
     return {"recommended": recommended, "comfortZone": comfort_zone}
 
