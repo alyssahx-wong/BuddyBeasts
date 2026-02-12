@@ -291,11 +291,21 @@ export const useMonsterStore = create(
         }
       }),
 
-      setActiveMonster: (monsterId) => set((state) => {
-        const nextMonster = state.monsters.find((m) => m.id === monsterId)
-        if (!nextMonster) return state
-        return { monster: nextMonster }
-      }),
+      setActiveMonster: async (monsterId) => {
+        const state = get();
+        const nextMonster = state.monsters.find((m) => m.id === monsterId);
+        if (!nextMonster) return;
+        try {
+          // Use monsterType for backend, fallback to nextMonster.monsterType
+          await api.post('/api/monsters/me/select', { monsterType: nextMonster.monsterType });
+          set({ monster: nextMonster });
+          // Optionally, re-fetch from backend to ensure state is up-to-date
+          await get().fetchMonster();
+        } catch (err) {
+          // fallback to local update if backend fails
+          set({ monster: nextMonster });
+        }
+      },
 
       saveGroupPhoto: (photoData) => set((state) => {
         const photo = {
