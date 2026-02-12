@@ -88,7 +88,9 @@ export default function LivingHub() {
               onClick={() => navigate('/profile')}
               className="w-10 h-10 rounded-full overflow-hidden border-2 border-pixel-pink"
             >
-              {user.picture ? (
+              {monster.monsterImageUrl ? (
+                <img src={monster.monsterImageUrl} alt={user.name} className="w-full h-full object-contain bg-pixel-dark" style={{ imageRendering: 'pixelated' }} />
+              ) : user.picture ? (
                 <img src={user.picture} alt={user.name} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full bg-pixel-blue flex items-center justify-center text-white font-pixel text-xs">
@@ -167,6 +169,7 @@ export default function LivingHub() {
                     monsterType={onlineUser.monster?.monsterType}
                     size="medium"
                     animated={true}
+                    customImageUrl={onlineUser.monster?.monsterImageUrl}
                   />
                 </button>
               </div>
@@ -231,6 +234,36 @@ export default function LivingHub() {
           )}
         </div>
 
+        {/* Get Out of Your Comfort Zone */}
+        <div className="mt-6">
+          <h3 className="font-pixel text-xs text-pixel-pink mb-3">Get Out of Your Comfort Zone</h3>
+          {traitRecs.comfortZone && traitRecs.comfortZone.length > 0 ? (
+            <div className="space-y-3">
+              {traitRecs.comfortZone.map((quest) => (
+                <button
+                  key={quest.instanceId}
+                  onClick={() => navigate(`/lobby/${quest.instanceId}`)}
+                  className="pixel-card p-4 flex items-center justify-between w-full text-left hover:border-pixel-pink transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="text-2xl">{quest.icon}</div>
+                    <div>
+                      <p className="font-cute text-sm text-pixel-light font-bold">{quest.title}</p>
+                      <p className="text-[10px] font-cute text-pixel-pink">
+                        {quest.currentParticipants}/{quest.maxParticipants} joined · {quest.maxParticipants - quest.currentParticipants} spots
+                      </p>
+                    </div>
+                  </div>
+                  <span className="px-2 py-1 bg-pixel-pink rounded font-cute text-xs text-white font-bold">TRY IT</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="pixel-card p-4">
+              <p className="text-xs font-game text-pixel-light text-center">No comfort zone quests right now — check back soon!</p>
+            </div>
+          )}
+        </div>
 
       </div>
 

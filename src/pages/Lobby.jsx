@@ -219,7 +219,7 @@ export default function Lobby() {
                     size="medium"
                     animated={true}
                     isPlayer={participant.id === user.id}
-                    customImageUrl={participant.id === user.id ? monster.monsterImageUrl : null}
+                    customImageUrl={participant.monster?.monsterImageUrl}
                   />
                 </div>
               ))}
