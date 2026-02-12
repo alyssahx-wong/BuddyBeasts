@@ -57,14 +57,17 @@ export default function Login() {
             BuddyBeasts
           </h1>
           <p className="text-lg md:text-xl text-pixel-light font-game">
-            Turn local social connection into a living pixel world
+            Beasties. Besties. Monstrously Fun.
           </p>
         </div>
 
         <div className="mb-8 flex justify-center">
-          <div className="w-32 h-32 bg-pixel-pink rounded-lg flex items-center justify-center animate-float">
-            <div className="pixel-border text-6xl">👾</div>
-          </div>
+          <img
+            src="/logo.png"
+            alt="BuddyBeasts Logo"
+            className="w-32 h-32 rounded-lg animate-float shadow-lg"
+            style={{ objectFit: 'cover' }}
+          />
         </div>
 
         {error && (
@@ -88,28 +91,13 @@ export default function Login() {
             {loading ? 'Connecting...' : 'Continue with Google'}
           </button>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t-2 border-pixel-purple"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-pixel-dark text-pixel-light">OR</span>
-            </div>
-          </div>
-
-          <button
-            onClick={handleDemoLogin}
-            disabled={loading}
-            className="pixel-button bg-pixel-blue hover:bg-pixel-green text-white w-full disabled:opacity-50"
-          >
-            {loading ? 'Connecting...' : 'Try Demo'}
-          </button>
+          {/* Only Google login button remains */}
         </div>
 
         <div className="mt-8 text-xs text-pixel-light opacity-75 font-game">
-          <p className="mb-2">🎮 Complete group quests</p>
-          <p className="mb-2">🐾 Grow your pixel monster</p>
-          <p>🤝 Build real community connections</p>
+          <p className="mb-2">🎮 Show up together</p>
+          <p className="mb-2">👾 Grow your beastie</p>
+          <p>🫶 Leave with besties</p>
         </div>
       </div>
     </div>
