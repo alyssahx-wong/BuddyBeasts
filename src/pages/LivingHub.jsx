@@ -138,7 +138,7 @@ export default function LivingHub() {
           </div>
 
           {/* Other Online Monsters */}
-          {onlineUsers.slice(0, 8).map((onlineUser, index) => {
+          {onlineUsers.filter((u) => u.id !== user.id).slice(0, 8).map((onlineUser, index) => {
             const positions = [
               { bottom: '25%', left: '15%' },
               { bottom: '35%', right: '20%' },
