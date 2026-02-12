@@ -1,6 +1,7 @@
 import React from 'react'
 
 import PersonalityRadarChart from './PersonalityRadarChart'
+import MoodTimeline from './MoodTimeline'
 
 import InsightStatCards from './InsightStatCards'
 import BelongingLineChart from './BelongingLineChart'
@@ -17,6 +18,7 @@ export default function InsightsTab({
 }) {
   return (
     <div>
+      <MoodTimeline />
       <PersonalityRadarChart traitScores={traitScores} />
       <InsightStatCards
         stats={stats}
