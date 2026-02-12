@@ -5,6 +5,7 @@ import { useAuthStore } from './stores/authStore'
 import { useMonsterStore } from './stores/monsterStore'
 import { getEvolveAnim } from './components/PixelMonster'
 import EvolutionOverlay from './components/EvolutionOverlay'
+import MonsterChatBubble from './components/MonsterChatBubble'
 
 // Pages
 import Login from './pages/Login'
@@ -47,6 +48,7 @@ function App() {
       <Router>
         <div className="app min-h-screen bg-pixel-dark">
           <EvolutionLayer />
+          <MonsterChatBubble />
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/quiz" element={

@@ -181,6 +181,17 @@ class ChatMessage(Base):
     timestamp = Column(Float, nullable=False)
 
 
+class ChatReadStatus(Base):
+    __tablename__ = "chat_read_status"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    conversation_id = Column(String, nullable=False)
+    last_read_timestamp = Column(Float, nullable=False)
+
+    __table_args__ = (UniqueConstraint("user_id", "conversation_id"),)
+
+
 class DMConversation(Base):
     __tablename__ = "dm_conversations"
 

@@ -1,9 +1,7 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { useHubStore } from '../stores/hubStore'
-import { useMonsterStore } from '../stores/monsterStore'
-import { getComfortZoneQuests, getRecommendedQuests } from '../utils/questTraits'
 import PixelMonster from '../components/PixelMonster'
 import NavigationBar from '../components/NavigationBar'
 import api from '../api'
@@ -12,9 +10,8 @@ export default function LivingHub() {
   const navigate = useNavigate()
   const { user, currentHub } = useAuthStore()
   const { onlineUsers, startPolling, stopPolling } = useHubStore()
-  const personalityScores = useMonsterStore((s) => s.monster.personalityScores)
   const [monster, setMonster] = useState({ evolution: 'baby', level: 1 })
-  const [quests, setQuests] = useState([])
+  const [userStats, setUserStats] = useState({ questsDone: 0, friendsMet: 0, streak: 0 })
   const [showWelcome, setShowWelcome] = useState(true)
   const [traitRecs, setTraitRecs] = useState({ recommended: [], comfortZone: [] })
 
@@ -23,6 +20,7 @@ export default function LivingHub() {
       navigate('/hub-selection')
       return
     }
+
 
     // Fetch the player's own monster from the backend
     api.get('/api/monsters/me').then(({ data }) => {
@@ -45,24 +43,6 @@ export default function LivingHub() {
       clearTimeout(timer)
     }
   }, [currentHub, navigate, startPolling, stopPolling])
-
-const { filteredRecommended, filteredComfortZone } = useMemo(() => {
-    // 1. Get the "Comfort Zone" (Growth) quests first as they have priority
-    const cz = getComfortZoneQuests(quests, personalityScores).slice(0, 3)
-    
-    // 2. Create a Set of IDs currently used in the Comfort Zone section
-    const czIds = new Set(cz.map((q) => q.instanceId || q.id))
-
-    // 3. Get Recommended quests, but filter out any that are already in the CZ section
-    const rec = getRecommendedQuests(quests, personalityScores)
-      .filter((q) => !czIds.has(q.instanceId || q.id))
-      .slice(0, 3)
-
-    return {
-      filteredRecommended: rec,
-      filteredComfortZone: cz,
-    }
-  }, [quests, personalityScores])
 
   const handleJoinQuest = async (quest) => {
     try {
@@ -205,17 +185,17 @@ const { filteredRecommended, filteredComfortZone } = useMemo(() => {
         <div className="mt-6 grid grid-cols-3 gap-3 text-center">
           <div className="pixel-card p-3">
             <p className="text-xl">🏆</p>
-            <p className="font-cute text-sm text-pixel-light font-bold">{monster.questsCompleted}</p>
+            <p className="font-cute text-sm text-pixel-light font-bold">{userStats.questsDone}</p>
             <p className="text-[10px] font-cute text-pixel-blue">Quests Done</p>
           </div>
           <div className="pixel-card p-3">
             <p className="text-xl">🤝</p>
-            <p className="font-cute text-sm text-pixel-light font-bold">{onlineUsers.length}</p>
+            <p className="font-cute text-sm text-pixel-light font-bold">{userStats.friendsMet}</p>
             <p className="text-[10px] font-cute text-pixel-blue">Friends Met</p>
           </div>
           <div className="pixel-card p-3">
             <p className="text-xl">🔥</p>
-            <p className="font-cute text-sm text-pixel-light font-bold">5 days</p>
+            <p className="font-cute text-sm text-pixel-light font-bold">{userStats.streak} days</p>
             <p className="text-[10px] font-cute text-pixel-blue">Streak</p>
           </div>
         </div>

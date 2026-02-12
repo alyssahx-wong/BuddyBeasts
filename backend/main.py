@@ -2528,6 +2528,56 @@ def send_chat_message(lobby_id: str, body: SendMessageRequest, user: dict = Depe
     }
 
 
+@app.post("/api/chat/{lobby_id}/read", tags=["Chat"])
+def mark_chat_read(lobby_id: str, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Mark a chat conversation as read by the user"""
+    # Check if read status exists
+    read_status = db.query(models.ChatReadStatus).filter(
+        models.ChatReadStatus.user_id == user["id"],
+        models.ChatReadStatus.conversation_id == lobby_id
+    ).first()
+    
+    if read_status:
+        read_status.last_read_timestamp = time.time()
+    else:
+        read_status = models.ChatReadStatus(
+            user_id=user["id"],
+            conversation_id=lobby_id,
+            last_read_timestamp=time.time()
+        )
+        db.add(read_status)
+    
+    db.commit()
+    return {"success": True, "lastRead": read_status.last_read_timestamp}
+
+
+@app.get("/api/chat/{lobby_id}/read", tags=["Chat"])
+def get_chat_read_status(lobby_id: str, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get when the user last read this conversation"""
+    read_status = db.query(models.ChatReadStatus).filter(
+        models.ChatReadStatus.user_id == user["id"],
+        models.ChatReadStatus.conversation_id == lobby_id
+    ).first()
+    
+    return {
+        "lobbyId": lobby_id,
+        "lastRead": read_status.last_read_timestamp if read_status else 0
+    }
+
+
+@app.get("/api/chat/read/all", tags=["Chat"])
+def get_all_read_status(user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get all read statuses for the current user"""
+    statuses = db.query(models.ChatReadStatus).filter(
+        models.ChatReadStatus.user_id == user["id"]
+    ).all()
+    
+    return {
+        status.conversation_id: status.last_read_timestamp
+        for status in statuses
+    }
+
+
 # ── Direct Messages ──────────────────────────────────────────────────────────
 
 class StartDMRequest(BaseModel):
