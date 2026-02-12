@@ -14,8 +14,8 @@ export default function NavigationBar() {
   ]
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-pixel-dark border-t-4 border-pixel-purple z-50 pb-safe pt-safe">
-      <div className="max-w-4xl mx-auto flex justify-around items-center py-3 px-2">
+    <nav className="fixed bottom-0 left-0 right-0 bg-pixel-dark border-t-4 border-pixel-purple z-50 pb-safe">
+      <div className="max-w-4xl mx-auto flex justify-around items-center py-1 px-2">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path
           return (
@@ -23,7 +23,7 @@ export default function NavigationBar() {
               key={item.path}
               onClick={() => navigate(item.path)}
               className={`
-                touch-target flex flex-col items-center justify-center gap-1 px-5 py-3 rounded transition-all min-w-[72px]
+                touch-target flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-all min-w-[56px]
                 ${isActive
                   ? 'bg-pixel-purple text-pixel-yellow'
                   : 'text-pixel-light hover:text-pixel-pink'
