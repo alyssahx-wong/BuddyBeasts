@@ -19,6 +19,8 @@ export const useMonsterStore = create(
         preferredQuestTypes: {},
         preferredGroupSize: 'small',
         traitScores: null,
+        monsterImageUrl: null,
+        monsterPrompt: null,
         unlockedSkins: ['default'],
         activeSkin: 'default',
         equippedItems: {
@@ -64,6 +66,21 @@ export const useMonsterStore = create(
         } catch {
           return null
         }
+      },
+
+      generateMonsterImage: async (scores, monsterType, monsterName, variationSeed = 0) => {
+        const { data } = await api.post('/api/monsters/me/generate-image', {
+          ...scores,
+          monsterType,
+          monsterName,
+          variationSeed,
+        }, { timeout: 120000 })
+        if (data && data.id) {
+          set((state) => ({
+            monster: { ...state.monster, ...data },
+          }))
+        }
+        return data
       },
 
       initializeMonster: (userId, quizData = {}) => set((state) => {

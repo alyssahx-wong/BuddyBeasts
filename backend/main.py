@@ -7,6 +7,7 @@ Run:  python main.py          → http://localhost:8000/docs
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import math
 import os
@@ -524,6 +525,8 @@ def monster_to_dict(m: models.Monster) -> dict:
         "preferredQuestTypes": m.preferred_quest_types or {},
         "preferredGroupSize": m.preferred_group_size,
         "traitScores": m.trait_scores,
+        "monsterImageUrl": m.monster_image_url,
+        "monsterPrompt": m.monster_prompt,
     }
 
 
@@ -875,6 +878,16 @@ class TraitScoresRequest(BaseModel):
     calm: int = Field(ge=1, le=10)
     monsterType: int = Field(ge=1, le=18)
     monsterName: str
+
+class GenerateMonsterImageRequest(BaseModel):
+    curious: int = Field(ge=1, le=10)
+    social: int = Field(ge=1, le=10)
+    creative: int = Field(ge=1, le=10)
+    adventurous: int = Field(ge=1, le=10)
+    calm: int = Field(ge=1, le=10)
+    monsterType: int = Field(ge=1, le=18)
+    monsterName: str
+    variationSeed: int = 0
 
 class Profile(BaseModel):
     user: dict
@@ -2149,6 +2162,134 @@ def save_trait_scores(body: TraitScoresRequest, user: dict = Depends(get_current
     if body.monsterType not in (m.collected_monsters or []):
         m.collected_monsters = (m.collected_monsters or []) + [body.monsterType]
     db.commit()
+    return monster_to_dict(m)
+
+
+# ── Sogni AI Monster Image Generation ──────────────────────────────────────
+
+VARIATION_MODIFIERS = [
+    "tiny top hat", "star-shaped markings", "glowing tail tip",
+    "small crystal horn", "leaf-shaped ears", "swirl cheek marks",
+    "striped tail", "sparkle aura", "tiny wings", "heart-shaped paws",
+    "flame-tipped tail", "cloud puff collar", "spiral antennae",
+    "gem forehead", "feathered crest",
+]
+
+
+def build_sogni_prompt(trait_scores: dict, monster_name: str, variation_seed: int = 0) -> str:
+    """Convert numeric trait scores (1-10) to visual descriptors for the Sogni AI prompt."""
+    curious = trait_scores.get("curious", 5)
+    social = trait_scores.get("social", 5)
+    creative = trait_scores.get("creative", 5)
+    adventurous = trait_scores.get("adventurous", 5)
+    calm = trait_scores.get("calm", 5)
+
+    # Eyes based on curious
+    if curious >= 7:
+        eyes = "big curious sparkling eyes"
+    elif curious >= 4:
+        eyes = "alert watchful eyes"
+    else:
+        eyes = "sleepy half-closed eyes"
+
+    # Pose based on social
+    if social >= 7:
+        pose = "open welcoming pose with arms wide"
+    elif social >= 4:
+        pose = "friendly standing stance"
+    else:
+        pose = "shy huddled pose"
+
+    # Colors based on creative
+    if creative >= 7:
+        colors = "rainbow highlights and colorful patterns"
+    elif creative >= 4:
+        colors = "colorful markings and warm tones"
+    else:
+        colors = "simple monochrome palette"
+
+    # Body based on adventurous
+    if adventurous >= 7:
+        body = "muscular build with small wings and horns"
+    elif adventurous >= 4:
+        body = "athletic compact build"
+    else:
+        body = "round soft cuddly body"
+
+    # Aura based on calm
+    if calm >= 7:
+        aura = "flowing peaceful aura with pastel tones"
+    elif calm >= 4:
+        aura = "warm gentle glow with soft colors"
+    else:
+        aura = "electric sparks and neon accents"
+
+    # Pick a variation modifier for regeneration variety
+    modifier = VARIATION_MODIFIERS[variation_seed % len(VARIATION_MODIFIERS)]
+
+    return (
+        f"cute fantasy monster named {monster_name}, {eyes}, {pose}, {body}, "
+        f"{colors}, {aura}, with {modifier}"
+    )
+
+
+@app.post("/api/monsters/me/generate-image", tags=["Monster"])
+async def generate_monster_image(
+    body: GenerateMonsterImageRequest,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate an AI pixel art monster image via Sogni and store it."""
+    m = db.query(models.Monster).filter(models.Monster.user_id == user["id"]).first()
+    if not m:
+        raise HTTPException(status_code=404, detail="Monster not found")
+
+    trait_scores = {
+        "curious": body.curious,
+        "social": body.social,
+        "creative": body.creative,
+        "adventurous": body.adventurous,
+        "calm": body.calm,
+    }
+
+    prompt = build_sogni_prompt(trait_scores, body.monsterName, body.variationSeed)
+
+    # Call generate_monster.js via subprocess (cwd must be backend/ for dotenv path resolution)
+    backend_dir = os.path.dirname(os.path.abspath(__file__))
+    script_path = os.path.join(backend_dir, "generate_monster.js")
+    proc = await asyncio.create_subprocess_exec(
+        "node", script_path, prompt,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        cwd=backend_dir,
+    )
+    stdout, stderr = await proc.communicate()
+
+    if proc.returncode != 0:
+        err_msg = stderr.decode().strip() if stderr else "Unknown error"
+        raise HTTPException(status_code=502, detail=f"Monster generation failed: {err_msg}")
+
+    # Strip dotenv log lines that go to stdout (e.g. "[dotenv@17...] injecting env...")
+    raw_output = stdout.decode()
+    base64_lines = [line for line in raw_output.strip().split("\n") if not line.startswith("[dotenv")]
+    base64_png = "".join(base64_lines).strip()
+    if not base64_png:
+        raise HTTPException(status_code=502, detail="Monster generation returned empty result")
+
+    # Store as data URI (small ~50KB images; avoids Google Drive embedding issues)
+    image_url = f"data:image/png;base64,{base64_png}"
+
+    # Persist to DB
+    m.monster_image_url = image_url
+    m.monster_prompt = prompt
+    m.trait_scores = trait_scores
+    m.monster_type = body.monsterType
+    m.selected_monster = body.monsterType
+    m.name = body.monsterName
+    if body.monsterType not in (m.collected_monsters or []):
+        m.collected_monsters = (m.collected_monsters or []) + [body.monsterType]
+    db.commit()
+
     return monster_to_dict(m)
 
 

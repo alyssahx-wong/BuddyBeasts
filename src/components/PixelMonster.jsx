@@ -51,6 +51,7 @@ export default function PixelMonster({
   animated = false,
   isPlayer = false,
   className = '',
+  customImageUrl = null,
 }) {
   const sizeMap = {
     small: 48,
@@ -58,6 +59,29 @@ export default function PixelMonster({
     large: 112,
   }
   const px = sizeMap[size] || sizeMap.medium
+
+  // If an AI-generated custom image is available, render it instead of the GIF sprite
+  if (customImageUrl) {
+    return (
+      <div
+        className={`inline-block ${animated ? 'animate-float' : ''} ${isPlayer ? 'drop-shadow-lg' : ''} ${className}`}
+        style={{
+          filter: isPlayer ? 'drop-shadow(0 0 8px rgba(255, 230, 109, 0.6))' : 'none',
+        }}
+      >
+        <img
+          src={customImageUrl}
+          alt="Your monster"
+          width={px}
+          height={px}
+          style={{
+            imageRendering: 'pixelated',
+          }}
+          draggable={false}
+        />
+      </div>
+    )
+  }
 
   const type = monsterType && MONSTER_TYPES[monsterType] ? monsterType : 1
   const monsterData = MONSTER_TYPES[type]

@@ -259,6 +259,7 @@ export default function Profile() {
               equippedItems={monster.equippedItems}
               monsterId={monster.monsterId}
               usePixelArt={true}
+              customImageUrl={monster.monsterImageUrl}
             />
           </div>
           <p className="font-game text-pixel-light text-lg mb-4">{monster.name}</p>

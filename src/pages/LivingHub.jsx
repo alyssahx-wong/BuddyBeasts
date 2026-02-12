@@ -27,13 +27,6 @@ export default function LivingHub() {
       if (data && data.id) setMonster(data)
     }).catch(() => {})
 
-    // Fetch user stats for this hub
-    if (currentHub?.id) {
-      api.get(`/api/hubs/${currentHub.id}/user-stats`).then(({ data }) => {
-        setUserStats(data)
-      }).catch(() => {})
-    }
-
     // Fetch trait-based quest recommendations
     api.get('/api/quests/trait-recommendations', { params: { hub_id: currentHub.id, limit: 3 } })
       .then(({ data }) => setTraitRecs(data))
@@ -137,6 +130,7 @@ export default function LivingHub() {
                 size="large"
                 animated={true}
                 isPlayer={true}
+                customImageUrl={monster.monsterImageUrl}
               />
             </div>
           </div>
@@ -211,30 +205,24 @@ export default function LivingHub() {
           <h3 className="font-pixel text-xs text-pixel-yellow mb-3">Recommended For You</h3>
           {traitRecs.recommended.length > 0 ? (
             <div className="space-y-3">
-              {traitRecs.recommended.map((quest) => {
-                const spotsLeft = quest.maxParticipants - quest.currentParticipants
-                return (
-                  <div
-                    key={quest.instanceId}
-                    className="pixel-card p-4 flex items-center gap-3 w-full hover:border-pixel-yellow transition-all"
-                  >
+              {traitRecs.recommended.map((quest) => (
+                <button
+                  key={quest.instanceId}
+                  onClick={() => navigate(`/lobby/${quest.instanceId}`)}
+                  className="pixel-card p-4 flex items-center justify-between w-full text-left hover:border-pixel-yellow transition-all"
+                >
+                  <div className="flex items-center gap-3">
                     <div className="text-2xl">{quest.icon}</div>
-                    <div className="flex-1">
+                    <div>
                       <p className="font-cute text-sm text-pixel-light font-bold">{quest.title}</p>
                       <p className="text-[10px] font-cute text-pixel-blue">
-                        {quest.currentParticipants}/{quest.maxParticipants} joined · {spotsLeft} spots
+                        {quest.currentParticipants}/{quest.maxParticipants} joined · {quest.maxParticipants - quest.currentParticipants} spots
                       </p>
                     </div>
-                    <button
-                      onClick={() => handleJoinQuest(quest)}
-                      disabled={spotsLeft <= 0}
-                      className="px-3 py-2 bg-pixel-green rounded font-cute text-xs text-pixel-dark font-bold hover:bg-pixel-yellow transition-colors"
-                    >
-                      {spotsLeft <= 0 ? 'FULL' : 'JOIN'}
-                    </button>
                   </div>
-                )
-              })}
+                  <span className="px-2 py-1 bg-pixel-yellow rounded font-cute text-xs text-pixel-dark font-bold">JOIN</span>
+                </button>
+              ))}
             </div>
           ) : (
             <div className="pixel-card p-4">
@@ -243,42 +231,7 @@ export default function LivingHub() {
           )}
         </div>
 
-        {/* Get Out of Your Comfort Zone */}
-        <div className="mt-6">
-          <h3 className="font-pixel text-xs text-pixel-pink mb-3">Get Out of Your Comfort Zone</h3>
-          {traitRecs.comfortZone.length > 0 ? (
-            <div className="space-y-3">
-              {traitRecs.comfortZone.map((quest) => {
-                const spotsLeft = quest.maxParticipants - quest.currentParticipants
-                return (
-                  <div
-                    key={quest.instanceId}
-                    className="pixel-card p-4 flex items-center gap-3 w-full hover:border-pixel-pink transition-all border-pixel-pink border-opacity-40"
-                  >
-                    <div className="text-2xl">{quest.icon}</div>
-                    <div className="flex-1">
-                      <p className="font-cute text-sm text-pixel-light font-bold">{quest.title}</p>
-                      <p className="text-[10px] font-cute text-pixel-pink">
-                        {quest.currentParticipants}/{quest.maxParticipants} joined · {spotsLeft} spots
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => handleJoinQuest(quest)}
-                      disabled={spotsLeft <= 0}
-                      className="px-3 py-2 bg-pixel-pink rounded font-cute text-xs text-pixel-dark font-bold hover:bg-pixel-yellow transition-colors"
-                    >
-                      {spotsLeft <= 0 ? 'FULL' : 'TRY IT'}
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
-          ) : (
-            <div className="pixel-card p-4">
-              <p className="text-xs font-game text-pixel-light text-center">No challenge quests available yet — new ones are coming!</p>
-            </div>
-          )}
-        </div>
+
       </div>
 
       {/* Bottom Navigation */}

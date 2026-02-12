@@ -6,7 +6,7 @@ import { useMonsterStore } from '../stores/monsterStore'
 export default function PersonalityQuiz() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const { fetchMonster, saveTraitScores } = useMonsterStore()
+  const { fetchMonster, saveTraitScores, generateMonsterImage } = useMonsterStore()
 
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [scores, setScores] = useState({
@@ -19,6 +19,15 @@ export default function PersonalityQuiz() {
   const [quizComplete, setQuizComplete] = useState(false)
   const [assignedMonster, setAssignedMonster] = useState(null)
   const [loading, setLoading] = useState(true)
+
+  // AI generation state
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [generatedImageUrl, setGeneratedImageUrl] = useState(null)
+  const [generatedPrompt, setGeneratedPrompt] = useState(null)
+  const [generationError, setGenerationError] = useState(null)
+  const [variationSeed, setVariationSeed] = useState(0)
+  const [namingStep, setNamingStep] = useState(false)
+  const [monsterName, setMonsterName] = useState('')
 
   const MONSTERS = [
     { id: 1, name: 'Spark', traits: ['adventurous', 'creative'] },
@@ -40,8 +49,6 @@ export default function PersonalityQuiz() {
     { id: 17, name: 'Frost', traits: ['calm', 'adventurous'] },
     { id: 18, name: 'Zephyr', traits: ['creative', 'social'] },
   ]
-
-  const TRAIT_KEYS = ['curious', 'social', 'creative', 'adventurous', 'calm']
 
   const QUIZ_QUESTIONS = [
     {
@@ -105,7 +112,7 @@ export default function PersonalityQuiz() {
     }
   }
 
-  const completeQuiz = (finalScores) => {
+  const completeQuiz = async (finalScores) => {
     // Find top 2 traits (excluding 'curious' which has no monster mapping)
     const matchableTraits = ['social', 'creative', 'adventurous', 'calm']
     const sortedTraits = matchableTraits
@@ -123,12 +130,59 @@ export default function PersonalityQuiz() {
         : MONSTERS[Math.floor(Math.random() * MONSTERS.length)]
 
     setAssignedMonster(monster)
+    setMonsterName(monster.name)
     setQuizComplete(true)
+    setNamingStep(true)
+  }
+
+  const handleNameSubmit = () => {
+    if (!monsterName.trim()) return
+    setNamingStep(false)
+    generateImage(scores, assignedMonster, 0)
+  }
+
+  const generateImage = async (finalScores, monster, seed) => {
+    setIsGenerating(true)
+    setGenerationError(null)
+    setGeneratedImageUrl(null)
+
+    try {
+      const result = await generateMonsterImage(
+        finalScores,
+        monster.id,
+        monsterName.trim(),
+        seed
+      )
+      if (result && result.monsterImageUrl) {
+        setGeneratedImageUrl(result.monsterImageUrl)
+        setGeneratedPrompt(result.monsterPrompt)
+      } else {
+        setGenerationError('Generation returned no image. You can continue with the default monster.')
+      }
+    } catch (err) {
+      const detail = err?.response?.data?.detail || err?.message || 'Unknown error'
+      const isTimeout = err?.code === 'ECONNABORTED' || detail === 'Network Error'
+      const msg = isTimeout
+        ? 'AI generation timed out. The server may be busy — try again!'
+        : `AI generation failed: ${detail}`
+      setGenerationError(msg)
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const handleRegenerate = () => {
+    const nextSeed = variationSeed + 1
+    setVariationSeed(nextSeed)
+    generateImage(scores, assignedMonster, nextSeed)
   }
 
   const handleContinue = async () => {
     if (!assignedMonster) return
-    await saveTraitScores(scores, assignedMonster.id, assignedMonster.name)
+    // If generation failed, save trait scores with the fallback method
+    if (!generatedImageUrl) {
+      await saveTraitScores(scores, assignedMonster.id, monsterName.trim())
+    }
     navigate('/hub-selection')
   }
 
@@ -210,41 +264,161 @@ export default function PersonalityQuiz() {
               ))}
             </div>
           </div>
-        ) : (
+        ) : namingStep ? (
+          /* Naming Step */
           <div className="text-center">
             <div className="pixel-card p-8 mb-6 bg-pixel-purple bg-opacity-20">
               <p className="text-6xl mb-4 animate-float">✨</p>
-              <h2 className="font-pixel text-xl text-pixel-yellow mb-4">
-                Meet Your Monster!
+              <h2 className="font-pixel text-lg text-pixel-yellow mb-4">
+                Name Your Monster!
               </h2>
-
-              {/* Monster Image */}
-              <div className="pixel-card p-6 bg-pixel-dark mb-6 flex justify-center">
-                <img
-                  src={`/src/monster_imgs/${assignedMonster.id}.png`}
-                  alt="Your monster"
-                  className="h-32 object-contain"
-                />
-              </div>
-
-              <div className="pixel-card p-4 bg-pixel-blue bg-opacity-20 mb-6">
-                <p className="text-xs text-pixel-blue font-game mb-2">Your Companion</p>
-                <p className="font-pixel text-lg text-pixel-light">
-                  {assignedMonster.name}
-                </p>
-              </div>
-
-              <p className="text-xs text-pixel-light font-game mb-6">
-                This monster was created just for you based on your personality. Grow together
-                as you complete quests and create memories.
+              <p className="font-game text-sm text-pixel-light mb-6">
+                Give your new companion a name
               </p>
-
+              <input
+                type="text"
+                value={monsterName}
+                onChange={(e) => setMonsterName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleNameSubmit()}
+                maxLength={20}
+                placeholder="Enter a name..."
+                className="w-full px-4 py-3 mb-6 bg-pixel-dark border-2 border-pixel-purple rounded text-center font-game text-lg text-pixel-light focus:border-pixel-yellow focus:outline-none"
+                autoFocus
+              />
               <button
-                onClick={handleContinue}
-                className="pixel-button bg-pixel-blue text-white w-full py-4"
+                onClick={handleNameSubmit}
+                disabled={!monsterName.trim()}
+                className="pixel-button bg-pixel-blue text-white w-full py-4 disabled:opacity-40"
               >
-                Let's Go! 🚀
+                Create Monster!
               </button>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center">
+            <div className="pixel-card p-8 mb-6 bg-pixel-purple bg-opacity-20">
+              {/* Generating State */}
+              {isGenerating && (
+                <>
+                  <div className="mb-6">
+                    <div className="text-6xl mb-4 animate-pulse">✨</div>
+                    <h2 className="font-pixel text-lg text-pixel-yellow mb-2">
+                      Creating Your Monster...
+                    </h2>
+                    <p className="font-game text-sm text-pixel-light">
+                      Our AI is crafting a unique companion just for you
+                    </p>
+                  </div>
+                  <div className="flex justify-center mb-4">
+                    <div className="w-32 h-32 bg-pixel-dark border-4 border-pixel-purple rounded-lg flex items-center justify-center">
+                      <div className="animate-spin text-4xl">✦</div>
+                    </div>
+                  </div>
+                  <div className="w-full bg-pixel-dark border-2 border-pixel-purple h-3 rounded overflow-hidden">
+                    <div className="bg-pixel-blue h-full animate-pulse" style={{ width: '60%' }} />
+                  </div>
+                </>
+              )}
+
+              {/* Reveal State - AI image generated successfully */}
+              {!isGenerating && generatedImageUrl && (
+                <>
+                  <p className="text-6xl mb-4 animate-float">✨</p>
+                  <h2 className="font-pixel text-xl text-pixel-yellow mb-4">
+                    Meet Your Monster!
+                  </h2>
+
+                  {/* AI-Generated Monster Image */}
+                  <div className="pixel-card p-6 bg-pixel-dark mb-6 flex justify-center">
+                    <img
+                      src={generatedImageUrl}
+                      alt="Your AI-generated monster"
+                      className="h-40 w-40 object-contain"
+                      style={{ imageRendering: 'pixelated' }}
+                    />
+                  </div>
+
+                  <div className="pixel-card p-4 bg-pixel-blue bg-opacity-20 mb-4">
+                    <p className="text-xs text-pixel-blue font-game mb-2">Your Companion</p>
+                    <p className="font-pixel text-lg text-pixel-light">
+                      {monsterName}
+                    </p>
+                  </div>
+
+                  {/* Collapsible prompt details */}
+                  {generatedPrompt && (
+                    <details className="mb-4 text-left">
+                      <summary className="font-game text-xs text-pixel-light opacity-60 cursor-pointer hover:opacity-100">
+                        View AI prompt used
+                      </summary>
+                      <p className="font-game text-xs text-pixel-light opacity-50 mt-2 p-3 bg-pixel-dark rounded">
+                        {generatedPrompt}
+                      </p>
+                    </details>
+                  )}
+
+                  <p className="text-xs text-pixel-light font-game mb-6">
+                    This monster was created just for you by AI based on your personality.
+                    Grow together as you complete quests and create memories.
+                  </p>
+
+                  <button
+                    onClick={handleContinue}
+                    className="pixel-button bg-pixel-blue text-white w-full py-4 mb-3"
+                  >
+                    Let's Go!
+                  </button>
+                  <button
+                    onClick={handleRegenerate}
+                    className="pixel-button bg-pixel-purple text-pixel-light w-full py-3 text-sm"
+                  >
+                    Regenerate Monster
+                  </button>
+                </>
+              )}
+
+              {/* Error State - fallback to static PNG */}
+              {!isGenerating && generationError && !generatedImageUrl && (
+                <>
+                  <p className="text-6xl mb-4 animate-float">✨</p>
+                  <h2 className="font-pixel text-xl text-pixel-yellow mb-4">
+                    Meet Your Monster!
+                  </h2>
+
+                  {/* Fallback Static Image */}
+                  <div className="pixel-card p-6 bg-pixel-dark mb-6 flex justify-center">
+                    <img
+                      src={`/src/monster_imgs/${assignedMonster.id}.png`}
+                      alt="Your monster"
+                      className="h-32 object-contain"
+                    />
+                  </div>
+
+                  <div className="pixel-card p-4 bg-pixel-blue bg-opacity-20 mb-4">
+                    <p className="text-xs text-pixel-blue font-game mb-2">Your Companion</p>
+                    <p className="font-pixel text-lg text-pixel-light">
+                      {monsterName}
+                    </p>
+                  </div>
+
+                  <p className="text-xs text-pixel-yellow font-game mb-4">
+                    {generationError}
+                  </p>
+
+                  <button
+                    onClick={handleContinue}
+                    className="pixel-button bg-pixel-blue text-white w-full py-4 mb-3"
+                  >
+                    Continue with Default
+                  </button>
+                  <button
+                    onClick={handleRegenerate}
+                    className="pixel-button bg-pixel-purple text-pixel-light w-full py-3 text-sm"
+                  >
+                    Retry AI Generation
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}
