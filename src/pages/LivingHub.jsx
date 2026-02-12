@@ -12,6 +12,7 @@ export default function LivingHub() {
   const { onlineUsers, startPolling, stopPolling } = useHubStore()
   const [monster, setMonster] = useState({ evolution: 'baby', level: 1 })
   const [showWelcome, setShowWelcome] = useState(true)
+  const [traitRecs, setTraitRecs] = useState({ recommended: [], comfortZone: [] })
 
   useEffect(() => {
     if (!currentHub) {
@@ -23,6 +24,11 @@ export default function LivingHub() {
     api.get('/api/monsters/me').then(({ data }) => {
       if (data && data.id) setMonster(data)
     }).catch(() => {})
+
+    // Fetch trait-based quest recommendations
+    api.get('/api/quests/trait-recommendations', { params: { hub_id: currentHub.id, limit: 3 } })
+      .then(({ data }) => setTraitRecs(data))
+      .catch(() => {})
 
     // Start polling for online users
     startPolling(currentHub.id)
@@ -182,51 +188,66 @@ export default function LivingHub() {
           </div>
         </div>
 
-        {/* Active Quest */}
-        <div className="mt-6">
-          <h3 className="font-pixel text-xs text-pixel-yellow mb-3">Active Quest</h3>
-          <div className="pixel-card p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="text-2xl">☕</div>
-              <div>
-                <p className="font-cute text-sm text-pixel-light font-bold">Coffee Chat</p>
-                <p className="text-[10px] font-cute text-pixel-blue">Starts in 15 min · 2/3 joined</p>
-              </div>
-            </div>
-            <button
-              onClick={() => navigate('/quests')}
-              className="px-3 py-2 bg-pixel-green rounded font-cute text-xs text-pixel-dark font-bold hover:bg-pixel-yellow transition-colors"
-            >
-              LOBBY
-            </button>
-          </div>
-        </div>
-
         {/* Recommended For You */}
         <div className="mt-6">
           <h3 className="font-pixel text-xs text-pixel-yellow mb-3">Recommended For You</h3>
-          <div className="space-y-3">
-            <button
-              onClick={() => navigate('/quests')}
-              className="pixel-card p-4 flex items-center gap-3 w-full text-left hover:border-pixel-blue transition-all"
-            >
-              <div className="text-2xl">🌇</div>
-              <div>
-                <p className="font-cute text-sm text-pixel-light font-bold">Sunset Walk</p>
-                <p className="text-[10px] font-cute text-pixel-blue">Today 6pm · 3 spots</p>
-              </div>
-            </button>
-            <button
-              onClick={() => navigate('/quests')}
-              className="pixel-card p-4 flex items-center gap-3 w-full text-left hover:border-pixel-blue transition-all"
-            >
-              <div className="text-2xl">📚</div>
-              <div>
-                <p className="font-cute text-sm text-pixel-light font-bold">Study Jam</p>
-                <p className="text-[10px] font-cute text-pixel-blue">Tomorrow 2pm · 2 spots</p>
-              </div>
-            </button>
-          </div>
+          {traitRecs.recommended.length > 0 ? (
+            <div className="space-y-3">
+              {traitRecs.recommended.map((quest) => (
+                <button
+                  key={quest.instanceId}
+                  onClick={() => navigate(`/lobby/${quest.instanceId}`)}
+                  className="pixel-card p-4 flex items-center justify-between w-full text-left hover:border-pixel-yellow transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="text-2xl">{quest.icon}</div>
+                    <div>
+                      <p className="font-cute text-sm text-pixel-light font-bold">{quest.title}</p>
+                      <p className="text-[10px] font-cute text-pixel-blue">
+                        {quest.currentParticipants}/{quest.maxParticipants} joined · {quest.maxParticipants - quest.currentParticipants} spots
+                      </p>
+                    </div>
+                  </div>
+                  <span className="px-2 py-1 bg-pixel-yellow rounded font-cute text-xs text-pixel-dark font-bold">JOIN</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="pixel-card p-4">
+              <p className="text-xs font-game text-pixel-light text-center">No recommended quests right now — check back soon!</p>
+            </div>
+          )}
+        </div>
+
+        {/* Get Out of Your Comfort Zone */}
+        <div className="mt-6">
+          <h3 className="font-pixel text-xs text-pixel-pink mb-3">Get Out of Your Comfort Zone</h3>
+          {traitRecs.comfortZone.length > 0 ? (
+            <div className="space-y-3">
+              {traitRecs.comfortZone.map((quest) => (
+                <button
+                  key={quest.instanceId}
+                  onClick={() => navigate(`/lobby/${quest.instanceId}`)}
+                  className="pixel-card p-4 flex items-center justify-between w-full text-left hover:border-pixel-pink transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="text-2xl">{quest.icon}</div>
+                    <div>
+                      <p className="font-cute text-sm text-pixel-light font-bold">{quest.title}</p>
+                      <p className="text-[10px] font-cute text-pixel-pink">
+                        {quest.currentParticipants}/{quest.maxParticipants} joined · {quest.maxParticipants - quest.currentParticipants} spots
+                      </p>
+                    </div>
+                  </div>
+                  <span className="px-2 py-1 bg-pixel-pink rounded font-cute text-xs text-white font-bold">TRY IT</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="pixel-card p-4">
+              <p className="text-xs font-game text-pixel-light text-center">No challenge quests available yet — new ones are coming!</p>
+            </div>
+          )}
         </div>
       </div>
 

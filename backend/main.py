@@ -474,6 +474,16 @@ QUEST_TRAIT_SCORES = {
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
+def compute_trait_distance(user_traits: dict, quest_type: str) -> float:
+    """Euclidean distance between user trait scores and a quest type's trait scores.
+    Returns -1 if the quest type is not in QUEST_TRAIT_SCORES."""
+    quest_traits = QUEST_TRAIT_SCORES.get(quest_type)
+    if not quest_traits:
+        return -1.0
+    keys = ["curious", "social", "creative", "adventurous", "calm"]
+    return math.sqrt(sum((user_traits.get(k, 5) - quest_traits.get(k, 5)) ** 2 for k in keys))
+
+
 def haversine(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     """Return distance in km between two lat/lng points."""
     R = 6371.0
@@ -2391,6 +2401,49 @@ def get_recommendations(user: dict = Depends(get_current_user), db: Session = De
         "recommendedGroupSize": group_size,
         "bestTimeOfDay": best_time,
     }
+
+
+# ── Trait-Based Quest Recommendations ────────────────────────────────────────
+
+@app.get("/api/quests/trait-recommendations", tags=["Quests"])
+def get_trait_recommendations(
+    hub_id: Optional[str] = Query(None),
+    limit: int = Query(3, ge=1, le=10),
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return quests scored against the user's personality traits.
+    `recommended` = closest match, `comfortZone` = furthest match."""
+
+    monster = db.query(models.Monster).filter(models.Monster.user_id == user["id"]).first()
+    user_traits = monster.trait_scores if monster else None
+    if not user_traits:
+        return {"recommended": [], "comfortZone": []}
+
+    # Fetch active quest instances (optionally filtered by hub)
+    q = db.query(models.QuestInstance).filter(models.QuestInstance.is_active == True)
+    if hub_id:
+        q = q.filter(models.QuestInstance.hub_id == hub_id)
+    instances = q.all()
+
+    scored = []
+    for inst in instances:
+        tpl = db.query(models.QuestTemplate).filter(models.QuestTemplate.id == inst.template_id).first()
+        if not tpl:
+            continue
+        dist = compute_trait_distance(user_traits, tpl.type)
+        if dist < 0:
+            continue
+        pids = [p.user_id for p in db.query(models.InstanceParticipant).filter(
+            models.InstanceParticipant.instance_id == inst.instance_id).all()]
+        creator = db.query(models.User).filter(models.User.id == inst.creator_user_id).first()
+        scored.append((dist, instance_to_dict(inst, tpl, pids, creator.name if creator else None)))
+
+    scored.sort(key=lambda x: x[0])
+    recommended = [item for _, item in scored[:limit]]
+    comfort_zone = [item for _, item in scored[-limit:]][::-1] if len(scored) > limit else []
+
+    return {"recommended": recommended, "comfortZone": comfort_zone}
 
 
 # ── Main ─────────────────────────────────────────────────────────────────────
