@@ -16,6 +16,7 @@ export default function LivingHub() {
   const [monster, setMonster] = useState({ evolution: 'baby', level: 1 })
   const [quests, setQuests] = useState([])
   const [showWelcome, setShowWelcome] = useState(true)
+  const [traitRecs, setTraitRecs] = useState({ recommended: [], comfortZone: [] })
 
   useEffect(() => {
     if (!currentHub) {
@@ -28,9 +29,9 @@ export default function LivingHub() {
       if (data && data.id) setMonster(data)
     }).catch(() => {})
 
-    // Fetch quests for comfort zone section
-    api.get('/api/quests/instances', { params: { hub_id: currentHub.id } })
-      .then(({ data }) => setQuests(data || []))
+    // Fetch trait-based quest recommendations
+    api.get('/api/quests/trait-recommendations', { params: { hub_id: currentHub.id, limit: 3 } })
+      .then(({ data }) => setTraitRecs(data))
       .catch(() => {})
 
     // Start polling for online users
@@ -218,103 +219,38 @@ const { filteredRecommended, filteredComfortZone } = useMemo(() => {
           </div>
         </div>
 
-        {/* Active Quest */}
+        {/* Recommended For You */}
         <div className="mt-6">
-          <h3 className="font-pixel text-xs text-pixel-yellow mb-3">Active Quest</h3>
-          <div className="pixel-card p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="text-2xl">☕</div>
-              <div>
-                <p className="font-cute text-sm text-pixel-light font-bold">Coffee Chat</p>
-                <p className="text-[10px] font-cute text-pixel-blue">Starts in 15 min · 2/3 joined</p>
-              </div>
+          <h3 className="font-pixel text-xs text-pixel-yellow mb-3">Recommended For You</h3>
+          {traitRecs.recommended.length > 0 ? (
+            <div className="space-y-3">
+              {traitRecs.recommended.map((quest) => (
+                <button
+                  key={quest.instanceId}
+                  onClick={() => navigate(`/lobby/${quest.instanceId}`)}
+                  className="pixel-card p-4 flex items-center justify-between w-full text-left hover:border-pixel-yellow transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="text-2xl">{quest.icon}</div>
+                    <div>
+                      <p className="font-cute text-sm text-pixel-light font-bold">{quest.title}</p>
+                      <p className="text-[10px] font-cute text-pixel-blue">
+                        {quest.currentParticipants}/{quest.maxParticipants} joined · {quest.maxParticipants - quest.currentParticipants} spots
+                      </p>
+                    </div>
+                  </div>
+                  <span className="px-2 py-1 bg-pixel-yellow rounded font-cute text-xs text-pixel-dark font-bold">JOIN</span>
+                </button>
+              ))}
             </div>
-            <button
-              onClick={() => navigate('/quests')}
-              className="px-3 py-2 bg-pixel-green rounded font-cute text-xs text-pixel-dark font-bold hover:bg-pixel-yellow transition-colors"
-            >
-              LOBBY
-            </button>
-          </div>
+          ) : (
+            <div className="pixel-card p-4">
+              <p className="text-xs font-game text-pixel-light text-center">No recommended quests right now — check back soon!</p>
+            </div>
+          )}
         </div>
 
-        {/* Recommended For You */}
-        {filteredRecommended.length > 0 && (
-          <div className="mt-6">
-            <h3 className="font-pixel text-xs text-pixel-yellow mb-3">Recommended For You</h3>
-            <div className="space-y-3">
-              {filteredRecommended.map((quest) => {
-                const spotsLeft = quest.maxParticipants - quest.currentParticipants
-                return (
-                  <div
-                    key={`rec-${quest.instanceId || quest.id}`}
-                    className="pixel-card p-4 flex items-center gap-3 w-full hover:border-pixel-blue transition-all"
-                  >
-                    <div className="text-2xl">{quest.icon}</div>
-                    <div className="flex-1">
-                      <p className="font-cute text-sm text-pixel-light font-bold">{quest.title}</p>
-                      <p className="text-[10px] font-cute text-pixel-blue">
-                        {quest.duration}mins · {spotsLeft} spots
-                      </p>
-                      {quest.matchingTraits.length > 0 && (
-                        <p className="text-[10px] font-cute text-pixel-yellow mt-0.5">
-                          Matches: {quest.matchingTraits.join(', ')}
-                        </p>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => handleJoinQuest(quest)}
-                      disabled={spotsLeft <= 0}
-                      className="px-3 py-2 bg-pixel-green rounded font-cute text-xs text-pixel-dark font-bold hover:bg-pixel-yellow transition-colors"
-                    >
-                      {spotsLeft <= 0 ? 'FULL' : 'JOIN'}
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
 
-        {/* Out of Your Comfort Zone */}
-        {filteredComfortZone.length > 0 && (
-          <div className="mt-6">
-            <h3 className="font-pixel text-xs text-pixel-pink mb-3">
-              🔥 Out of Your Comfort Zone
-            </h3>
-            <div className="space-y-3">
-              {filteredComfortZone.map((quest) => {
-                const spotsLeft = quest.maxParticipants - quest.currentParticipants
-                return (
-                  <div
-                    key={`cz-${quest.instanceId || quest.id}`}
-                    className="pixel-card p-4 flex items-center gap-3 w-full hover:border-pixel-pink transition-all border-pixel-pink border-opacity-40"
-                  >
-                    <div className="text-2xl">{quest.icon}</div>
-                    <div className="flex-1">
-                      <p className="font-cute text-sm text-pixel-light font-bold">{quest.title}</p>
-                      <p className="text-[10px] font-cute text-pixel-blue">
-                        {quest.duration}mins · {spotsLeft} spots
-                      </p>
-                      {quest.stretchedTraits.length > 0 && (
-                        <p className="text-[10px] font-cute text-pixel-pink mt-0.5">
-                          🔥 {quest.stretchedTraits.join(', ')}
-                        </p>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => handleJoinQuest(quest)}
-                      disabled={spotsLeft <= 0}
-                      className="px-3 py-2 bg-pixel-pink rounded font-cute text-xs text-pixel-dark font-bold hover:bg-pixel-yellow transition-colors"
-                    >
-                      {spotsLeft <= 0 ? 'FULL' : 'JOIN'}
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Bottom Navigation */}
