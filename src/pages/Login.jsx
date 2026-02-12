@@ -21,7 +21,7 @@ export default function Login() {
         setLoading(true)
         setError(null)
         await loginGoogle(null, codeResponse.code)
-        navigate('/hub-selection')
+        navigate('/quiz')
       } catch (err) {
         console.error('Login error:', err)
         setError('Google login failed. Please try again.')
@@ -39,7 +39,7 @@ export default function Login() {
       setLoading(true)
       setError(null)
       await loginDemo('Demo Player')
-      navigate('/hub-selection')
+      navigate('/quiz')
     } catch (err) {
       console.error('Demo login error:', err)
       setError('Could not connect to server. Is the backend running?')

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { useMonsterStore } from '../stores/monsterStore'
@@ -6,12 +6,19 @@ import { useMonsterStore } from '../stores/monsterStore'
 export default function PersonalityQuiz() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const { initializeMonster } = useMonsterStore()
+  const { fetchMonster, saveTraitScores } = useMonsterStore()
 
   const [currentQuestion, setCurrentQuestion] = useState(0)
-  const [scores, setScores] = useState({ social: 0, creative: 0, adventurous: 0, calm: 0 })
+  const [scores, setScores] = useState({
+    curious: null,
+    social: null,
+    creative: null,
+    adventurous: null,
+    calm: null,
+  })
   const [quizComplete, setQuizComplete] = useState(false)
-  const [assignedMonsterId, setAssignedMonsterId] = useState(null)
+  const [assignedMonster, setAssignedMonster] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   const MONSTERS = [
     { id: 1, name: 'Spark', traits: ['adventurous', 'creative'] },
@@ -34,57 +41,61 @@ export default function PersonalityQuiz() {
     { id: 18, name: 'Zephyr', traits: ['creative', 'social'] },
   ]
 
+  const TRAIT_KEYS = ['curious', 'social', 'creative', 'adventurous', 'calm']
+
   const QUIZ_QUESTIONS = [
     {
-      question: 'How do you spend a weekend?',
-      answers: [
-        { text: 'Out exploring new places', trait: 'adventurous', points: 1 },
-        { text: 'With friends at a gathering', trait: 'social', points: 1 },
-        { text: 'Creating or making something', trait: 'creative', points: 1 },
-        { text: 'Relaxing and recharging', trait: 'calm', points: 1 },
-      ],
+      trait: 'curious',
+      question: 'How eager are you to explore new ideas and learn new things?',
+      lowLabel: 'Not very curious',
+      highLabel: 'Extremely curious',
     },
     {
-      question: 'What activity energizes you the most?',
-      answers: [
-        { text: 'Trying something new and risky', trait: 'adventurous', points: 1 },
-        { text: 'Being around people and connecting', trait: 'social', points: 1 },
-        { text: 'Expressing yourself artistically', trait: 'creative', points: 1 },
-        { text: 'Finding peace and stillness', trait: 'calm', points: 1 },
-      ],
+      trait: 'social',
+      question: 'How much do you enjoy being around others and meeting new people?',
+      lowLabel: 'Prefer solitude',
+      highLabel: 'Love socializing',
     },
     {
-      question: 'When faced with a challenge, you:',
-      answers: [
-        { text: 'Jump in headfirst and learn as you go', trait: 'adventurous', points: 1 },
-        { text: 'Ask others for their perspective', trait: 'social', points: 1 },
-        { text: 'Think of unique, unconventional solutions', trait: 'creative', points: 1 },
-        { text: 'Take time to analyze and plan carefully', trait: 'calm', points: 1 },
-      ],
+      trait: 'creative',
+      question: 'How often do you express yourself through art, ideas, or imagination?',
+      lowLabel: 'Rarely creative',
+      highLabel: 'Always creating',
     },
     {
-      question: 'What do you value most in friendships?',
-      answers: [
-        { text: 'Going on adventures together', trait: 'adventurous', points: 1 },
-        { text: 'Being part of a connected community', trait: 'social', points: 1 },
-        { text: 'Inspiring each other creatively', trait: 'creative', points: 1 },
-        { text: 'Deep, calm conversations', trait: 'calm', points: 1 },
-      ],
+      trait: 'adventurous',
+      question: 'How willing are you to try risky or unfamiliar experiences?',
+      lowLabel: 'Play it safe',
+      highLabel: 'Thrill seeker',
     },
     {
-      question: 'In a group, you tend to be the one who:',
-      answers: [
-        { text: 'Suggests exciting things to try', trait: 'adventurous', points: 1 },
-        { text: 'Brings people together and connects them', trait: 'social', points: 1 },
-        { text: 'Shares new ideas and perspectives', trait: 'creative', points: 1 },
-        { text: 'Listens deeply and offers perspective', trait: 'calm', points: 1 },
-      ],
+      trait: 'calm',
+      question: 'How easily do you find peace and stay relaxed under pressure?',
+      lowLabel: 'Often stressed',
+      highLabel: 'Very calm',
     },
   ]
 
-  const handleAnswer = (trait, points) => {
-    const newScores = { ...scores }
-    newScores[trait] += points
+  // On mount: check if returning user already has trait scores
+  useEffect(() => {
+    const checkExisting = async () => {
+      try {
+        const data = await fetchMonster()
+        if (data && data.traitScores) {
+          navigate('/hub-selection', { replace: true })
+          return
+        }
+      } catch {
+        // continue to quiz
+      }
+      setLoading(false)
+    }
+    checkExisting()
+  }, [])
+
+  const handleScore = (value) => {
+    const trait = QUIZ_QUESTIONS[currentQuestion].trait
+    const newScores = { ...scores, [trait]: value }
     setScores(newScores)
 
     if (currentQuestion < QUIZ_QUESTIONS.length - 1) {
@@ -95,39 +106,43 @@ export default function PersonalityQuiz() {
   }
 
   const completeQuiz = (finalScores) => {
-    // Find the top 2 traits
-    const sortedTraits = Object.entries(finalScores)
-      .sort(([, a], [, b]) => b - a)
+    // Find top 2 traits (excluding 'curious' which has no monster mapping)
+    const matchableTraits = ['social', 'creative', 'adventurous', 'calm']
+    const sortedTraits = matchableTraits
+      .sort((a, b) => finalScores[b] - finalScores[a])
       .slice(0, 2)
-      .map(([trait]) => trait)
 
     // Find a monster that matches the top traits
     const matchingMonsters = MONSTERS.filter((monster) =>
       sortedTraits.every((trait) => monster.traits.includes(trait))
     )
 
-    const assignedMonster =
+    const monster =
       matchingMonsters.length > 0
         ? matchingMonsters[Math.floor(Math.random() * matchingMonsters.length)]
         : MONSTERS[Math.floor(Math.random() * MONSTERS.length)]
 
-    setAssignedMonsterId(assignedMonster.id)
+    setAssignedMonster(monster)
     setQuizComplete(true)
-
-    // Initialize the monster in the store
-    initializeMonster(user?.id, {
-      name: assignedMonster.name,
-      monsterId: assignedMonster.id,
-    })
   }
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
+    if (!assignedMonster) return
+    await saveTraitScores(scores, assignedMonster.id, assignedMonster.name)
     navigate('/hub-selection')
   }
 
   if (!user) {
     navigate('/login')
     return null
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-pixel-dark via-pixel-purple to-pixel-dark flex items-center justify-center">
+        <p className="font-game text-pixel-light animate-pulse">Loading...</p>
+      </div>
+    )
   }
 
   return (
@@ -165,19 +180,32 @@ export default function PersonalityQuiz() {
             </div>
 
             {/* Question */}
-            <h2 className="font-pixel text-base text-pixel-yellow mb-6">
+            <h2 className="font-pixel text-base text-pixel-yellow mb-2">
               {QUIZ_QUESTIONS[currentQuestion].question}
             </h2>
 
-            {/* Answers */}
-            <div className="space-y-3">
-              {QUIZ_QUESTIONS[currentQuestion].answers.map((answer, idx) => (
+            {/* Low/High Labels */}
+            <div className="flex justify-between text-xs font-game text-pixel-light opacity-70 mb-4">
+              <span>{QUIZ_QUESTIONS[currentQuestion].lowLabel}</span>
+              <span>{QUIZ_QUESTIONS[currentQuestion].highLabel}</span>
+            </div>
+
+            {/* 1-10 Scale Buttons */}
+            <div className="grid grid-cols-5 gap-2 sm:grid-cols-10">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => (
                 <button
-                  key={idx}
-                  onClick={() => handleAnswer(answer.trait, answer.points)}
-                  className="w-full pixel-card p-4 text-left hover:border-pixel-yellow transition-all"
+                  key={value}
+                  onClick={() => handleScore(value)}
+                  className={`
+                    w-full aspect-square rounded font-game text-lg
+                    transition-all hover:scale-110
+                    ${scores[QUIZ_QUESTIONS[currentQuestion].trait] === value
+                      ? 'bg-pixel-yellow text-pixel-dark'
+                      : 'bg-pixel-purple text-pixel-light hover:bg-pixel-pink'
+                    }
+                  `}
                 >
-                  <p className="text-sm font-game text-pixel-light">{answer.text}</p>
+                  {value}
                 </button>
               ))}
             </div>
@@ -193,7 +221,7 @@ export default function PersonalityQuiz() {
               {/* Monster Image */}
               <div className="pixel-card p-6 bg-pixel-dark mb-6 flex justify-center">
                 <img
-                  src={`/src/monster_imgs/${assignedMonsterId}.png`}
+                  src={`/src/monster_imgs/${assignedMonster.id}.png`}
                   alt="Your monster"
                   className="h-32 object-contain"
                 />
@@ -202,7 +230,7 @@ export default function PersonalityQuiz() {
               <div className="pixel-card p-4 bg-pixel-blue bg-opacity-20 mb-6">
                 <p className="text-xs text-pixel-blue font-game mb-2">Your Companion</p>
                 <p className="font-pixel text-lg text-pixel-light">
-                  {MONSTERS.find((m) => m.id === assignedMonsterId)?.name}
+                  {assignedMonster.name}
                 </p>
               </div>
 

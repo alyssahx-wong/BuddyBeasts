@@ -210,6 +210,7 @@ export default function Profile() {
             completedQuests={completedQuests}
             belongingScores={belongingScores}
             connections={connections}
+            traitScores={monster.traitScores}
           />
         )}
 

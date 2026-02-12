@@ -18,6 +18,7 @@ export const useMonsterStore = create(
         socialScore: 0,
         preferredQuestTypes: {},
         preferredGroupSize: 'small',
+        traitScores: null,
         unlockedSkins: ['default'],
         activeSkin: 'default',
         equippedItems: {
@@ -35,6 +36,24 @@ export const useMonsterStore = create(
       fetchMonster: async () => {
         try {
           const { data } = await api.get('/api/monsters/me')
+          if (data && data.id) {
+            set((state) => ({
+              monster: { ...state.monster, ...data },
+            }))
+          }
+          return data
+        } catch {
+          return null
+        }
+      },
+
+      saveTraitScores: async (scores, monsterType, monsterName) => {
+        try {
+          const { data } = await api.post('/api/monsters/me/trait-scores', {
+            ...scores,
+            monsterType,
+            monsterName,
+          })
           if (data && data.id) {
             set((state) => ({
               monster: { ...state.monster, ...data },
