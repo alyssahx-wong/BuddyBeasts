@@ -4,7 +4,8 @@
       "Bash(xargs ls:*)",
       "Bash(find:*)",
       "Bash(npm install:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }
