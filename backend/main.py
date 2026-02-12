@@ -437,6 +437,41 @@ SEED_TEMPLATES = [
 ]
 
 
+# ── Quest Trait Scores (curious, social, creative, adventurous, calm) ────────
+# Each quest type is scored 1-10 across five personality traits.
+# Used by the recommendation engine to match quests to user strengths.
+
+QUEST_TRAIT_SCORES = {
+    "coffee_chat":    {"curious": 2, "social": 8, "creative": 3, "adventurous": 2, "calm": 10},
+    "study_jam":      {"curious": 9, "social": 5, "creative": 4, "adventurous": 2, "calm": 7},
+    "sunset_walk":    {"curious": 5, "social": 6, "creative": 4, "adventurous": 5, "calm": 9},
+    "help_neighbor":  {"curious": 3, "social": 7, "creative": 3, "adventurous": 4, "calm": 6},
+    "lunch_crew":     {"curious": 3, "social": 9, "creative": 2, "adventurous": 3, "calm": 8},
+    "game_night":     {"curious": 5, "social": 8, "creative": 4, "adventurous": 5, "calm": 6},
+    "morning_workout":{"curious": 3, "social": 6, "creative": 2, "adventurous": 7, "calm": 4},
+    "art_cafe":       {"curious": 6, "social": 5, "creative": 10, "adventurous": 3, "calm": 7},
+    "board_game":     {"curious": 5, "social": 8, "creative": 4, "adventurous": 4, "calm": 6},
+    "cooking":        {"curious": 7, "social": 6, "creative": 8, "adventurous": 5, "calm": 6},
+    "photo_walk":     {"curious": 8, "social": 5, "creative": 9, "adventurous": 7, "calm": 5},
+    "karaoke":        {"curious": 4, "social": 9, "creative": 7, "adventurous": 6, "calm": 3},
+    "hiking":         {"curious": 7, "social": 5, "creative": 2, "adventurous": 10, "calm": 5},
+    "book_club":      {"curious": 9, "social": 6, "creative": 5, "adventurous": 2, "calm": 8},
+    "movie":          {"curious": 5, "social": 7, "creative": 4, "adventurous": 2, "calm": 9},
+    "volunteer":      {"curious": 5, "social": 7, "creative": 3, "adventurous": 5, "calm": 5},
+    "fitness":        {"curious": 3, "social": 5, "creative": 2, "adventurous": 5, "calm": 9},
+    "trivia":         {"curious": 9, "social": 7, "creative": 4, "adventurous": 4, "calm": 5},
+    "poetry":         {"curious": 7, "social": 6, "creative": 10, "adventurous": 3, "calm": 6},
+    "biking":         {"curious": 6, "social": 6, "creative": 2, "adventurous": 8, "calm": 4},
+    "picnic":         {"curious": 4, "social": 8, "creative": 3, "adventurous": 4, "calm": 9},
+    "learning":       {"curious": 9, "social": 6, "creative": 7, "adventurous": 5, "calm": 5},
+    "exploration":    {"curious": 8, "social": 6, "creative": 4, "adventurous": 7, "calm": 6},
+    "wellness":       {"curious": 5, "social": 4, "creative": 3, "adventurous": 2, "calm": 10},
+    "dance":          {"curious": 5, "social": 7, "creative": 8, "adventurous": 7, "calm": 3},
+    "stargazing":     {"curious": 9, "social": 5, "creative": 5, "adventurous": 6, "calm": 8},
+    "pottery":        {"curious": 7, "social": 5, "creative": 10, "adventurous": 3, "calm": 7},
+}
+
+
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 def haversine(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
@@ -478,6 +513,7 @@ def monster_to_dict(m: models.Monster) -> dict:
         "socialScore": m.social_score,
         "preferredQuestTypes": m.preferred_quest_types or {},
         "preferredGroupSize": m.preferred_group_size,
+        "traitScores": m.trait_scores,
     }
 
 
@@ -565,6 +601,7 @@ def ensure_user_stores(db: Session, user_id: str) -> None:
             social_score=0,
             preferred_quest_types={},
             preferred_group_size="small",
+            trait_scores=None,
         )
         db.add(m)
         db.commit()
@@ -819,6 +856,15 @@ class EvolveRequest(BaseModel):
 class CompleteQuestRequest(BaseModel):
     questType: str
     isGroup: bool = False
+
+class TraitScoresRequest(BaseModel):
+    curious: int = Field(ge=1, le=10)
+    social: int = Field(ge=1, le=10)
+    creative: int = Field(ge=1, le=10)
+    adventurous: int = Field(ge=1, le=10)
+    calm: int = Field(ge=1, le=10)
+    monsterType: int = Field(ge=1, le=18)
+    monsterName: str
 
 class Profile(BaseModel):
     user: dict
@@ -2071,6 +2117,27 @@ def evolve_monster(body: EvolveRequest, user: dict = Depends(get_current_user), 
         existing = m.traits if isinstance(m.traits, list) else []
         merged = list(set(existing + body.traits))
         m.traits = [t for t in merged if t]
+    db.commit()
+    return monster_to_dict(m)
+
+
+@app.post("/api/monsters/me/trait-scores", tags=["Monster"])
+def save_trait_scores(body: TraitScoresRequest, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    m = db.query(models.Monster).filter(models.Monster.user_id == user["id"]).first()
+    if not m:
+        raise HTTPException(status_code=404, detail="Monster not found")
+    m.trait_scores = {
+        "curious": body.curious,
+        "social": body.social,
+        "creative": body.creative,
+        "adventurous": body.adventurous,
+        "calm": body.calm,
+    }
+    m.monster_type = body.monsterType
+    m.selected_monster = body.monsterType
+    m.name = body.monsterName
+    if body.monsterType not in (m.collected_monsters or []):
+        m.collected_monsters = (m.collected_monsters or []) + [body.monsterType]
     db.commit()
     return monster_to_dict(m)
 
