@@ -20,18 +20,11 @@ export default function PersonalityQuiz() {
   const [assignedMonster, setAssignedMonster] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // Skip quiz if user already has personality scores
-  useEffect(() => {
-    if (monster?.personalityScores) {
-      navigate('/hub-selection', { replace: true })
-    }
-  }, [monster?.personalityScores, navigate])
-
   const MONSTERS = [
     { id: 1, name: 'Spark', traits: ['adventurous', 'creative'] },
     { id: 2, name: 'Whisper', traits: ['calm', 'creative'] },
     { id: 3, name: 'Bounce', traits: ['social', 'adventurous'] },
-    { id: 4, name: 'Echo', traits: ['calm', 'nurturing'] },
+    { id: 4, name: 'Echo', traits: ['calm', 'social'] },
     { id: 5, name: 'Flame', traits: ['adventurous', 'adventurous'] },
     { id: 6, name: 'Drift', traits: ['calm', 'calm'] },
     { id: 7, name: 'Pulse', traits: ['creative', 'creative'] },
@@ -39,7 +32,7 @@ export default function PersonalityQuiz() {
     { id: 9, name: 'Ember', traits: ['adventurous', 'creative'] },
     { id: 10, name: 'Glow', traits: ['calm', 'creative'] },
     { id: 11, name: 'Dash', traits: ['social', 'adventurous'] },
-    { id: 12, name: 'Seraph', traits: ['nurturing', 'social'] },
+    { id: 12, name: 'Seraph', traits: ['calm', 'social'] },
     { id: 13, name: 'Blaze', traits: ['adventurous', 'adventurous'] },
     { id: 14, name: 'Hush', traits: ['calm', 'calm'] },
     { id: 15, name: 'Twirl', traits: ['creative', 'creative'] },
