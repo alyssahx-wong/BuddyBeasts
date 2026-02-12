@@ -20,6 +20,13 @@ export default function Chat() {
     startDMConversation,
     startPolling,
     stopPolling,
+    stopBackgroundPolling,
+    loadReadStatus,
+    markConversationRead,
+    blockUser,
+    unblockUser,
+    isUserBlocked,
+    getBlockedUsers,
   } = useChatStore()
   const { onlineUsers: hubOnlineUsers } = useHubStore()
 
@@ -27,20 +34,32 @@ export default function Chat() {
   const [selectedConversation, setSelectedConversation] = useState(null)
   const [showConversationList, setShowConversationList] = useState(true)
   const [showNewDMModal, setShowNewDMModal] = useState(false)
+  const [showBlockedUsers, setShowBlockedUsers] = useState(false)
   const [dmContacts, setDmContacts] = useState([])
   const [dmSearchQuery, setDmSearchQuery] = useState('')
   const [friendsList, setFriendsList] = useState([])
+  const [contextMenu, setContextMenu] = useState(null)
   const messagesEndRef = useRef(null)
 
   // Ensure hub conversation exists on mount & load DM conversations + friends
   useEffect(() => {
+    // Load read status from backend first
+    loadReadStatus()
+    
     if (currentHub) {
       ensureHubConversation(currentHub.id, currentHub.name)
     }
     fetchDMConversations()
     // Load friends list for sidebar
     api.get('/api/friends').then(({ data }) => setFriendsList(data)).catch(() => {})
-  }, [currentHub, ensureHubConversation, fetchDMConversations])
+    
+    // Stop background polling when entering chat page
+    stopBackgroundPolling()
+    
+    return () => {
+      // Background polling will be restarted by NavigationBar
+    }
+  }, [currentHub, ensureHubConversation, fetchDMConversations, stopBackgroundPolling, loadReadStatus])
 
   // Initialize - select first available conversation or hub chat
   useEffect(() => {
@@ -60,9 +79,11 @@ export default function Chat() {
   useEffect(() => {
     if (selectedConversation) {
       startPolling(selectedConversation)
+      // Mark as read immediately when selecting
+      markConversationRead(selectedConversation)
     }
     return () => stopPolling()
-  }, [selectedConversation, startPolling, stopPolling])
+  }, [selectedConversation, startPolling, stopPolling, markConversationRead])
 
   // Derive messages for current conversation
   const conversationMessages = messagesByLobby[selectedConversation] || []
@@ -71,6 +92,13 @@ export default function Chat() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [conversationMessages])
+
+  // Mark as read whenever new messages arrive in the active conversation
+  useEffect(() => {
+    if (selectedConversation && conversationMessages.length > 0) {
+      markConversationRead(selectedConversation)
+    }
+  }, [conversationMessages.length, selectedConversation, markConversationRead])
 
   const handleSendMessage = () => {
     if (!messageText.trim() || !selectedConversation) return
@@ -81,6 +109,7 @@ export default function Chat() {
   const handleSelectConversation = (convId) => {
     setSelectedConversation(convId)
     setCurrentConversation(convId)
+    markConversationRead(convId)
     setShowConversationList(false)
   }
 
@@ -128,6 +157,41 @@ export default function Chat() {
     }
   }
 
+  const handleBlockUser = (userId, userName) => {
+    if (window.confirm(`Block ${userName}? You will no longer see their messages.`)) {
+      blockUser(userId)
+      setContextMenu(null)
+    }
+  }
+
+  const handleUnblockUser = (userId, userName) => {
+    if (window.confirm(`Unblock ${userName}? You will see their messages again.`)) {
+      unblockUser(userId)
+      setContextMenu(null)
+    }
+  }
+
+  const handleContextMenu = (e, message) => {
+    e.preventDefault()
+    if (message.userId === user.id) return // Can't block yourself
+    
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      userId: message.userId,
+      userName: message.userName,
+    })
+  }
+
+  // Close context menu when clicking outside
+  useEffect(() => {
+    const handleClick = () => setContextMenu(null)
+    if (contextMenu) {
+      document.addEventListener('click', handleClick)
+      return () => document.removeEventListener('click', handleClick)
+    }
+  }, [contextMenu])
+
   const filteredContacts = dmContacts.filter((c) =>
     c.name.toLowerCase().includes(dmSearchQuery.toLowerCase())
   )
@@ -166,7 +230,7 @@ export default function Chat() {
           {/* Hub Chat */}
           <div
             onClick={() => handleSelectConversation(hubChatId)}
-            className={`pixel-card p-4 cursor-pointer transition-all ${
+            className={`pixel-card p-4 cursor-pointer transition-all relative ${
               selectedConversation === hubChatId
                 ? 'border-pixel-yellow bg-pixel-yellow bg-opacity-10'
                 : 'hover:border-pixel-blue'
@@ -177,9 +241,23 @@ export default function Chat() {
               <h3 className="font-pixel text-xs text-pixel-light">
                 {currentHub?.name} Hub
               </h3>
+              {(() => {
+                const hubConv = conversations.find((c) => c.id === hubChatId)
+                const unread = hubConv?.unreadCount || 0
+                return unread > 0 && selectedConversation !== hubChatId ? (
+                  <div className="ml-auto w-6 h-6 rounded-full bg-pixel-pink flex items-center justify-center text-white font-pixel text-xs animate-pulse border-2 border-pixel-dark">
+                    {unread > 9 ? '9+' : unread}
+                  </div>
+                ) : null
+              })()}
             </div>
             <p className="text-xs text-pixel-blue font-game">
-              {hubOnlineUsers.length + 1} online
+              {(() => {
+                // Check if current user is already in the online users list
+                const hasCurrentUser = hubOnlineUsers.some(u => u.id === user?.id)
+                const totalOnline = hasCurrentUser ? hubOnlineUsers.length : hubOnlineUsers.length + 1
+                return `${totalOnline} online`
+              })()}
             </p>
           </div>
 
@@ -192,32 +270,40 @@ export default function Chat() {
                 </p>
               </div>
               <div className="max-h-[270px] overflow-y-auto space-y-2 chat-scroll">
-                {questConversations.map((conv) => (
-                  <div
-                    key={conv.id}
-                    onClick={() => handleSelectConversation(conv.id)}
-                    className={`pixel-card p-4 cursor-pointer transition-all ${
-                      selectedConversation === conv.id
-                        ? 'border-pixel-yellow bg-pixel-yellow bg-opacity-10'
-                        : 'hover:border-pixel-blue'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-lg">📋</span>
-                      <h3 className="font-pixel text-xs text-pixel-light">
-                        {conv.name}
-                      </h3>
-                    </div>
-                    <p className="text-xs text-pixel-blue font-game">
-                      {conv.members.length} member{conv.members.length !== 1 ? 's' : ''}
-                    </p>
-                    {conv.lastMessage && (
-                      <p className="text-xs text-pixel-light opacity-75 mt-2 truncate">
-                        {conv.lastMessage}
+                {questConversations.map((conv) => {
+                  const unread = conv.unreadCount || 0
+                  return (
+                    <div
+                      key={conv.id}
+                      onClick={() => handleSelectConversation(conv.id)}
+                      className={`pixel-card p-4 cursor-pointer transition-all relative ${
+                        selectedConversation === conv.id
+                          ? 'border-pixel-yellow bg-pixel-yellow bg-opacity-10'
+                          : 'hover:border-pixel-blue'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-lg">📋</span>
+                        <h3 className="font-pixel text-xs text-pixel-light flex-1">
+                          {conv.name}
+                        </h3>
+                        {unread > 0 && selectedConversation !== conv.id && (
+                          <div className="w-6 h-6 rounded-full bg-pixel-pink flex items-center justify-center text-white font-pixel text-xs animate-pulse border-2 border-pixel-dark">
+                            {unread > 9 ? '9+' : unread}
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-pixel-blue font-game">
+                        {conv.members.length} member{conv.members.length !== 1 ? 's' : ''}
                       </p>
-                    )}
-                  </div>
-                ))}
+                      {conv.lastMessage && (
+                        <p className="text-xs text-pixel-light opacity-75 mt-2 truncate">
+                          {conv.lastMessage}
+                        </p>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </>
           )}
@@ -251,19 +337,25 @@ export default function Chat() {
                 const existingDM = dmConversations.find(
                   (dm) => dm.otherUserId === friend.id
                 )
+                const unread = existingDM?.unreadCount || 0
                 return (
                   <div
                     key={friend.id}
                     onClick={() => handleFriendDM(friend.id, friend.name)}
-                    className={`pixel-card p-3 cursor-pointer transition-all ${
+                    className={`pixel-card p-3 cursor-pointer transition-all relative ${
                       existingDM && selectedConversation === existingDM.id
                         ? 'border-pixel-yellow bg-pixel-yellow bg-opacity-10'
                         : 'hover:border-pixel-blue'
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-pixel-purple flex items-center justify-center text-xs font-pixel">
+                      <div className="w-7 h-7 rounded-full bg-pixel-purple flex items-center justify-center text-xs font-pixel relative">
                         {friend.name.charAt(0).toUpperCase()}
+                        {unread > 0 && existingDM && selectedConversation !== existingDM.id && (
+                          <span className="absolute -top-1 -right-1 w-4 h-4 bg-pixel-pink rounded-full text-white text-[8px] flex items-center justify-center animate-pulse border-2 border-pixel-dark">
+                            {unread > 9 ? '9' : unread}
+                          </span>
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-pixel text-xs text-pixel-light truncate">
@@ -315,7 +407,8 @@ export default function Chat() {
                           message.userId === user.id
                             ? 'bg-pixel-green'
                             : 'bg-pixel-blue'
-                        } pixel-card p-3 rounded`}
+                        } pixel-card p-3 rounded cursor-context-menu`}
+                        onContextMenu={(e) => handleContextMenu(e, message)}
                       >
                         {message.userId !== user.id && (
                           <p className="text-xs font-pixel text-pixel-yellow mb-1">
@@ -446,6 +539,163 @@ export default function Chat() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Blocked Users Modal */}
+      {showBlockedUsers && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4">
+          <div className="pixel-card bg-pixel-dark border-4 border-pixel-purple w-full max-w-md max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b-2 border-pixel-purple">
+              <h2 className="font-pixel text-sm text-pixel-yellow">Blocked Users</h2>
+              <button
+                onClick={() => setShowBlockedUsers(false)}
+                className="text-pixel-light hover:text-pixel-yellow text-xl leading-none"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
+              {getBlockedUsers().length > 0 ? (
+                getBlockedUsers().map((userId) => {
+                  // Try to find user name from friends list or DM conversations
+                  const friend = friendsList.find((f) => f.id === userId)
+                  const dm = dmConversations.find((d) => d.otherUserId === userId)
+                  const userName = friend?.name || dm?.otherUserName || `User ${userId.substring(0, 8)}`
+                  
+                  return (
+                    <div
+                      key={userId}
+                      className="pixel-card p-3 flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-pixel-pink flex items-center justify-center text-sm font-pixel">
+                          {userName.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="font-game text-sm text-pixel-light">
+                          {userName}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          unblockUser(userId)
+                        }}
+                        className="pixel-button bg-pixel-green hover:bg-pixel-blue text-white text-xs px-3 py-1"
+                      >
+                        Unblock
+                      </button>
+                    </div>
+                  )
+                })
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-2">✓</div>
+                  <p className="text-xs text-pixel-light font-game">
+                    No blocked users
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t-2 border-pixel-purple">
+              <p className="text-xs text-pixel-blue font-game text-center">
+                Right-click on any message to block a user
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Blocked Users Modal */}
+      {showBlockedUsers && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4">
+          <div className="pixel-card bg-pixel-dark border-4 border-pixel-purple w-full max-w-md max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b-2 border-pixel-purple">
+              <h2 className="font-pixel text-sm text-pixel-yellow">Blocked Users</h2>
+              <button
+                onClick={() => setShowBlockedUsers(false)}
+                className="text-pixel-light hover:text-pixel-yellow text-xl leading-none"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
+              {getBlockedUsers().length > 0 ? (
+                getBlockedUsers().map((userId) => {
+                  // Try to find user name from friends list or DM conversations
+                  const friend = friendsList.find((f) => f.id === userId)
+                  const dm = dmConversations.find((d) => d.otherUserId === userId)
+                  const userName = friend?.name || dm?.otherUserName || `User ${userId.substring(0, 8)}`
+                  
+                  return (
+                    <div
+                      key={userId}
+                      className="pixel-card p-3 flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-pixel-pink flex items-center justify-center text-sm font-pixel">
+                          {userName.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="font-game text-sm text-pixel-light">
+                          {userName}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          unblockUser(userId)
+                        }}
+                        className="pixel-button bg-pixel-green hover:bg-pixel-blue text-white text-xs px-3 py-1"
+                      >
+                        Unblock
+                      </button>
+                    </div>
+                  )
+                })
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-2">✓</div>
+                  <p className="text-xs text-pixel-light font-game">
+                    No blocked users
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t-2 border-pixel-purple">
+              <p className="text-xs text-pixel-blue font-game text-center">
+                Right-click on any message to block a user
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Context Menu for Blocking */}
+      {contextMenu && (
+        <div
+          className="fixed z-50 pixel-card bg-pixel-dark border-2 border-pixel-purple py-1 shadow-lg"
+          style={{
+            left: contextMenu.x,
+            top: contextMenu.y,
+          }}
+        >
+          {isUserBlocked(contextMenu.userId) ? (
+            <button
+              onClick={() => handleUnblockUser(contextMenu.userId, contextMenu.userName)}
+              className="w-full px-4 py-2 text-left text-sm font-game text-pixel-light hover:bg-pixel-green hover:text-white transition-colors"
+            >
+              ✓ Unblock {contextMenu.userName}
+            </button>
+          ) : (
+            <button
+              onClick={() => handleBlockUser(contextMenu.userId, contextMenu.userName)}
+              className="w-full px-4 py-2 text-left text-sm font-game text-pixel-pink hover:bg-pixel-pink hover:text-white transition-colors"
+            >
+              🚫 Block {contextMenu.userName}
+            </button>
+          )}
         </div>
       )}
 

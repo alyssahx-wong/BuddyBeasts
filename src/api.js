@@ -20,4 +20,10 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// Mark a conversation as read and sync with backend (if available)
+export async function markConversationRead(conversationId) {
+  // If you have a backend endpoint, call it here
+  // await api.post('/api/chat/read-status', { conversationId, lastReadTimestamp: Date.now() / 1000 })
+}
+
 export default api
