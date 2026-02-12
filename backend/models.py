@@ -54,8 +54,6 @@ class Monster(Base):
     preferred_quest_types = Column(JSON, nullable=False, default=dict)
     preferred_group_size = Column(String, nullable=False, default="small")
     trait_scores = Column(JSON, nullable=True, default=None)
-    # New: stores per-monster-type profile data
-    monster_profiles = Column(JSON, nullable=False, default=dict)  # {type_id: {profile_data}}
 
 
 class Hub(Base):
