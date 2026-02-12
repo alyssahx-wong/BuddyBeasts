@@ -218,7 +218,14 @@ export default function Profile() {
         {/* User Card */}
         <div className="pixel-card p-6 mb-6 bg-gradient-to-br from-pixel-blue to-pixel-purple bg-opacity-20">
           <div className="flex items-center gap-4 mb-4">
-            {user.picture ? (
+            {monster.monsterImageUrl ? (
+              <img
+                src={monster.monsterImageUrl}
+                alt={user.name}
+                className="w-16 h-16 rounded-full border-4 border-pixel-yellow bg-pixel-dark object-contain"
+                style={{ imageRendering: 'pixelated' }}
+              />
+            ) : user.picture ? (
               <img
                 src={user.picture}
                 alt={user.name}
