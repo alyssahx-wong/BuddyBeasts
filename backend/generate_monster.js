@@ -1,8 +1,13 @@
 import { SogniClient } from '@sogni-ai/sogni-client';
 import dotenv from 'dotenv';
+import fs from 'fs';
 import sharp from 'sharp';
 
-dotenv.config({ path: '../.env.local' });
+// Only load .env.local if it exists (not needed inside Docker where env vars are injected)
+const envPath = '../.env.local';
+if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+}
 
 const prompt = process.argv[2];
 if (!prompt) {

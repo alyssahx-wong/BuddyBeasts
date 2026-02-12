@@ -150,6 +150,7 @@ const { filteredRecommended, filteredComfortZone } = useMemo(() => {
                 size="large"
                 animated={true}
                 isPlayer={true}
+                customImageUrl={monster.monsterImageUrl}
               />
             </div>
           </div>

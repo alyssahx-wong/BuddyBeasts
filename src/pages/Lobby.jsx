@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
+import { useMonsterStore } from '../stores/monsterStore'
 import PixelMonster from '../components/PixelMonster'
 import api from '../api'
 import coffeeBg from '../icons/coffee.png'
@@ -18,6 +19,7 @@ export default function Lobby() {
   const navigate = useNavigate()
   const { questId } = useParams()
   const { user } = useAuthStore()
+  const { monster } = useMonsterStore()
 
   const [lobby, setLobby] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -217,6 +219,7 @@ export default function Lobby() {
                     size="medium"
                     animated={true}
                     isPlayer={participant.id === user.id}
+                    customImageUrl={participant.id === user.id ? monster.monsterImageUrl : null}
                   />
                 </div>
               ))}

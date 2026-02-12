@@ -54,6 +54,8 @@ class Monster(Base):
     preferred_quest_types = Column(JSON, nullable=False, default=dict)
     preferred_group_size = Column(String, nullable=False, default="small")
     trait_scores = Column(JSON, nullable=True, default=None)
+    monster_image_url = Column(Text, nullable=True, default=None)
+    monster_prompt = Column(Text, nullable=True, default=None)
 
 
 class Hub(Base):
