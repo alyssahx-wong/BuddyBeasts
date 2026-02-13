@@ -84,6 +84,17 @@ canvas, img {
   scrollbar-color: #4A3B8C transparent;
 }
 
+@keyframes bounce-in {
+  0% { transform: scale(0.3); opacity: 0; }
+  50% { transform: scale(1.08); opacity: 1; }
+  70% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.4s ease-out;
+}
+
 /* Animations */
 @keyframes float {
   0%, 100% { transform: translateY(0px); }

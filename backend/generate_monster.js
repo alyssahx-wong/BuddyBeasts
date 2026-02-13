@@ -23,13 +23,47 @@ async function removeBackgroundAndCrop(inputBuffer) {
 
   const { width, height } = info;
 
-  // Only remove pixels that are very close to pure white (>250 all channels)
-  for (let i = 0; i < data.length; i += 4) {
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
-    if (r > 250 && g > 250 && b > 250) {
-      data[i + 3] = 0;
+  // Flood-fill from edges to remove only the background white,
+  // preserving white pixels inside the character (e.g. belly, eyes)
+  const isNearWhite = (idx) =>
+    data[idx] > 240 && data[idx + 1] > 240 && data[idx + 2] > 240;
+
+  const visited = new Uint8Array(width * height);
+  const queue = [];
+
+  // Seed the queue with all near-white edge pixels
+  for (let x = 0; x < width; x++) {
+    if (isNearWhite(x * 4)) queue.push(x);
+    const bottom = (height - 1) * width + x;
+    if (isNearWhite(bottom * 4)) queue.push(bottom);
+  }
+  for (let y = 1; y < height - 1; y++) {
+    const left = y * width;
+    if (isNearWhite(left * 4)) queue.push(left);
+    const right = y * width + (width - 1);
+    if (isNearWhite(right * 4)) queue.push(right);
+  }
+
+  // BFS flood fill — only spreads through connected near-white pixels
+  for (const seed of queue) visited[seed] = 1;
+  let head = 0;
+  while (head < queue.length) {
+    const pos = queue[head++];
+    const x = pos % width;
+    const y = (pos - x) / width;
+    data[pos * 4 + 3] = 0; // make transparent
+
+    const neighbors = [
+      y > 0 ? pos - width : -1,
+      y < height - 1 ? pos + width : -1,
+      x > 0 ? pos - 1 : -1,
+      x < width - 1 ? pos + 1 : -1,
+    ];
+    for (const n of neighbors) {
+      if (n >= 0 && !visited[n] && isNearWhite(n * 4)) {
+        visited[n] = 1;
+        queue.push(n);
+      }
     }
   }
 
@@ -76,13 +110,13 @@ async function run() {
 
   const project = await sogni.projects.create({
     type: 'image',
-    modelId: 'flux1-schnell-fp8',
-    positivePrompt: `pixel art, 8-bit retro game sprite, full body from head to feet, standing on ground, visible legs and feet, centered in frame, front view, ${prompt}, flat colors, clean edges, solid white background, single character, small character in large frame, wide margin around character`,
-    negativePrompt: 'blurry, gradient, shadow, 3d, digital painting, anti-aliasing, cropped, cut off, partial, half body, portrait only, close-up, headshot, bust, zoomed in, no legs, no feet, floating',
+    modelId: 'flux1-schnell-fp8', // flux1-schnell-fp8
+    positivePrompt: `full body standing character, full body from head to feet, pixel art, 8-bit retro game sprite, standing on ground, visible legs and feet, centered in frame, front view, ${prompt}, flat colors, clean edges, solid white background, single character, small character in large frame, wide margin around character, fully visible character, wide shot, full figure with legs and feet on ground`,
+    negativePrompt: '',
     steps: 8,
     guidance: 3.5,
     numberOfMedia: 1,
-    sizePreset: 'portrait_7_9',
+    sizePreset: 'square',
     tokenType: 'spark',
   });
 
@@ -92,7 +126,9 @@ async function run() {
   const response = await fetch(imageUrl);
   const originalBuffer = Buffer.from(await response.arrayBuffer());
 
+
   const processedBuffer = await removeBackgroundAndCrop(originalBuffer);
+
 
   // Output base64 PNG to stdout for the Python caller
   process.stdout.write(processedBuffer.toString('base64'));
