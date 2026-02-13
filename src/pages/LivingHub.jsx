@@ -211,7 +211,7 @@ export default function LivingHub() {
               {traitRecs.recommended.map((quest) => (
                 <button
                   key={quest.instanceId}
-                  onClick={() => navigate(`/lobby/${quest.instanceId}`)}
+                  onClick={() => handleJoinQuest(quest)}
                   className="pixel-card p-4 flex items-center justify-between w-full text-left hover:border-pixel-yellow transition-all"
                 >
                   <div className="flex items-center gap-3">
@@ -242,7 +242,7 @@ export default function LivingHub() {
               {traitRecs.comfortZone.map((quest) => (
                 <button
                   key={quest.instanceId}
-                  onClick={() => navigate(`/lobby/${quest.instanceId}`)}
+                  onClick={() => handleJoinQuest(quest)}
                   className="pixel-card p-4 flex items-center justify-between w-full text-left hover:border-pixel-pink transition-all"
                 >
                   <div className="flex items-center gap-3">
