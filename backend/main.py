@@ -1431,8 +1431,15 @@ def _build_lobby_state(db: Session, instance_id: str) -> dict:
 
     lobby_parts = db.query(models.LobbyParticipant).filter(
         models.LobbyParticipant.instance_id == instance_id).all()
-    participants = []
+    # Deduplicate by user_id (keep first entry per user)
+    seen_user_ids = set()
+    unique_lobby_parts = []
     for lp in lobby_parts:
+        if lp.user_id not in seen_user_ids:
+            seen_user_ids.add(lp.user_id)
+            unique_lobby_parts.append(lp)
+    participants = []
+    for lp in unique_lobby_parts:
         u = db.query(models.User).filter(models.User.id == lp.user_id).first()
         m = db.query(models.Monster).filter(models.Monster.user_id == lp.user_id).first()
         participants.append({

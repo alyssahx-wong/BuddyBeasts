@@ -235,6 +235,7 @@ export default function MonsterChatBubble() {
             monsterType={monster.monsterType}
             size="small"
             className="pointer-events-none"
+            customImageUrl={monster.monsterImageUrl}
           />
           {hasUnread && (
             <span className="absolute -top-1 -right-1 w-4 h-4 bg-pixel-pink rounded-full border-2 border-pixel-dark animate-pulse" />
@@ -300,6 +301,7 @@ export default function MonsterChatBubble() {
                       monsterType={monster.monsterType}
                       size="small"
                       className="pointer-events-none"
+                      customImageUrl={monster.monsterImageUrl}
                     />
                   </div>
                 )}
