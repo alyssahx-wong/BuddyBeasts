@@ -58,7 +58,12 @@ export default function QRCheckIn() {
     const interval = setInterval(async () => {
       try {
         const { data } = await api.get(`/api/quests/${questId}/group-photo`)
-        const photoSrc = data.imageUrl || data.photoData
+        // Prefer base64 data; fix old Drive URLs if that's all we have
+        let photoSrc = data.photoData || data.imageUrl
+        if (photoSrc && photoSrc.includes('drive.google.com/uc?id=')) {
+          const m = photoSrc.match(/drive\.google\.com\/uc\?id=([^&]+)/)
+          if (m) photoSrc = `https://drive.google.com/thumbnail?id=${m[1]}&sz=w1000`
+        }
         if (photoSrc && !groupPhotoData) {
           setGroupPhotoData({
             photoData: photoSrc,
@@ -156,7 +161,7 @@ export default function QRCheckIn() {
         groupSize: lobby?.participants?.length || 1,
       })
 
-      const displaySrc = uploadResult.imageUrl || photoPreview
+      const displaySrc = photoPreview
 
       if (saveGroupPhoto) {
         saveGroupPhoto({
