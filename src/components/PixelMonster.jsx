@@ -83,8 +83,12 @@ export default function PixelMonster({
     )
   }
 
-  const type = monsterType && MONSTER_TYPES[monsterType] ? monsterType : 1
-  const monsterData = MONSTER_TYPES[type]
+  // If no valid monster type is set, render nothing (avoids flashing a default penguin)
+  if (!monsterType || !MONSTER_TYPES[monsterType]) {
+    return <div className={`inline-block ${className}`} style={{ width: px, height: px }} />
+  }
+
+  const monsterData = MONSTER_TYPES[monsterType]
 
   // Use evolved sprite if evolution is teen or above AND an evolved form exists
   const isEvolved = evolution !== 'baby' && monsterData.evolved
