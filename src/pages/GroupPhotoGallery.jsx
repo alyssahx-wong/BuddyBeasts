@@ -2,8 +2,16 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api'
 
+function fixDriveUrl(url) {
+  if (!url) return url
+  // Convert old broken uc?export=view URLs to working thumbnail URLs
+  const match = url.match(/drive\.google\.com\/uc\?id=([^&]+)/)
+  if (match) return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`
+  return url
+}
+
 function getPhotoSrc(photo) {
-  return photo.imageUrl || photo.imageData || photo.imageBase64
+  return photo.imageData || photo.imageBase64 || fixDriveUrl(photo.imageUrl)
 }
 
 export default function GroupPhotoGallery() {

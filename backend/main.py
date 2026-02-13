@@ -1710,7 +1710,7 @@ def upload_to_google_drive(user_id: str, image_bytes: bytes, filename: str, db: 
         body={"role": "reader", "type": "anyone"},
     ).execute()
 
-    return f"https://drive.google.com/uc?id={file_id}&export=view"
+    return f"https://drive.google.com/thumbnail?id={file_id}&sz=w1000"
 
 
 @app.post("/api/quests/photos/upload", tags=["Quest Photos"])
@@ -1721,43 +1721,43 @@ def upload_quest_photo(
 ):
     """Upload a group photo after completing a quest."""
     photo_id = f"photo_{uuid.uuid4().hex[:12]}"
-    image_url = None
-    image_data = None
-    is_demo = user["id"].startswith("demo_")
+    image_data = body.imageData
 
+    # Save to DB immediately with base64 so all participants can view the photo
+    photo = models.QuestPhoto(
+        id=photo_id,
+        quest_id=body.questId,
+        user_id=user["id"],
+        image_data=image_data,
+        image_url=None,
+        group_memory=body.groupMemory,
+        group_size=body.groupSize,
+        timestamp=time.time() * 1000,
+    )
+    db.add(photo)
+    db.commit()
+
+    # Best-effort: try Google Drive upload after DB save
+    image_url = None
+    is_demo = user["id"].startswith("demo_")
     if not is_demo:
-        # Try Google Drive upload for authenticated users
         try:
-            # Strip data URI prefix if present
             raw = body.imageData
             if "," in raw:
                 raw = raw.split(",", 1)[1]
             image_bytes = base64.b64decode(raw)
             filename = f"quest_{body.questId}_{photo_id}.jpg"
             image_url = upload_to_google_drive(user["id"], image_bytes, filename, db)
-        except Exception as exc:
-            # Fall back to base64 storage if Drive upload fails
-            image_data = body.imageData
-    else:
-        # Demo users: store base64 directly
-        image_data = body.imageData
-
-    db.add(models.QuestPhoto(
-        id=photo_id,
-        quest_id=body.questId,
-        user_id=user["id"],
-        image_data=image_data,
-        image_url=image_url,
-        group_memory=body.groupMemory,
-        group_size=body.groupSize,
-        timestamp=time.time() * 1000,
-    ))
-    db.commit()
+            photo.image_url = image_url
+            db.commit()
+        except Exception:
+            pass
 
     return {
         "success": True,
         "photoId": photo_id,
         "imageUrl": image_url,
+        "imageData": image_data,
         "message": "Photo saved to gallery",
     }
 
