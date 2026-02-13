@@ -1161,12 +1161,33 @@ def join_hub(hub_id: str, user: dict = Depends(get_current_user), db: Session = 
     return {"ok": True, "hubId": hub_id}
 
 
+ONLINE_TIMEOUT = 30  # seconds — users inactive longer than this are considered offline
+
+
+@app.post("/api/hubs/{hub_id}/heartbeat", tags=["Hubs"])
+def hub_heartbeat(hub_id: str, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Update the user's last_active timestamp to mark them as online."""
+    mem = db.query(models.HubMember).filter(
+        models.HubMember.hub_id == hub_id,
+        models.HubMember.user_id == user["id"],
+    ).first()
+    if mem:
+        mem.last_active = time.time()
+        db.commit()
+    return {"ok": True}
+
+
 @app.get("/api/hubs/{hub_id}/users", tags=["Hubs"])
 def hub_online_users(hub_id: str, db: Session = Depends(get_db)):
     h = db.query(models.Hub).filter(models.Hub.id == hub_id).first()
     if not h:
         raise HTTPException(status_code=404, detail="Hub not found")
-    members = db.query(models.HubMember).filter(models.HubMember.hub_id == hub_id).all()
+    cutoff = time.time() - ONLINE_TIMEOUT
+    members = db.query(models.HubMember).filter(
+        models.HubMember.hub_id == hub_id,
+        models.HubMember.last_active != None,
+        models.HubMember.last_active >= cutoff,
+    ).all()
     result = []
     for mem in members:
         u = db.query(models.User).filter(models.User.id == mem.user_id).first()

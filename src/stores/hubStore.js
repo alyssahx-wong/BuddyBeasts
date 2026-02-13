@@ -23,6 +23,14 @@ export const useHubStore = create((set, get) => ({
     completedQuests: [...state.completedQuests, quest]
   })),
 
+  sendHeartbeat: async (hubId) => {
+    try {
+      await api.post(`/api/hubs/${hubId}/heartbeat`)
+    } catch {
+      // ignore heartbeat failures
+    }
+  },
+
   fetchOnlineUsers: async (hubId) => {
     try {
       const { data } = await api.get(`/api/hubs/${hubId}/users`)
@@ -32,12 +40,17 @@ export const useHubStore = create((set, get) => ({
     }
   },
 
-  // Poll the backend for online users every 5 seconds
+  // Poll the backend for online users every 5 seconds, with heartbeat
   startPolling: (hubId) => {
-    const { fetchOnlineUsers, stopPolling } = get()
+    const { fetchOnlineUsers, sendHeartbeat, stopPolling } = get()
     stopPolling()
+    // Send initial heartbeat + fetch
+    sendHeartbeat(hubId)
     fetchOnlineUsers(hubId)
-    const interval = setInterval(() => fetchOnlineUsers(hubId), 5000)
+    const interval = setInterval(() => {
+      sendHeartbeat(hubId)
+      fetchOnlineUsers(hubId)
+    }, 5000)
     set({ pollingInterval: interval })
   },
 

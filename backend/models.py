@@ -74,6 +74,7 @@ class HubMember(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     hub_id = Column(String, ForeignKey("hubs.id"), nullable=False)
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    last_active = Column(Float, nullable=True, default=None)
 
     __table_args__ = (UniqueConstraint("hub_id", "user_id"),)
 
