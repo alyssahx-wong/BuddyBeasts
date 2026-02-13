@@ -22,6 +22,7 @@ export default function QuestBoard() {
   const [filter, setFilter] = useState('all')
   const [recommendations, setRecommendations] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [dialog, setDialog] = useState({ open: false, message: '', icon: '' })
 
   useEffect(() => {
     if (!currentHub) {
@@ -99,7 +100,7 @@ export default function QuestBoard() {
       navigate(`/lobby/${instanceId}`)
     } catch (err) {
       console.error('Failed to join quest:', err)
-      alert('Could not join quest. Please try again.')
+      setDialog({ open: true, message: 'Could not join quest. Please try again.', icon: '😿' })
     }
   }
 
@@ -121,10 +122,10 @@ export default function QuestBoard() {
       }))
       setQuests(instances)
 
-      alert('Quest deleted successfully')
+      setDialog({ open: true, message: 'Quest deleted successfully!', icon: '✅' })
     } catch (err) {
       console.error('Failed to delete quest:', err)
-      alert(err.response?.data?.detail || 'Could not delete quest. Please try again.')
+      setDialog({ open: true, message: err.response?.data?.detail || 'Could not delete quest. Please try again.', icon: '😿' })
     }
   }
 
@@ -152,7 +153,7 @@ export default function QuestBoard() {
             <button
               onClick={() => {
                 if (monster.level < 4) {
-                  alert(`Level ${monster.level} - Create Unlocks at Level 4`)
+                  setDialog({ open: true, message: `Level ${monster.level} - Create Unlocks at Level 4`, icon: '🔒' })
                 } else {
                   navigate('/quests/create')
                 }
@@ -333,6 +334,22 @@ export default function QuestBoard() {
           </p>
         </div>
       </div>
+
+      {/* Custom Dialog */}
+      {dialog.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+          <div className="bg-pixel-dark border-4 border-pixel-purple rounded-2xl p-6 mx-6 max-w-sm w-full text-center shadow-lg shadow-pixel-purple/30 animate-bounce-in">
+            <div className="text-5xl mb-4">{dialog.icon}</div>
+            <p className="font-game text-lg text-pixel-light mb-6">{dialog.message}</p>
+            <button
+              onClick={() => setDialog({ open: false, message: '', icon: '' })}
+              className="pixel-button bg-pixel-purple hover:bg-pixel-blue text-pixel-light px-8 py-2 text-sm"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
 
       <NavigationBar />
     </div>
