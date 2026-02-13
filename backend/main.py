@@ -33,6 +33,14 @@ from sqlalchemy.orm import Session
 from database import Base, engine, get_db
 import models
 
+from rembg import remove as rembg_remove
+
+def remove_background_b64(raw_b64: str) -> str:
+    """Remove background from a base64-encoded image using rembg, return base64 PNG."""
+    input_bytes = base64.b64decode(raw_b64)
+    output_bytes = rembg_remove(input_bytes)
+    return base64.b64encode(output_bytes).decode()
+
 GOOGLE_CLIENT_ID = os.environ.get("VITE_GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 
@@ -2316,10 +2324,12 @@ async def generate_evolved_image(
 
     raw_output = stdout.decode()
     base64_lines = [line for line in raw_output.strip().split("\n") if not line.startswith("[dotenv")]
-    base64_png = "".join(base64_lines).strip()
-    if not base64_png:
+    raw_b64 = "".join(base64_lines).strip()
+    if not raw_b64:
         raise HTTPException(status_code=502, detail="Evolved image generation returned empty result")
 
+    # AI-based background removal
+    base64_png = remove_background_b64(raw_b64)
     image_url = f"data:image/png;base64,{base64_png}"
 
     m.monster_image_url = image_url
@@ -2368,11 +2378,12 @@ async def generate_monster_image(
     # Strip dotenv log lines that go to stdout (e.g. "[dotenv@17...] injecting env...")
     raw_output = stdout.decode()
     base64_lines = [line for line in raw_output.strip().split("\n") if not line.startswith("[dotenv")]
-    base64_png = "".join(base64_lines).strip()
-    if not base64_png:
+    raw_b64 = "".join(base64_lines).strip()
+    if not raw_b64:
         raise HTTPException(status_code=502, detail="Monster generation returned empty result")
 
-    # Store as data URI (small ~50KB images; avoids Google Drive embedding issues)
+    # AI-based background removal
+    base64_png = remove_background_b64(raw_b64)
     image_url = f"data:image/png;base64,{base64_png}"
 
     # Persist to DB
