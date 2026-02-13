@@ -2255,6 +2255,73 @@ def build_sogni_prompt(trait_scores: dict, monster_name: str, variation_seed: in
     )
 
 
+EVOLUTION_MODIFIERS = {
+    "teen": "evolved teenage form, sharper features, slightly larger, more defined",
+    "adult": "fully evolved adult form, larger and more imposing, majestic, battle-scarred, detailed armor-like patterns",
+    "leader": "evolved leader form, commanding presence, crown-like crest, regal, larger, battle-scarred",
+    "support": "evolved support form, nurturing aura, healing glow, protective stance, larger",
+}
+
+
+def build_evolved_sogni_prompt(trait_scores: dict, monster_name: str, evolution: str, variation_seed: int = 0) -> str:
+    """Build a Sogni prompt enhanced with evolution-specific descriptors."""
+    base_prompt = build_sogni_prompt(trait_scores, monster_name, variation_seed)
+    evo_desc = EVOLUTION_MODIFIERS.get(evolution, "")
+    if evo_desc:
+        return f"{evo_desc}, {base_prompt}"
+    return base_prompt
+
+
+class EvolveImageRequest(BaseModel):
+    variationSeed: int = 0
+
+
+@app.post("/api/monsters/me/evolve-image", tags=["Monster"])
+async def generate_evolved_image(
+    body: EvolveImageRequest,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate a new AI image reflecting the monster's evolved form."""
+    m = db.query(models.Monster).filter(models.Monster.user_id == user["id"]).first()
+    if not m:
+        raise HTTPException(status_code=404, detail="Monster not found")
+    if m.evolution == "baby":
+        raise HTTPException(status_code=400, detail="Monster must be evolved first")
+
+    trait_scores = m.trait_scores or {"curious": 5, "social": 5, "creative": 5, "adventurous": 5, "calm": 5}
+    prompt = build_evolved_sogni_prompt(trait_scores, m.name, m.evolution, body.variationSeed)
+
+    # Call generate_monster.js via subprocess
+    backend_dir = os.path.dirname(os.path.abspath(__file__))
+    script_path = os.path.join(backend_dir, "generate_monster.js")
+    proc = await asyncio.create_subprocess_exec(
+        "node", script_path, prompt,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        cwd=backend_dir,
+    )
+    stdout, stderr = await proc.communicate()
+
+    if proc.returncode != 0:
+        err_msg = stderr.decode().strip() if stderr else "Unknown error"
+        raise HTTPException(status_code=502, detail=f"Evolved image generation failed: {err_msg}")
+
+    raw_output = stdout.decode()
+    base64_lines = [line for line in raw_output.strip().split("\n") if not line.startswith("[dotenv")]
+    base64_png = "".join(base64_lines).strip()
+    if not base64_png:
+        raise HTTPException(status_code=502, detail="Evolved image generation returned empty result")
+
+    image_url = f"data:image/png;base64,{base64_png}"
+
+    m.monster_image_url = image_url
+    m.monster_prompt = prompt
+    db.commit()
+
+    return monster_to_dict(m)
+
+
 @app.post("/api/monsters/me/generate-image", tags=["Monster"])
 async def generate_monster_image(
     body: GenerateMonsterImageRequest,
