@@ -83,6 +83,16 @@ export const useMonsterStore = create(
         return data
       },
 
+      generateEvolvedImage: async () => {
+        const { data } = await api.post('/api/monsters/me/evolve-image', {}, { timeout: 120000 })
+        if (data && data.id) {
+          set((state) => ({
+            monster: { ...state.monster, ...data },
+          }))
+        }
+        return data
+      },
+
       initializeMonster: (userId, quizData = {}) => set((state) => {
         const initialized = {
           ...state.monster,

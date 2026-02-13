@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import { useAuthStore } from './stores/authStore'
@@ -26,16 +26,59 @@ function ProtectedRoute({ children }) {
 }
 
 function EvolutionLayer() {
-  const { monster, clearJustEvolved } = useMonsterStore()
-  const animSrc = getEvolveAnim(monster.monsterType)
+  const { monster, clearJustEvolved, generateEvolvedImage } = useMonsterStore()
+  const [evolvedImageUrl, setEvolvedImageUrl] = useState(null)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [generationError, setGenerationError] = useState(null)
+  const generationStarted = useRef(false)
 
-  if (!monster.justEvolved || !animSrc) return null
+  // Capture the baby image at the moment evolution starts (before it gets overwritten)
+  const babyImageRef = useRef(null)
+  const babySpriteSrc = getEvolveAnim(monster.monsterType)
+
+  useEffect(() => {
+    if (monster.justEvolved && !babyImageRef.current) {
+      babyImageRef.current = monster.monsterImageUrl
+    }
+  }, [monster.justEvolved, monster.monsterImageUrl])
+
+  // Start Sogni generation as soon as the overlay is shown
+  useEffect(() => {
+    if (!monster.justEvolved || generationStarted.current) return
+    generationStarted.current = true
+    setIsGenerating(true)
+    setGenerationError(null)
+
+    generateEvolvedImage()
+      .then((data) => {
+        setEvolvedImageUrl(data?.monsterImageUrl || null)
+        setIsGenerating(false)
+      })
+      .catch(() => {
+        setGenerationError('Image generation failed')
+        setIsGenerating(false)
+      })
+  }, [monster.justEvolved, generateEvolvedImage])
+
+  const handleComplete = useCallback(() => {
+    clearJustEvolved()
+    setEvolvedImageUrl(null)
+    setIsGenerating(false)
+    setGenerationError(null)
+    generationStarted.current = false
+    babyImageRef.current = null
+  }, [clearJustEvolved])
+
+  if (!monster.justEvolved) return null
 
   return (
     <EvolutionOverlay
-      animSrc={animSrc}
+      babyImageUrl={babyImageRef.current}
+      babySpriteSrc={babySpriteSrc}
       monsterName={monster.name}
-      onComplete={() => clearJustEvolved()}
+      evolvedImageUrl={evolvedImageUrl}
+      generationError={generationError}
+      onComplete={handleComplete}
     />
   )
 }
