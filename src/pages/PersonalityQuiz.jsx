@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { useMonsterStore } from '../stores/monsterStore'
+import boxShaking from '../characters/box-shaking.gif'
+import boxOpening from '../characters/box-opening.gif'
 
 export default function PersonalityQuiz() {
   const navigate = useNavigate()
@@ -28,6 +30,7 @@ export default function PersonalityQuiz() {
   const [variationSeed, setVariationSeed] = useState(0)
   const [namingStep, setNamingStep] = useState(false)
   const [monsterName, setMonsterName] = useState('')
+  const [showBoxOpen, setShowBoxOpen] = useState(false)
 
   const MONSTERS = [
     { id: 1, name: 'Spark', traits: ['adventurous', 'creative'] },
@@ -156,6 +159,8 @@ export default function PersonalityQuiz() {
       if (result && result.monsterImageUrl) {
         setGeneratedImageUrl(result.monsterImageUrl)
         setGeneratedPrompt(result.monsterPrompt)
+        setShowBoxOpen(true)
+        setTimeout(() => setShowBoxOpen(false), 1500)
       } else {
         setGenerationError('Generation returned no image. You can continue with the default monster.')
       }
@@ -297,31 +302,45 @@ export default function PersonalityQuiz() {
         ) : (
           <div className="text-center">
             <div className="pixel-card p-8 mb-6 bg-pixel-purple bg-opacity-20">
-              {/* Generating State */}
+              {/* Generating State — box shaking while AI works */}
               {isGenerating && (
                 <>
-                  <div className="mb-6">
-                    <div className="text-6xl mb-4 animate-pulse">✨</div>
-                    <h2 className="font-pixel text-lg text-pixel-yellow mb-2">
-                      Creating Your Monster...
-                    </h2>
-                    <p className="font-game text-sm text-pixel-light">
-                      Our AI is crafting a unique companion just for you
-                    </p>
-                  </div>
+                  <h2 className="font-pixel text-lg text-pixel-yellow mb-2">
+                    Creating Your Monster...
+                  </h2>
+                  <p className="font-game text-sm text-pixel-light mb-6">
+                    Our AI is crafting a unique companion just for you
+                  </p>
                   <div className="flex justify-center mb-4">
-                    <div className="w-32 h-32 bg-pixel-dark border-4 border-pixel-purple rounded-lg flex items-center justify-center">
-                      <div className="animate-spin text-4xl">✦</div>
-                    </div>
+                    <img
+                      src={boxShaking}
+                      alt="Box shaking"
+                      className="w-32 h-32 object-contain"
+                      style={{ imageRendering: 'pixelated' }}
+                    />
                   </div>
-                  <div className="w-full bg-pixel-dark border-2 border-pixel-purple h-3 rounded overflow-hidden">
-                    <div className="bg-pixel-blue h-full animate-pulse" style={{ width: '60%' }} />
+                </>
+              )}
+
+              {/* Box opening — briefly shown after AI returns image */}
+              {!isGenerating && showBoxOpen && (
+                <>
+                  <h2 className="font-pixel text-lg text-pixel-yellow mb-2">
+                    Your Monster Appears!
+                  </h2>
+                  <div className="flex justify-center mb-4">
+                    <img
+                      src={boxOpening}
+                      alt="Box opening"
+                      className="w-32 h-32 object-contain"
+                      style={{ imageRendering: 'pixelated' }}
+                    />
                   </div>
                 </>
               )}
 
               {/* Reveal State - AI image generated successfully */}
-              {!isGenerating && generatedImageUrl && (
+              {!isGenerating && !showBoxOpen && generatedImageUrl && (
                 <>
                   <p className="text-6xl mb-4 animate-float">✨</p>
                   <h2 className="font-pixel text-xl text-pixel-yellow mb-4">

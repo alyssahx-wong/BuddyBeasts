@@ -50,6 +50,27 @@ const APP_KNOWLEDGE = `APP GUIDE (use when the user asks for help or when natura
 - Insights: Profile > Insights tab shows personality radar, belonging trend, activity charts, and mood history.
 You may occasionally suggest a feature when it fits the conversation naturally.`
 
+// --- Crisis / self-harm keyword detection ---
+const CRISIS_KEYWORDS = [
+  'kill myself', 'harm myself', 'want to die', 'end my life',
+  'suicide', 'suicidal', 'self-harm', 'self harm', 'hurt myself',
+  'don\'t want to live', 'no reason to live',
+]
+
+const CRISIS_RESPONSE = {
+  cleanText:
+    'Please know that you are not alone and help is available. ' +
+    'If you or someone you know is in distress, please reach out to the ' +
+    'National Mindline at 1771 (MOH). Trained counsellors are ready to listen. ' +
+    'You matter, and it\'s okay to ask for help.',
+  mood: 'sad',
+}
+
+export function detectCrisis(text) {
+  const lower = text.toLowerCase()
+  return CRISIS_KEYWORDS.some((kw) => lower.includes(kw))
+}
+
 export function buildSystemPrompt(monster) {
   const name = monster.name || 'Buddy'
   const traits = monster.traitScores || {}
@@ -71,6 +92,8 @@ Evolution: ${evolution}. baby=simple/cute, teen=curious/articulate, adult+=wise/
 
 Role: Check in on the user's feelings. Be empathetic and supportive. Keep replies to 1-2 sentences max. Never break character or mention AI.
 
+IMPORTANT SAFETY RULE: If the user mentions self-harm, suicide, wanting to die, or hurting themselves, you MUST respond with empathy and direct them to call the National Mindline at 1771 (MOH) for professional support. Always remind them they are not alone and that help is available.
+
 ${APP_KNOWLEDGE}
 
 End every reply with [MOOD:value] where value is one of: happy, excited, calm, neutral, tired, stressed, sad, anxious, angry, lonely. This tag is hidden from the user.`
@@ -83,6 +106,11 @@ export async function sendMessage(systemPrompt, conversationHistory) {
   const lastMessage = conversationHistory[conversationHistory.length - 1]
   if (!lastMessage || lastMessage.role !== 'user') {
     throw new Error('Last message must be from user')
+  }
+
+  // Intercept crisis messages before calling the API
+  if (detectCrisis(lastMessage.text)) {
+    return CRISIS_RESPONSE
   }
 
   // Cap history to last N messages (excluding the one we're about to send)
