@@ -111,10 +111,10 @@ async function run() {
   const project = await sogni.projects.create({
     type: 'image',
     modelId: 'flux1-schnell-fp8', // flux1-schnell-fp8
-    positivePrompt: `full body standing character, full body from head to feet, pixel art, 8-bit retro game sprite, standing on ground, visible legs and feet, centered in frame, front view, ${prompt}, flat colors, clean edges, solid white background, single character, small character in large frame, wide margin around character, fully visible character, wide shot, full figure with legs and feet on ground`,
+    positivePrompt: `full body creature, complete body with all limbs visible, pixel art, 8-bit retro game sprite, centered in frame, front view, ${prompt}, flat colors, clean edges, solid white background, single character, small character in large frame, wide margin around character, fully visible creature, wide shot, nothing cropped or cut off`,
     negativePrompt: '',
-    steps: 8,
-    guidance: 3.5,
+    steps: 12,
+    guidance: 5.0,
     numberOfMedia: 1,
     sizePreset: 'square',
     tokenType: 'spark',
@@ -122,6 +122,9 @@ async function run() {
 
   const imageUrls = await project.waitForCompletion();
   const imageUrl = imageUrls[0];
+
+  // Wait for the image to be fully available on the server
+  await new Promise((resolve) => setTimeout(resolve, 3000));
 
   const response = await fetch(imageUrl);
   const originalBuffer = Buffer.from(await response.arrayBuffer());

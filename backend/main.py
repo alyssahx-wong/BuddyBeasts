@@ -527,6 +527,7 @@ def monster_to_dict(m: models.Monster) -> dict:
         "traitScores": m.trait_scores,
         "monsterImageUrl": m.monster_image_url,
         "monsterPrompt": m.monster_prompt,
+        "customization": m.customization,
     }
 
 
@@ -648,6 +649,12 @@ def _seed_data() -> None:
         if "friends" not in user_columns:
             with engine.begin() as conn:
                 conn.execute(text("ALTER TABLE users ADD COLUMN friends JSON DEFAULT '[]'"))
+
+        # Migrate: add customization column to monsters table if it doesn't exist
+        monster_columns = [c["name"] for c in inspector.get_columns("monsters")]
+        if "customization" not in monster_columns:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE monsters ADD COLUMN customization JSON DEFAULT NULL"))
 
         # Seed hubs if empty
         if db.query(models.Hub).count() == 0:
@@ -888,6 +895,10 @@ class GenerateMonsterImageRequest(BaseModel):
     monsterType: int = Field(ge=1, le=18)
     monsterName: str
     variationSeed: int = 0
+    animal: str | None = None
+    colour: str | None = None
+    element: str | None = None
+    accessory: str | None = None
 
 class Profile(BaseModel):
     user: dict
@@ -2205,13 +2216,47 @@ VARIATION_MODIFIERS = [
 ]
 
 
-def build_sogni_prompt(trait_scores: dict, monster_name: str, variation_seed: int = 0) -> str:
+COLOUR_PALETTES = {
+    "sunset": "warm sunset palette of orange, pink, and gold",
+    "ocean": "cool ocean palette of blue, teal, and aqua",
+    "forest": "earthy forest palette of green, emerald, and brown",
+    "galaxy": "cosmic galaxy palette of deep purple, indigo, and starry silver",
+    "candy": "sweet pastel palette of pink, mint, and lavender",
+    "ember": "fiery palette of red, orange, and dark charcoal",
+    "arctic": "icy palette of white, ice blue, and silver",
+    "shadow": "dark palette of deep purple, black, and neon accents",
+}
+
+ELEMENT_AURAS = {
+    "fire": "surrounded by flickering flames and warm embers",
+    "water": "surrounded by flowing water droplets and bubbles",
+    "nature": "surrounded by floating leaves and tiny flowers",
+    "electric": "surrounded by crackling lightning sparks",
+    "cosmic": "surrounded by floating stars and nebula wisps",
+    "ice": "surrounded by frost crystals and snowflakes",
+    "shadow": "surrounded by dark misty shadows",
+    "crystal": "surrounded by floating gemstones and prismatic light",
+}
+
+
+def build_sogni_prompt(
+    trait_scores: dict,
+    monster_name: str,
+    variation_seed: int = 0,
+    animal: str | None = None,
+    colour: str | None = None,
+    element: str | None = None,
+    accessory: str | None = None,
+) -> str:
     """Convert numeric trait scores (1-10) to visual descriptors for the Sogni AI prompt."""
     curious = trait_scores.get("curious", 5)
     social = trait_scores.get("social", 5)
     creative = trait_scores.get("creative", 5)
     adventurous = trait_scores.get("adventurous", 5)
     calm = trait_scores.get("calm", 5)
+
+    # Base creature from animal choice or default
+    base_creature = f"{animal}-like creature" if animal else "fantasy monster"
 
     # Eyes based on curious
     if curious >= 7:
@@ -2229,13 +2274,14 @@ def build_sogni_prompt(trait_scores: dict, monster_name: str, variation_seed: in
     else:
         pose = "shy huddled pose"
 
-    # Colors based on creative
+    # Colors based on creative (overridden by colour choice)
     if creative >= 7:
         colors = "rainbow highlights and colorful patterns"
     elif creative >= 4:
         colors = "colorful markings and warm tones"
     else:
         colors = "simple monochrome palette"
+    colour_desc = COLOUR_PALETTES.get(colour, colors)
 
     # Body based on adventurous
     if adventurous >= 7:
@@ -2245,20 +2291,24 @@ def build_sogni_prompt(trait_scores: dict, monster_name: str, variation_seed: in
     else:
         body = "round soft cuddly body"
 
-    # Aura based on calm
+    # Aura based on calm (overridden by element choice)
     if calm >= 7:
         aura = "flowing peaceful aura with pastel tones"
     elif calm >= 4:
         aura = "warm gentle glow with soft colors"
     else:
         aura = "electric sparks and neon accents"
+    aura_desc = ELEMENT_AURAS.get(element, aura)
 
-    # Pick a variation modifier for regeneration variety
-    modifier = VARIATION_MODIFIERS[variation_seed % len(VARIATION_MODIFIERS)]
+    # Accessory from choice or random variation modifier
+    if accessory and accessory.lower() != "none":
+        accessory_desc = accessory.lower()
+    else:
+        accessory_desc = VARIATION_MODIFIERS[variation_seed % len(VARIATION_MODIFIERS)]
 
     return (
-        f"cute fantasy monster named {monster_name}, {eyes}, {pose}, {body}, "
-        f"{colors}, {aura}, with {modifier}"
+        f"cute {base_creature}, four limbs, two arms, two legs, {eyes}, {pose}, {body}, "
+        f"{colour_desc}, {aura_desc}, wearing {accessory_desc}"
     )
 
 
@@ -2348,7 +2398,11 @@ async def generate_monster_image(
         "calm": body.calm,
     }
 
-    prompt = build_sogni_prompt(trait_scores, body.monsterName, body.variationSeed)
+    prompt = build_sogni_prompt(
+        trait_scores, body.monsterName, body.variationSeed,
+        animal=body.animal, colour=body.colour,
+        element=body.element, accessory=body.accessory,
+    )
 
     # Call generate_monster.js via subprocess (cwd must be backend/ for dotenv path resolution)
     backend_dir = os.path.dirname(os.path.abspath(__file__))
@@ -2382,6 +2436,14 @@ async def generate_monster_image(
     m.monster_type = body.monsterType
     m.selected_monster = body.monsterType
     m.name = body.monsterName
+    m.customization = {
+        k: v for k, v in {
+            "animal": body.animal,
+            "colour": body.colour,
+            "element": body.element,
+            "accessory": body.accessory,
+        }.items() if v is not None
+    } or None
     if body.monsterType not in (m.collected_monsters or []):
         m.collected_monsters = (m.collected_monsters or []) + [body.monsterType]
     db.commit()

@@ -56,6 +56,7 @@ class Monster(Base):
     trait_scores = Column(JSON, nullable=True, default=None)
     monster_image_url = Column(Text, nullable=True, default=None)
     monster_prompt = Column(Text, nullable=True, default=None)
+    customization = Column(JSON, nullable=True, default=None)
 
 
 class Hub(Base):

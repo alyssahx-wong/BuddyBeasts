@@ -32,6 +32,15 @@ export default function PersonalityQuiz() {
   const [monsterName, setMonsterName] = useState('')
   const [showBoxOpen, setShowBoxOpen] = useState(false)
 
+  // Customization state
+  const [customizationStep, setCustomizationStep] = useState(-1) // -1 = not started, 0-3 = picking
+  const [customization, setCustomization] = useState({
+    animal: null,
+    colour: null,
+    element: null,
+    accessory: null,
+  })
+
   const MONSTERS = [
     { id: 1, name: 'Spark', traits: ['adventurous', 'creative'] },
     { id: 2, name: 'Whisper', traits: ['calm', 'creative'] },
@@ -86,6 +95,73 @@ export default function PersonalityQuiz() {
     },
   ]
 
+  const CUSTOMIZATION_STEPS = [
+    {
+      key: 'animal',
+      title: 'Choose Your Creature',
+      subtitle: 'What animal inspires your monster?',
+      options: [
+        { value: 'cat', emoji: '🐱', label: 'Cat' },
+        { value: 'dragon', emoji: '🐉', label: 'Dragon' },
+        { value: 'bunny', emoji: '🐰', label: 'Bunny' },
+        { value: 'fox', emoji: '🦊', label: 'Fox' },
+        { value: 'wolf', emoji: '🐺', label: 'Wolf' },
+        { value: 'bear', emoji: '🐻', label: 'Bear' },
+        { value: 'owl', emoji: '🦉', label: 'Owl' },
+        { value: 'turtle', emoji: '🐢', label: 'Turtle' },
+        { value: 'axolotl', emoji: '🦎', label: 'Axolotl' },
+        { value: 'penguin', emoji: '🐧', label: 'Penguin' },
+      ],
+    },
+    {
+      key: 'colour',
+      title: 'Pick a Colour Theme',
+      subtitle: 'What palette fits your monster?',
+      options: [
+        { value: 'sunset', emoji: '🌅', label: 'Sunset' },
+        { value: 'ocean', emoji: '🌊', label: 'Ocean' },
+        { value: 'forest', emoji: '🌿', label: 'Forest' },
+        { value: 'galaxy', emoji: '🌌', label: 'Galaxy' },
+        { value: 'candy', emoji: '🍬', label: 'Candy' },
+        { value: 'ember', emoji: '🔥', label: 'Ember' },
+        { value: 'arctic', emoji: '❄️', label: 'Arctic' },
+        { value: 'shadow', emoji: '🌑', label: 'Shadow' },
+      ],
+    },
+    {
+      key: 'element',
+      title: 'Choose an Element',
+      subtitle: 'What power surrounds your monster?',
+      options: [
+        { value: 'fire', emoji: '🔥', label: 'Fire' },
+        { value: 'water', emoji: '💧', label: 'Water' },
+        { value: 'nature', emoji: '🌱', label: 'Nature' },
+        { value: 'electric', emoji: '⚡', label: 'Electric' },
+        { value: 'cosmic', emoji: '✨', label: 'Cosmic' },
+        { value: 'ice', emoji: '🧊', label: 'Ice' },
+        { value: 'shadow', emoji: '👤', label: 'Shadow' },
+        { value: 'crystal', emoji: '💎', label: 'Crystal' },
+      ],
+    },
+    {
+      key: 'accessory',
+      title: 'Pick an Accessory',
+      subtitle: 'What does your monster wear?',
+      options: [
+        { value: 'tiny crown', emoji: '👑', label: 'Crown' },
+        { value: 'scarf', emoji: '🧣', label: 'Scarf' },
+        { value: 'goggles', emoji: '🥽', label: 'Goggles' },
+        { value: 'flower wreath', emoji: '🌸', label: 'Flowers' },
+        { value: 'bow tie', emoji: '🎀', label: 'Bow Tie' },
+        { value: 'bandana', emoji: '🏴', label: 'Bandana' },
+        { value: 'star earring', emoji: '⭐', label: 'Earring' },
+        { value: 'crystal necklace', emoji: '📿', label: 'Necklace' },
+        { value: 'cape', emoji: '🦸', label: 'Cape' },
+        { value: 'none', emoji: '❌', label: 'None' },
+      ],
+    },
+  ]
+
   // On mount: check if returning user already has trait scores
   useEffect(() => {
     const checkExisting = async () => {
@@ -135,7 +211,18 @@ export default function PersonalityQuiz() {
     setAssignedMonster(monster)
     setMonsterName(monster.name)
     setQuizComplete(true)
-    setNamingStep(true)
+    setCustomizationStep(0) // Start customization flow
+  }
+
+  const handleCustomizationPick = (value) => {
+    const step = CUSTOMIZATION_STEPS[customizationStep]
+    setCustomization((prev) => ({ ...prev, [step.key]: value }))
+    if (customizationStep < CUSTOMIZATION_STEPS.length - 1) {
+      setCustomizationStep(customizationStep + 1)
+    } else {
+      setCustomizationStep(-1)
+      setNamingStep(true)
+    }
   }
 
   const handleNameSubmit = () => {
@@ -154,7 +241,8 @@ export default function PersonalityQuiz() {
         finalScores,
         monster.id,
         monsterName.trim(),
-        seed
+        seed,
+        customization
       )
       if (result && result.monsterImageUrl) {
         setGeneratedImageUrl(result.monsterImageUrl)
@@ -216,7 +304,54 @@ export default function PersonalityQuiz() {
       </div>
 
       <div className="max-w-4xl mx-auto p-4">
-        {!quizComplete ? (
+        {quizComplete && customizationStep >= 0 ? (
+          /* Customization Step */
+          <div className="text-center">
+            <div className="pixel-card p-6 mb-6">
+              {/* Progress dots */}
+              <div className="flex justify-center gap-2 mb-6">
+                {CUSTOMIZATION_STEPS.map((_, i) => (
+                  <div
+                    key={i}
+                    className={`w-3 h-3 rounded-full transition-all ${
+                      i === customizationStep
+                        ? 'bg-pixel-yellow scale-125'
+                        : i < customizationStep
+                        ? 'bg-pixel-blue'
+                        : 'bg-pixel-purple'
+                    }`}
+                  />
+                ))}
+              </div>
+
+              <h2 className="font-pixel text-base text-pixel-yellow mb-2">
+                {CUSTOMIZATION_STEPS[customizationStep].title}
+              </h2>
+              <p className="font-game text-sm text-pixel-light mb-6">
+                {CUSTOMIZATION_STEPS[customizationStep].subtitle}
+              </p>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {CUSTOMIZATION_STEPS[customizationStep].options.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => handleCustomizationPick(opt.value)}
+                    className={`
+                      p-4 rounded border-2 transition-all hover:scale-105 active:scale-95
+                      ${customization[CUSTOMIZATION_STEPS[customizationStep].key] === opt.value
+                        ? 'border-pixel-yellow bg-pixel-yellow bg-opacity-20'
+                        : 'border-pixel-purple bg-pixel-dark hover:border-pixel-pink'
+                      }
+                    `}
+                  >
+                    <span className="text-2xl block mb-1">{opt.emoji}</span>
+                    <span className="font-game text-sm text-pixel-light">{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : !quizComplete ? (
           <div className="pixel-card p-6 mb-6">
             {/* Progress Bar */}
             <div className="mb-6">

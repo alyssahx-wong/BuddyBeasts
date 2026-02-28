@@ -62,19 +62,25 @@ export default function PixelMonster({
 
   // If an AI-generated custom image is available, render it instead of the GIF sprite
   if (customImageUrl) {
+    const customSizeMap = { small: 64, medium: 112, large: 200 }
+    const cpx = customSizeMap[size] || 112
     return (
       <div
-        className={`inline-block ${animated ? 'animate-float' : ''} ${isPlayer ? 'drop-shadow-lg' : ''} ${className}`}
+        className={`inline-flex items-end justify-center ${animated ? 'animate-float' : ''} ${isPlayer ? 'drop-shadow-lg' : ''} ${className}`}
         style={{
+          width: cpx,
+          height: cpx,
           filter: isPlayer ? 'drop-shadow(0 0 8px rgba(255, 230, 109, 0.6))' : 'none',
         }}
       >
         <img
           src={customImageUrl}
           alt="Your monster"
-          width={px}
-          height={px}
           style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            objectPosition: 'center bottom',
             imageRendering: 'pixelated',
           }}
           draggable={false}

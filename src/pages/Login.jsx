@@ -91,7 +91,13 @@ export default function Login() {
             {loading ? 'Connecting...' : 'Continue with Google'}
           </button>
 
-          {/* Only Google login button remains */}
+          <button
+            onClick={handleDemoLogin}
+            disabled={loading}
+            className="pixel-button bg-pixel-purple hover:bg-pixel-pink text-white w-full disabled:opacity-50"
+          >
+            {loading ? 'Connecting...' : 'Play as Demo'}
+          </button>
         </div>
 
         <div className="mt-8 text-xs text-pixel-light opacity-75 font-game">

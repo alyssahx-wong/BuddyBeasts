@@ -68,12 +68,16 @@ export const useMonsterStore = create(
         }
       },
 
-      generateMonsterImage: async (scores, monsterType, monsterName, variationSeed = 0) => {
+      generateMonsterImage: async (scores, monsterType, monsterName, variationSeed = 0, customization = {}) => {
         const { data } = await api.post('/api/monsters/me/generate-image', {
           ...scores,
           monsterType,
           monsterName,
           variationSeed,
+          animal: customization.animal || null,
+          colour: customization.colour || null,
+          element: customization.element || null,
+          accessory: customization.accessory || null,
         }, { timeout: 120000 })
         if (data && data.id) {
           set((state) => ({
